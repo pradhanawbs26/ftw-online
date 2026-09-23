@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "Employee": {
+      "title": "Employee",
+      "description": "Registered employee record for PT. Wahana Bara Sentosa",
+      "type": "object",
+      "properties": {
+        "nik": {
+          "type": "string",
+          "description": "Nomor Induk Karyawan"
+        },
+        "nama": {
+          "type": "string",
+          "description": "Nama lengkap karyawan"
+        },
+        "jabatan": {
+          "type": "string",
+          "description": "Jabatan / posisi kerja"
+        },
+        "dept": {
+          "type": "string",
+          "description": "Departemen / Divisi kerja"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
+        }
+      },
+      "required": ["nik", "nama", "jabatan", "dept"]
+    },
+    "Assessment": {
+      "title": "Assessment",
+      "description": "Fit to Work self-assessment report",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique assessment identification code"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Submission ISO timestamp"
+        },
+        "nik": {
+          "type": "string",
+          "description": "Nomor Induk Karyawan"
+        },
+        "nama": {
+          "type": "string",
+          "description": "Nama karyawan"
+        },
+        "jabatan": {
+          "type": "string",
+          "description": "Jabatan karyawan"
+        },
+        "dept": {
+          "type": "string",
+          "description": "Departemen karyawan"
+        },
+        "tanggalPengisian": {
+          "type": "string",
+          "description": "Tanggal pengisian (YYYY-MM-DD)"
+        },
+        "jamPengisian": {
+          "type": "string",
+          "description": "Jam pengisian (HH:mm)"
+        },
+        "totalSleep12": {
+          "type": "number",
+          "description": "Total jam tidur dalam 12 jam terakhir"
+        },
+        "totalSleep36": {
+          "type": "number",
+          "description": "Total jam tidur dalam 36 jam terakhir"
+        },
+        "consumesObat": {
+          "type": "boolean",
+          "description": "Apakah mengonsumsi obat yang menyebabkan kantuk"
+        },
+        "hasPersonalProblem": {
+          "type": "boolean",
+          "description": "Apakah memiliki masalah pribadi/stres"
+        },
+        "totalFatigueScore": {
+          "type": "number",
+          "description": "Skor total kelelahan (A + B + C)"
+        },
+        "readinessScore": {
+          "type": "number",
+          "description": "Persentase kesiapan kerja (0-100%)"
+        },
+        "fatigueCategory": {
+          "type": "string",
+          "description": "Kategori fatigue (NORMAL, LAPOR, REST, REJECT)"
+        },
+        "finalDecision": {
+          "type": "string",
+          "description": "Status kelayakan (FIT, FIT_CONDITIONAL, REST_BEFORE_WORK, UNFIT)"
+        }
+      },
+      "required": ["id", "nik", "nama", "finalDecision"]
+    }
+  }
+}

@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Assessments / History logs: allow read and write
+    match /assessments/{assessmentId} {
+      allow read, write: if true;
+    }
+    
+    // Employee directory: allow read and write
+    match /employees/{employeeId} {
+      allow read, write: if true;
+    }
+    
+    // General fallback rule
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

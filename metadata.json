@@ -1,0 +1,6 @@
+{
+  "name": "Fit to Work Karyawan",
+  "description": "Aplikasi Fit to Work untuk menilai kelayakan kerja karyawan berdasarkan durasi tidur, jam terjaga, konsumsi obat, dan masalah pribadi sebelum memulai shift kerja.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
