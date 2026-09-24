@@ -1,10 +1,9 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
 
@@ -44,47 +43,59 @@ if (!fs.existsSync(EMPLOYEES_FILE)) {
 
 // ---------------- CORPO SYNC ENGINE (GOOGLE SHEETS) ----------------
 
-// Clean and parse CSV standard strings with double-quote handling
+// High-performance slice-based CSV parser with quote escaping support
 function parseCSV(text: string): string[][] {
   const lines: string[][] = [];
   let row: string[] = [];
-  let cell = '';
-  let insideQuote = false;
-  
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const nextChar = text[i + 1];
-    if (char === '"') {
-      if (insideQuote && nextChar === '"') {
-        cell += '"';
-        i++; // skip next double quote
-      } else {
-        insideQuote = !insideQuote;
+  let start = 0;
+  let inQuotes = false;
+  const len = text.length;
+
+  for (let i = 0; i < len; i++) {
+    const c = text.charCodeAt(i);
+    if (c === 34) { // quote '"'
+      inQuotes = !inQuotes;
+    } else if (c === 44 && !inQuotes) { // comma ','
+      let cell = text.slice(start, i);
+      if (cell.startsWith('"') && cell.endsWith('"')) {
+        cell = cell.slice(1, -1).replace(/""/g, '"');
       }
-    } else if (char === ',' && !insideQuote) {
       row.push(cell);
-      cell = '';
-    } else if ((char === '\r' || char === '\n') && !insideQuote) {
-      if (char === '\r' && nextChar === '\n') {
+      start = i + 1;
+    } else if ((c === 10 || c === 13) && !inQuotes) { // newline '\n' or '\r'
+      let cell = text.slice(start, i);
+      if (cell.startsWith('"') && cell.endsWith('"')) {
+        cell = cell.slice(1, -1).replace(/""/g, '"');
+      }
+      row.push(cell);
+      if (row.length > 1 || row[0] !== '') lines.push(row);
+      row = [];
+      if (c === 13 && i + 1 < len && text.charCodeAt(i + 1) === 10) {
         i++;
       }
-      row.push(cell);
-      lines.push(row);
-      row = [];
-      cell = '';
-    } else {
-      cell += char;
+      start = i + 1;
     }
   }
-  if (cell || row.length > 0) {
+  if (start < len) {
+    let cell = text.slice(start);
+    if (cell.startsWith('"') && cell.endsWith('"')) {
+      cell = cell.slice(1, -1).replace(/""/g, '"');
+    }
     row.push(cell);
-    lines.push(row);
+    if (row.length > 1 || row[0] !== '') lines.push(row);
   }
   return lines;
 }
 
+let isSyncInProgress = false;
+
 // Public spreadsheet-based auto-hydration loader
 async function syncFromGoogleSheet() {
+  if (isSyncInProgress) {
+    console.log("[Sync] Sync already in progress, skipping concurrent run.");
+    return;
+  }
+  isSyncInProgress = true;
   try {
     if (!fs.existsSync(CONFIG_FILE)) return;
     const configData = fs.readFileSync(CONFIG_FILE, "utf-8");
@@ -213,7 +224,7 @@ async function syncFromGoogleSheet() {
             if (history.length > 0) {
               // Convert to newest-first order
               const reversedHistory = history.reverse();
-              fs.writeFileSync(HISTORY_FILE, JSON.stringify(reversedHistory, null, 2));
+              await fs.promises.writeFile(HISTORY_FILE, JSON.stringify(reversedHistory));
               console.log(`[Sync] Successfully loaded & cached ${history.length} assessment entries from Sheet 'Laporan_Fit'`);
             }
           }
@@ -225,6 +236,8 @@ async function syncFromGoogleSheet() {
 
   } catch (err: any) {
     console.error("[Sync Core Error] Critical sheet sync fail:", err.message);
+  } finally {
+    isSyncInProgress = false;
   }
 }
 
@@ -471,10 +484,19 @@ app.post("/api/config", (req, res) => {
   }
 });
 
+// Health check endpoints for Cloud Run and load balancers
+app.get(["/health", "/healthz", "/_health", "/ping"], (req, res) => {
+  res.status(200).send("OK");
+});
+
 // Setup Vite Dev Server / Static Assets serving
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
+  const distPath = path.join(process.cwd(), "dist");
+  const isProduction = process.env.NODE_ENV === "production" || fs.existsSync(path.join(distPath, "index.html"));
+
+  if (!isProduction) {
     console.log("Starting server in DEVELOPMENT mode with Vite Middleware...");
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -482,29 +504,35 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     console.log("Starting server in PRODUCTION mode...");
-    const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      const indexPath = path.join(distPath, "index.html");
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(200).send("<!doctype html><html><head><title>Fit to Work</title></head><body><div id='root'></div></body></html>");
+      }
     });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server fully operational on http://0.0.0.0:${PORT}`);
     
-    // Perform initial synchronization of Employees and Assessment History on startup
-    console.log("[Startup] Initializing auto-hydration from connected spreadsheet...");
-    syncFromGoogleSheet().catch(e => {
-      console.error("[Startup Sync Warning] Failed during launch auto-hydration:", e.message);
-    });
+    // Non-blocking deferred auto-hydration so the HTTP server responds immediately to Cloud Run health probes
+    console.log("[Startup] Scheduling auto-hydration from connected spreadsheet in 5 seconds...");
+    setTimeout(() => {
+      syncFromGoogleSheet().catch(e => {
+        console.error("[Startup Sync Warning] Failed during launch auto-hydration:", e.message);
+      });
+    }, 5000);
 
-    // Set background periodic sync interval every 3 minutes (180,000 milliseconds)
+    // Set background periodic sync interval every 5 minutes (300,000 milliseconds)
     setInterval(() => {
       console.log("[Periodic Sync] Refreshing employees and assessments from Google Sheets...");
       syncFromGoogleSheet().catch(e => {
         console.error("[Periodic Sync Error] Sheet pull failed:", e.message);
       });
-    }, 180000);
+    }, 300000);
   });
 }
 

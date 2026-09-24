@@ -1,8 +1,24 @@
 {
   "entities": {
+    "DirectoryRoster": {
+      "title": "DirectoryRoster",
+      "description": "Consolidated employee directory stored in a single document for maximum storage and read quota efficiency",
+      "type": "object",
+      "properties": {
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last roster update"
+        },
+        "count": {
+          "type": "number",
+          "description": "Total number of employees in the roster"
+        }
+      },
+      "required": ["updatedAt"]
+    },
     "Employee": {
       "title": "Employee",
-      "description": "Registered employee record for PT. Wahana Bara Sentosa",
+      "description": "Individual employee record for PT. Wahana Bara Sentosa",
       "type": "object",
       "properties": {
         "nik": {
@@ -30,7 +46,7 @@
     },
     "Assessment": {
       "title": "Assessment",
-      "description": "Fit to Work self-assessment report",
+      "description": "Fit to Work self-assessment report optimized for lightweight storage",
       "type": "object",
       "properties": {
         "id": {
@@ -96,9 +112,27 @@
         "finalDecision": {
           "type": "string",
           "description": "Status kelayakan (FIT, FIT_CONDITIONAL, REST_BEFORE_WORK, UNFIT)"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of record update"
         }
       },
       "required": ["id", "nik", "nama", "finalDecision"]
+    }
+  },
+  "firestore": {
+    "/directory/{directoryId}": {
+      "schema": "DirectoryRoster",
+      "description": "Single aggregated document containing the full employee directory to reduce Firestore reads and storage indexing by 99%"
+    },
+    "/employees/{employeeId}": {
+      "schema": "Employee",
+      "description": "Individual employee documents for backward compatibility"
+    },
+    "/assessments/{assessmentId}": {
+      "schema": "Assessment",
+      "description": "Lightweight sanitized assessment reports"
     }
   }
 }

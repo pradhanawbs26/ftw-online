@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_1KlMB12z0qm2AuuNW5etcKsdlwzl",
+      "name": "ftw-online",
+      "directory": ".",
+      "orgId": "team_thxtAPqt5jXmSGEYc4jrWuHy"
+    }
+  ]
+}

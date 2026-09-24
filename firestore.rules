@@ -1,17 +1,22 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Assessments / History logs: allow read and write
-    match /assessments/{assessmentId} {
+    // Consolidated employee directory (single-document roster for high read/storage efficiency)
+    match /directory/{directoryId} {
       allow read, write: if true;
     }
-    
-    // Employee directory: allow read and write
+
+    // Individual employee documents
     match /employees/{employeeId} {
       allow read, write: if true;
     }
-    
-    // General fallback rule
+
+    // Assessments / Fit to Work reports
+    match /assessments/{assessmentId} {
+      allow read, write: if true;
+    }
+
+    // Fallback rule
     match /{document=**} {
       allow read, write: if true;
     }

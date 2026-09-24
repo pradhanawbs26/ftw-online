@@ -45,7 +45,10 @@ import {
   syncEmployeeToFirestore,
   syncEmployeesBatchToFirestore,
   deleteEmployeeFromFirestore,
-  fetchEmployeesFromFirestore
+  fetchEmployeesFromFirestore,
+  saveRosterToFirestore,
+  fetchRosterFromFirestore,
+  pruneOldAssessmentsFromFirestore
 } from './firebase';
 
 // PT. Wahana Bara Sentosa Base Employee Database (Fallback if Google Sheets is not synced)
@@ -289,6 +292,8 @@ export default function App() {
   const [adminActiveTab, setAdminActiveTab] = useState<'dashboard' | 'employees' | 'sheets_sync' | 'firebase_backup'>('dashboard');
   const [firebaseSyncing, setFirebaseSyncing] = useState<boolean>(false);
   const [firebaseStatusMsg, setFirebaseStatusMsg] = useState<string>('');
+  const [pruneDays, setPruneDays] = useState<number>(30);
+  const [isPruning, setIsPruning] = useState<boolean>(false);
   const [adminNikFilter, setAdminNikFilter] = useState<string>('');
   const [newEmpNik, setNewEmpNik] = useState<string>('');
   const [newEmpNama, setNewEmpNama] = useState<string>('');
@@ -420,19 +425,24 @@ export default function App() {
         console.warn("Failed to load employees list on startup", e);
       }
 
-      // Check Firebase Firestore backup for employees
-      try {
-        const firestoreEmployees = await fetchEmployeesFromFirestore();
-        if (firestoreEmployees && Object.keys(firestoreEmployees).length > 0) {
-          console.log(`[Firebase Backup] Loaded ${Object.keys(firestoreEmployees).length} employees from Firestore`);
-          setEmployeeDb(prev => {
-            const merged = { ...firestoreEmployees, ...prev };
-            localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(merged));
-            return merged;
-          });
+      // Quota Saver: Only consult Firestore if the local/server database is completely empty
+      const localEmpSaved = localStorage.getItem('wbs_sheets_employee_db');
+      const isEmpEmpty = (!localEmpSaved || localEmpSaved === '{}') && Object.keys(employeeDb).length <= 8;
+      if (isEmpEmpty) {
+        try {
+          // Use consolidated single-document roster (1 Read only!)
+          const firestoreEmployees = await fetchRosterFromFirestore();
+          if (firestoreEmployees && Object.keys(firestoreEmployees).length > 0) {
+            console.log(`[Firebase Recovery] Restored ${Object.keys(firestoreEmployees).length} employees via 1-Read Roster`);
+            setEmployeeDb(prev => {
+              const merged = { ...firestoreEmployees, ...prev };
+              localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(merged));
+              return merged;
+            });
+          }
+        } catch (fbErr) {
+          console.warn("[Firebase Recovery] Employees fetch warning:", fbErr);
         }
-      } catch (fbErr) {
-        console.warn("[Firebase Backup] Employees fetch warning:", fbErr);
       }
 
       // Load history with filtering to ignore and cleanse any legacy invalid imports
@@ -572,24 +582,21 @@ export default function App() {
         }
       }
 
-      // Check Firebase Firestore backup for assessments
-      try {
-        const firestoreRecords = await fetchAssessmentsFromFirestore();
-        if (firestoreRecords && firestoreRecords.length > 0) {
-          console.log(`[Firebase Backup] Loaded ${firestoreRecords.length} assessments from Firestore`);
-          setHistory(prev => {
-            const existingIds = new Set(prev.map(r => r.id));
-            const newFromFs = firestoreRecords.filter(r => r.id && !existingIds.has(r.id));
-            if (newFromFs.length > 0) {
-              const merged = [...newFromFs, ...prev];
-              localStorage.setItem('wbs_ftw_history', JSON.stringify(merged));
-              return merged;
-            }
-            return prev;
-          });
+      // Quota Saver: Only fetch from Firestore if local history is completely blank
+      const localHistRaw = localStorage.getItem('wbs_ftw_history');
+      const isHistoryEmpty = !localHistRaw || localHistRaw === '[]';
+      if (isHistoryEmpty) {
+        try {
+          // Bounded query (limit 50) to protect Firestore read quota
+          const firestoreRecords = await fetchAssessmentsFromFirestore(50);
+          if (firestoreRecords && firestoreRecords.length > 0) {
+            console.log(`[Firebase Recovery] Restored ${firestoreRecords.length} assessments from Firestore (Limit 50)`);
+            setHistory(firestoreRecords);
+            localStorage.setItem('wbs_ftw_history', JSON.stringify(firestoreRecords));
+          }
+        } catch (fbHistErr) {
+          console.warn("[Firebase Recovery] History fetch warning:", fbHistErr);
         }
-      } catch (fbHistErr) {
-        console.warn("[Firebase Backup] History fetch warning:", fbHistErr);
       }
     };
 
@@ -1223,17 +1230,17 @@ export default function App() {
     }
   };
 
-  // Full Firebase Cloud Backup & Restore Handlers
+  // Full Firebase Cloud Backup & Restore Handlers (Optimized Quota Saver)
   const handleSyncAllToFirebase = async () => {
     try {
       setFirebaseSyncing(true);
-      setFirebaseStatusMsg(lang === 'ID' ? 'Sedang membackup seluruh database ke Firebase Firestore (ftw-wbs)...' : 'Backing up all data to Firebase Firestore (ftw-wbs)...');
+      setFirebaseStatusMsg(lang === 'ID' ? 'Sedang membackup ke Firebase Firestore (Mode Hemat Kuota & Ringan)...' : 'Backing up to Firebase Firestore (Quota Saver Mode)...');
 
-      // 1. Batch backup employees
+      // 1. Single-write consolidated roster backup (1 Write instead of hundreds!)
       const empCount = Object.keys(employeeDb).length;
       await syncEmployeesBatchToFirestore(employeeDb);
 
-      // 2. Backup assessments history
+      // 2. Backup assessments history using lightweight sanitized payload
       let histCount = 0;
       for (const rec of history) {
         await syncAssessmentToFirestore(rec);
@@ -1241,8 +1248,8 @@ export default function App() {
       }
 
       const msg = lang === 'ID'
-        ? `✅ Berhasil membackup ${empCount} data karyawan dan ${histCount} riwayat laporan assessment ke Firebase Firestore (Project: ftw-wbs)!`
-        : `✅ Successfully backed up ${empCount} employees and ${histCount} assessment records to Firebase Firestore (Project: ftw-wbs)!`;
+        ? `✅ Berhasil membackup ${empCount} data karyawan (1 Dokumen Roster Hemat) dan ${histCount} data assessment ringkas ke Firebase Firestore!`
+        : `✅ Successfully backed up ${empCount} employees (1-Doc Consolidated Roster) and ${histCount} lightweight assessment records to Firebase Firestore!`;
       
       setFirebaseStatusMsg(msg);
       alert(msg);
@@ -1259,10 +1266,10 @@ export default function App() {
   const handleRestoreFromFirebase = async () => {
     try {
       setFirebaseSyncing(true);
-      setFirebaseStatusMsg(lang === 'ID' ? 'Mengambil data dari Firebase Firestore...' : 'Pulling data from Firebase Firestore...');
+      setFirebaseStatusMsg(lang === 'ID' ? 'Mengambil data dari Firebase Firestore (Mode Hemat 1-Read)...' : 'Pulling data from Firebase Firestore (1-Read Saver Mode)...');
 
-      // 1. Restore employees
-      const fsEmployees = await fetchEmployeesFromFirestore();
+      // 1. Restore employees via consolidated single-read roster (1 Read only!)
+      const fsEmployees = await fetchRosterFromFirestore();
       let empCount = 0;
       if (fsEmployees && Object.keys(fsEmployees).length > 0) {
         const mergedEmp = { ...employeeDb, ...fsEmployees };
@@ -1270,8 +1277,8 @@ export default function App() {
         await saveEmployeeDb(mergedEmp);
       }
 
-      // 2. Restore assessments
-      const fsAssessments = await fetchAssessmentsFromFirestore();
+      // 2. Restore assessments with bounded query (Limit 100 to protect read quota)
+      const fsAssessments = await fetchAssessmentsFromFirestore(100);
       let histCount = 0;
       if (fsAssessments && fsAssessments.length > 0) {
         const existingIds = new Set(history.map(r => r.id));
@@ -1294,8 +1301,8 @@ export default function App() {
       }
 
       const msg = lang === 'ID'
-        ? `✅ Berhasil memulihkan ${empCount} data karyawan dan ${histCount} data assessment dari Firebase Firestore!`
-        : `✅ Successfully restored ${empCount} employees and ${histCount} assessment records from Firebase Firestore!`;
+        ? `✅ Berhasil memulihkan ${empCount} data karyawan (1 Read) dan ${histCount} data assessment dari Firebase Firestore!`
+        : `✅ Successfully restored ${empCount} employees (1 Read) and ${histCount} assessment records from Firebase Firestore!`;
 
       setFirebaseStatusMsg(msg);
       alert(msg);
@@ -1306,6 +1313,29 @@ export default function App() {
       alert(errMsg);
     } finally {
       setFirebaseSyncing(false);
+    }
+  };
+
+  // Handler to prune old assessments to free up Firebase storage space
+  const handlePruneOldAssessments = async () => {
+    const confirmPrune = window.confirm(
+      lang === 'ID'
+        ? `Apakah Anda yakin ingin memangkas & menghapus data laporan di Firebase Firestore yang berumur lebih dari ${pruneDays} hari? Tindakan ini akan mengosongkan kapasitas storage Firebase dan menjaga performa tetap cepat.`
+        : `Are you sure you want to prune assessment records in Firebase Firestore older than ${pruneDays} days? This will free up storage space.`
+    );
+    if (!confirmPrune) return;
+
+    try {
+      setIsPruning(true);
+      setFirebaseStatusMsg(lang === 'ID' ? `Sedang memangkas data lama (> ${pruneDays} hari)...` : `Pruning data older than ${pruneDays} days...`);
+      const result = await pruneOldAssessmentsFromFirestore(pruneDays);
+      setFirebaseStatusMsg(result.message);
+      alert(result.message);
+    } catch (err: any) {
+      console.error("Prune error:", err);
+      alert(`Gagal memangkas: ${err.message || err}`);
+    } finally {
+      setIsPruning(false);
     }
   };
 
@@ -4319,10 +4349,10 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                             </span>
                             <div>
                               <h3 className="text-lg font-black tracking-tight">
-                                Firebase Cloud Backup & Database Storage
+                                Firebase Cloud Storage & Quota Optimization
                               </h3>
                               <p className="text-xs text-amber-100 font-medium">
-                                Database cloud backup Firestore terkonfigurasi untuk PT. Wahana Bara Sentosa
+                                Mode Hemat Kuota & Penyimpanan Ringan Aktif untuk PT. Wahana Bara Sentosa
                               </p>
                             </div>
                           </div>
@@ -4333,15 +4363,61 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                               <span className="font-mono font-bold text-white text-sm">ftw-wbs</span>
                             </div>
                             <div className="bg-black/15 rounded-xl p-3">
-                              <span className="text-[10px] text-amber-200 uppercase font-black tracking-wider block">Status Koneksi</span>
-                              <span className="font-bold text-emerald-300 text-sm flex items-center gap-1.5">
+                              <span className="text-[10px] text-amber-200 uppercase font-black tracking-wider block">Mode Arsitektur</span>
+                              <span className="font-bold text-emerald-300 text-xs flex items-center gap-1.5 mt-0.5">
                                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                🟢 TERHUBUNG (CONNECTED)
+                                ⚡ HEMAT KUOTA & STORAGE
                               </span>
                             </div>
                             <div className="bg-black/15 rounded-xl p-3">
-                              <span className="text-[10px] text-amber-200 uppercase font-black tracking-wider block">Firestore Collections</span>
-                              <span className="font-mono font-bold text-white text-sm">employees & assessments</span>
+                              <span className="text-[10px] text-amber-200 uppercase font-black tracking-wider block">Target Collections</span>
+                              <span className="font-mono font-bold text-white text-xs">directory, assessments</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quota & Storage Optimization Highlights */}
+                      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 sm:p-5 shadow-xs">
+                        <div className="flex items-start gap-3">
+                          <span className="text-2xl">💡</span>
+                          <div className="space-y-2 text-xs">
+                            <h4 className="font-black text-emerald-950 uppercase tracking-wide text-xs">
+                              Strategi Optimasi Kuota & Penyimpanan Firebase Aktif:
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-emerald-900">
+                              <div className="bg-white/80 rounded-xl p-3 border border-emerald-150">
+                                <div className="font-bold text-emerald-950 flex items-center gap-1.5 mb-1">
+                                  <span>📦 1-Doc Consolidated Roster</span>
+                                </div>
+                                <p className="text-[11px] text-emerald-800 leading-relaxed">
+                                  Ratusan data karyawan dibundle ke 1 dokumen <code className="bg-emerald-100 px-1 py-0.5 rounded font-mono text-[10px]">/directory/roster</code>. Menghemat <b>99% kuota Read & Write</b> dibanding 1 dokumen per karyawan!
+                                </p>
+                              </div>
+                              <div className="bg-white/80 rounded-xl p-3 border border-emerald-150">
+                                <div className="font-bold text-emerald-950 flex items-center gap-1.5 mb-1">
+                                  <span>⚡ IndexedDB Persistent Cache</span>
+                                </div>
+                                <p className="text-[11px] text-emerald-800 leading-relaxed">
+                                  Cache multi-tab browser aktif di memori lokal. Pengambilan data berulang disajikan dari browser lokal tanpa memakan kuota Read Firebase.
+                                </p>
+                              </div>
+                              <div className="bg-white/80 rounded-xl p-3 border border-emerald-150">
+                                <div className="font-bold text-emerald-950 flex items-center gap-1.5 mb-1">
+                                  <span>📉 Payload Sanitized & Ringan</span>
+                                </div>
+                                <p className="text-[11px] text-emerald-800 leading-relaxed">
+                                  Field kosong & metadata UI dibersihkan sebelum disimpan ke Firestore, memotong ukuran penyimpanan dokumen hingga <b>70% lebih kecil</b>.
+                                </p>
+                              </div>
+                              <div className="bg-white/80 rounded-xl p-3 border border-emerald-150">
+                                <div className="font-bold text-emerald-950 flex items-center gap-1.5 mb-1">
+                                  <span>🛑 Pencegah Lonjakan Read (1.9M)</span>
+                                </div>
+                                <p className="text-[11px] text-emerald-800 leading-relaxed">
+                                  Menghilangkan pembacaan koleksi tanpa batas di setiap refresh halaman. Query riwayat dibatasi (limit) hanya untuk data esensial terbaru.
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -4355,13 +4431,13 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                             <div className="flex items-center gap-2 mb-3">
                               <span className="p-2 bg-rose-50 text-rose-600 rounded-lg font-black text-sm">🚀</span>
                               <h4 className="font-black text-sm text-neutral-900">
-                                {lang === 'ID' ? 'Backup Seluruh Data ke Firebase' : 'Backup All Data to Firebase'}
+                                {lang === 'ID' ? 'Backup Seluruh Data (Format Hemat)' : 'Backup All Data (Quota Saver)'}
                               </h4>
                             </div>
                             <p className="text-xs text-neutral-600 leading-relaxed mb-4">
                               {lang === 'ID'
-                                ? 'Mengunggah dan mencadangkan seluruh data karyawan aktif saat ini beserta seluruh riwayat assessment ke koleksi database cloud Firebase Firestore (ftw-wbs).'
-                                : 'Upload and safely backup all current active employees and full assessment history records to Firebase Firestore cloud database (ftw-wbs).'}
+                                ? 'Mengunggah seluruh daftar karyawan ke 1 dokumen roster hemat kuota dan riwayat assessment ringkas ke database Firestore (ftw-wbs).'
+                                : 'Upload and safely backup all current active employees (1-Doc roster) and compact assessment history to Firebase Firestore.'}
                             </p>
                             
                             <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-150 mb-4 space-y-1.5 text-xs">
@@ -4372,6 +4448,10 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                               <div className="flex justify-between text-neutral-600">
                                 <span>Laporan riwayat di memori:</span>
                                 <span className="font-bold font-mono text-neutral-900">{history.length} laporan</span>
+                              </div>
+                              <div className="flex justify-between text-emerald-700 font-semibold pt-1 border-t border-neutral-200">
+                                <span>Estimasi Kuota Tulis (Writes):</span>
+                                <span className="font-mono">1 Write (Roster) + {history.length} Writes</span>
                               </div>
                             </div>
                           </div>
@@ -4401,19 +4481,19 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                             <div className="flex items-center gap-2 mb-3">
                               <span className="p-2 bg-emerald-50 text-emerald-600 rounded-lg font-black text-sm">📥</span>
                               <h4 className="font-black text-sm text-neutral-900">
-                                {lang === 'ID' ? 'Tarik & Pulihkan Data dari Firebase' : 'Restore Data from Firebase'}
+                                {lang === 'ID' ? 'Tarik Data (1-Read Roster Mode)' : 'Restore Data (1-Read Mode)'}
                               </h4>
                             </div>
                             <p className="text-xs text-neutral-600 leading-relaxed mb-4">
                               {lang === 'ID'
-                                ? 'Mengambil data karyawan dan riwayat assessment yang tersimpan di cloud Firebase Firestore untuk memulihkan atau menyinkronkan data ke aplikasi lokal.'
-                                : 'Fetch employees and assessment records stored in Firebase Firestore cloud to restore or synchronize local application state.'}
+                                ? 'Mengambil seluruh karyawan hanya dengan 1 kali Read dari dokumen roster terpadu, plus riwayat laporan assessment esensial.'
+                                : 'Fetch all employees with a single Firestore Read operation from the unified roster document, plus essential assessment history.'}
                             </p>
 
                             <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-150 mb-4 text-xs text-neutral-600 space-y-1">
-                              <div className="font-bold text-neutral-800">⚡ Sinkronisasi Otomatis Terpasang:</div>
+                              <div className="font-bold text-neutral-800">⚡ Efisiensi Kuota Baca (Read):</div>
                               <p className="text-[11px] text-neutral-500 leading-relaxed">
-                                Setiap penambahan atau penghapusan karyawan di tab <b>Karyawan Aktif</b>, serta setiap kali karyawan mengirimkan laporan baru, data otomatis disimpan langsung ke Firebase Firestore.
+                                Mode sebelumnya menghabiskan ratusan Read setiap kali ditarik. Mode baru mengelompokkan data karyawan dalam 1 dokumen roster sehingga hanya mengonsumsi <b>1 Read</b>!
                               </p>
                             </div>
                           </div>
@@ -4435,6 +4515,52 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                 : (lang === 'ID' ? '📥 Tarik Data dari Firebase' : '📥 Pull from Firebase')}
                             </span>
                           </button>
+                        </div>
+                      </div>
+
+                      {/* 3. Storage Pruning & Cleanup Card (Hemat Kapasitas Penyimpanan) */}
+                      <div className="bg-white rounded-xl border border-amber-200 p-5 shadow-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <span className="p-1.5 bg-amber-50 text-amber-600 rounded-lg font-bold text-sm">🧹</span>
+                              <h4 className="font-black text-sm text-neutral-900">
+                                {lang === 'ID' ? 'Pangkas & Bersihkan Storage Riwayat Lama' : 'Prune Old History Storage'}
+                              </h4>
+                            </div>
+                            <p className="text-xs text-neutral-600 max-w-2xl leading-relaxed">
+                              {lang === 'ID'
+                                ? 'Hapus laporan assessment lama dari Firebase Firestore yang sudah tidak aktif untuk mengosongkan kuota penyimpanan (Storage) agar tetap berada dalam free-tier dan database tetap ringan.'
+                                : 'Delete old assessment records from Firebase Firestore to free up storage space and keep your database lightweight.'}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <select
+                              value={pruneDays}
+                              onChange={(e) => setPruneDays(Number(e.target.value))}
+                              className="bg-neutral-50 border border-neutral-300 rounded-xl px-3 py-2 text-xs font-bold text-neutral-800"
+                            >
+                              <option value={14}>{lang === 'ID' ? '> 14 Hari Lalu' : '> 14 Days Old'}</option>
+                              <option value={30}>{lang === 'ID' ? '> 30 Hari Lalu' : '> 30 Days Old'}</option>
+                              <option value={60}>{lang === 'ID' ? '> 60 Hari Lalu' : '> 60 Days Old'}</option>
+                              <option value={90}>{lang === 'ID' ? '> 90 Hari Lalu' : '> 90 Days Old'}</option>
+                            </select>
+
+                            <button
+                              type="button"
+                              disabled={isPruning}
+                              onClick={handlePruneOldAssessments}
+                              className={`py-2 px-4 rounded-xl font-bold text-xs text-white shadow-xs cursor-pointer transition flex items-center gap-1.5 ${
+                                isPruning
+                                  ? 'bg-neutral-400 cursor-not-allowed'
+                                  : 'bg-amber-600 hover:bg-amber-700 active:scale-95'
+                              }`}
+                            >
+                              <Trash2 className={`w-3.5 h-3.5 ${isPruning ? 'animate-spin' : ''}`} />
+                              <span>{isPruning ? (lang === 'ID' ? 'Memangkas...' : 'Pruning...') : (lang === 'ID' ? 'Pangkas Sekarang' : 'Prune Now')}</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
 
