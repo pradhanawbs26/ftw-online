@@ -425,24 +425,19 @@ export default function App() {
         console.warn("Failed to load employees list on startup", e);
       }
 
-      // Quota Saver: Only consult Firestore if the local/server database is completely empty
-      const localEmpSaved = localStorage.getItem('wbs_sheets_employee_db');
-      const isEmpEmpty = (!localEmpSaved || localEmpSaved === '{}') && Object.keys(employeeDb).length <= 8;
-      if (isEmpEmpty) {
-        try {
-          // Use consolidated single-document roster (1 Read only!)
-          const firestoreEmployees = await fetchRosterFromFirestore();
-          if (firestoreEmployees && Object.keys(firestoreEmployees).length > 0) {
-            console.log(`[Firebase Recovery] Restored ${Object.keys(firestoreEmployees).length} employees via 1-Read Roster`);
-            setEmployeeDb(prev => {
-              const merged = { ...firestoreEmployees, ...prev };
-              localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(merged));
-              return merged;
-            });
-          }
-        } catch (fbErr) {
-          console.warn("[Firebase Recovery] Employees fetch warning:", fbErr);
+      // Consult Firestore single-read roster to ensure any cloud-registered employees are fully merged
+      try {
+        // Use consolidated single-document roster (1 Read only!)
+        const firestoreEmployees = await fetchRosterFromFirestore();
+        if (firestoreEmployees && Object.keys(firestoreEmployees).length > 0) {
+          setEmployeeDb(prev => {
+            const merged = { ...firestoreEmployees, ...prev };
+            localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(merged));
+            return merged;
+          });
         }
+      } catch (fbErr) {
+        console.warn("[Firebase Recovery] Employees fetch warning:", fbErr);
       }
 
       // Load history with filtering to ignore and cleanse any legacy invalid imports

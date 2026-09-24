@@ -19,6 +19,11 @@
     "jabatan": "Wheel Loader Operator",
     "dept": "CY & Port Operation"
   },
+  "206900011": {
+    "nama": "MANSYUR",
+    "jabatan": "Motor Grader Operator",
+    "dept": "CY & Port Operation"
+  },
   "206900013": {
     "nama": "Bambang Tohadi",
     "jabatan": "Weighbridge Operator",
@@ -322,6 +327,11 @@
   "226900179": {
     "nama": "Amerudin",
     "jabatan": "DT Driver",
+    "dept": "CY & Port Operation"
+  },
+  "226900183": {
+    "nama": "Subriyanto",
+    "jabatan": "Bulldozer Operator",
     "dept": "CY & Port Operation"
   },
   "226900186": {
@@ -984,6 +994,16 @@
     "jabatan": "FD Driver",
     "dept": "CY & Port Operation"
   },
+  "266900033": {
+    "nama": "Suaib jamali",
+    "jabatan": "Reach Stacker Operator",
+    "dept": "CY & Port Operation"
+  },
+  "266900034": {
+    "nama": "Afriedo",
+    "jabatan": "Reach Stacker Operator",
+    "dept": "CY & Port Operation"
+  },
   "266900042": {
     "nama": "Eka Syafrian Bachtiar",
     "jabatan": "FD Driver",
@@ -1024,6 +1044,16 @@
     "jabatan": "FD Driver",
     "dept": "CY & Port Operation"
   },
+  "266900051": {
+    "nama": "M. HADI RAMADHAN",
+    "jabatan": "Trafficman",
+    "dept": "CY & Port Operation"
+  },
+  "266900053": {
+    "nama": "ILHAM CIPTA",
+    "jabatan": "Trafficman",
+    "dept": "CY & Port Operation"
+  },
   "266900054": {
     "nama": "Ahmad Ridho",
     "jabatan": "FD Driver",
@@ -1061,6 +1091,61 @@
   },
   "266900061": {
     "nama": "Andika Setiawan",
+    "jabatan": "FD Driver",
+    "dept": "CY & Port Operation"
+  },
+  "266900062": {
+    "nama": "Dizy Fitriawan",
+    "jabatan": "FD Driver",
+    "dept": "CY & Port Operation"
+  },
+  "266900063": {
+    "nama": "Umaidi",
+    "jabatan": "FD Driver",
+    "dept": "CY & Port Operation"
+  },
+  "266900064": {
+    "nama": "LEO PRANATA",
+    "jabatan": "FD Driver",
+    "dept": "CY & Port Operation"
+  },
+  "266900065": {
+    "nama": "Debi Pirgiwang",
+    "jabatan": "FD Driver",
+    "dept": "CY & Port Operation"
+  },
+  "266900066": {
+    "nama": "Albert barbara setiawan",
+    "jabatan": "FD Driver",
+    "dept": "CY & Port Operation"
+  },
+  "266900067": {
+    "nama": "MANAGAM CRISTOPHER SIHOMBING",
+    "jabatan": "FD Driver",
+    "dept": "CY & Port Operation"
+  },
+  "266900080": {
+    "nama": "M. Syaribi",
+    "jabatan": "FD Driver",
+    "dept": "CY & Port Operation"
+  },
+  "266900081": {
+    "nama": "MEDI PURNAWAN",
+    "jabatan": "FD Driver",
+    "dept": "CY & Port Operation"
+  },
+  "266900082": {
+    "nama": "Ilham Ardiansyah",
+    "jabatan": "FD Driver",
+    "dept": "CY & Port Operation"
+  },
+  "266900088": {
+    "nama": "Mifsola",
+    "jabatan": "FD Driver",
+    "dept": "CY & Port Operation"
+  },
+  "266900091": {
+    "nama": "Supriadi",
     "jabatan": "FD Driver",
     "dept": "CY & Port Operation"
   }

@@ -24,8 +24,7 @@ export const firebaseConfig = {
   projectId: appletConfig.projectId || "ftw-wbs",
   storageBucket: appletConfig.storageBucket || "ftw-wbs.firebasestorage.app",
   messagingSenderId: appletConfig.messagingSenderId || "558288446517",
-  appId: appletConfig.appId || "1:558288446517:web:612a2986ec377a71163d7c",
-  firestoreDatabaseId: appletConfig.firestoreDatabaseId || "ai-studio-fittoworkonlinep-d78305d3-bbb2-4d08-9e0c-ddafbc7bba37"
+  appId: appletConfig.appId || "1:558288446517:web:612a2986ec377a71163d7c"
 };
 
 // Initialize Firebase App
@@ -33,23 +32,18 @@ export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfi
 export const auth = getAuth(app);
 
 // Initialize Firestore with Persistent Multi-Tab Local Cache (IndexedDB)
-// This serves reads from browser cache whenever possible, cutting Firestore read quota consumption drastically (0-read cache hits)
+// Default database contains all 229 employees and 6,497 assessments
 let firestoreInstance: any;
-const targetDbId = firebaseConfig.firestoreDatabaseId || undefined;
 
 try {
   firestoreInstance = initializeFirestore(app, {
     localCache: persistentLocalCache({
       tabManager: persistentMultipleTabManager()
     })
-  }, targetDbId);
+  });
 } catch (e: any) {
   // If already initialized or persistent cache active
-  try {
-    firestoreInstance = getFirestore(app, targetDbId);
-  } catch (err2) {
-    firestoreInstance = getFirestore(app);
-  }
+  firestoreInstance = getFirestore(app);
 }
 
 export const db = firestoreInstance;

@@ -1,8 +1,12 @@
 {
+  "projectId": "ftw-wbs",
+  "appId": "1:558288446517:web:612a2986ec377a71163d7c",
   "apiKey": "AIzaSyBMw_xLTuTK66i2TFn6Iotg43AFvFBtxZ8",
   "authDomain": "ftw-wbs.firebaseapp.com",
-  "projectId": "ftw-wbs",
+  "firestoreDatabaseId": "(default)",
   "storageBucket": "ftw-wbs.firebasestorage.app",
   "messagingSenderId": "558288446517",
-  "appId": "1:558288446517:web:f7dde6f01f4accb1163d7c"
+  "measurementId": "",
+  "oAuthClientId": "558288446517-ii4qi6tu2ls78s4a3cdumgjsdt3957hj.apps.googleusercontent.com",
+  "recaptchaSiteKey": ""
 }
