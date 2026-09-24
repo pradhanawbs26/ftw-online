@@ -280,7 +280,16 @@ export default function App() {
   const [hasPersonalProblem, setHasPersonalProblem] = useState<boolean>(false);
 
   // Registry / History lists
-  const [history, setHistory] = useState<CustomAssessment[]>([]);
+  const [history, setHistory] = useState<CustomAssessment[]>(() => {
+    try {
+      const saved = localStorage.getItem('wbs_ftw_history');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
   const [showHistoryOverlay, setShowHistoryOverlay] = useState<boolean>(false);
   const [historyNikFilter, setHistoryNikFilter] = useState<string>('');
   const [formError, setFormError] = useState<string>('');
@@ -311,11 +320,11 @@ export default function App() {
   const [adminPasswordInput, setAdminPasswordInput] = useState<string>('');
   const [adminLoginError, setAdminLoginError] = useState<string>('');
 
-  // Admin Fit to Work Fatigue Dashboard States
+  // Admin Fit to Work Fatigue Dashboard States (Default status filter ALL to show all incoming submissions)
   const [adminFilterStartDate, setAdminFilterStartDate] = useState<string>('');
   const [adminFilterEndDate, setAdminFilterEndDate] = useState<string>('');
   const [adminFilterShift, setAdminFilterShift] = useState<'ALL' | 'DAY' | 'NIGHT'>('ALL');
-  const [adminFilterStatus, setAdminFilterStatus] = useState<'ALL' | 'PROBLEMATIC' | 'FIT' | 'FIT_CONDITIONAL' | 'REST_BEFORE_WORK' | 'UNFIT'>('PROBLEMATIC');
+  const [adminFilterStatus, setAdminFilterStatus] = useState<'ALL' | 'PROBLEMATIC' | 'FIT' | 'FIT_CONDITIONAL' | 'REST_BEFORE_WORK' | 'UNFIT'>('ALL');
   const [selectedDashboardRecordId, setSelectedDashboardRecordId] = useState<string | null>(null);
 
   // Google Sheets Management States
@@ -440,157 +449,70 @@ export default function App() {
         console.warn("[Firebase Recovery] Employees fetch warning:", fbErr);
       }
 
-      // Load history with filtering to ignore and cleanse any legacy invalid imports
+      // Load history: 1) Try Server /api/history, 2) Fallback to Firestore, 3) Fallback to LocalStorage
+      let historyLoaded = false;
       try {
         const historyResp = await fetch('/api/history');
         if (historyResp.ok) {
-          const data = await historyResp.json();
-          if (Array.isArray(data)) {
-            // Filter both loaded server dataset and cached local dataset to block garbage data rows
-            const filterGarbage = (item: any) => {
-              if (!item || !item.timestamp || !item.id) return false;
-              // Real timestamps contain characters like '-' and digits (e.g. "2026-05-22")
-              // Garbage imported rows have names like "Wahyudi Asrianto" as timestamp
-              const hasDateIndicator = item.timestamp.includes("-") || item.timestamp.includes("/");
-              const isPureText = /^[a-zA-Z\s]+$/.test(item.timestamp);
-              return hasDateIndicator && !isPureText;
-            };
-
-            const cleanServerData = data.filter(filterGarbage);
-
-            const localSaved = localStorage.getItem('wbs_ftw_history');
-            let localParsed: any[] = [];
-            if (localSaved) {
-              try {
-                const parsed = JSON.parse(localSaved);
-                if (Array.isArray(parsed)) {
-                  localParsed = parsed.filter(filterGarbage);
-                }
-              } catch (e) {}
-            }
-
-            if (cleanServerData.length === 0 && localParsed.length > 0) {
-              console.log("[Self-Heal] Server history was blank/reset, republishing clean cached assessments to server database...");
-              setHistory(localParsed);
-              localStorage.setItem('wbs_ftw_history', JSON.stringify(localParsed));
-              
-              // Restore history records on server
-              for (const record of localParsed) {
-                try {
-                  await fetch('/api/history', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(record)
-                  });
-                } catch (postErr) {
-                  console.error("Self-heal backup upload failed for record", record.id, postErr);
-                }
-              }
-            } else {
-              setHistory(cleanServerData);
-              localStorage.setItem('wbs_ftw_history', JSON.stringify(cleanServerData));
-            }
-          }
-        }
-      } catch (e) {
-        console.warn("Failed to retrieve cloud history logs, falling back to local files", e);
-        const saved = localStorage.getItem('wbs_ftw_history');
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed)) {
+          const contentType = historyResp.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const data = await historyResp.json();
+            if (Array.isArray(data) && data.length > 0) {
               const filterGarbage = (item: any) => {
                 if (!item || !item.timestamp || !item.id) return false;
                 const hasDateIndicator = item.timestamp.includes("-") || item.timestamp.includes("/");
                 const isPureText = /^[a-zA-Z\s]+$/.test(item.timestamp);
                 return hasDateIndicator && !isPureText;
               };
-              const cleanLocalData = parsed.filter(filterGarbage);
-              setHistory(cleanLocalData);
-              localStorage.setItem('wbs_ftw_history', JSON.stringify(cleanLocalData));
+
+              const cleanServerData = data.filter(filterGarbage);
+              if (cleanServerData.length > 0) {
+                setHistory(cleanServerData);
+                historyLoaded = true;
+                try {
+                  // Only cache top 100 items to avoid DOMException QuotaExceededError crashing the app
+                  localStorage.setItem('wbs_ftw_history', JSON.stringify(cleanServerData.slice(0, 100)));
+                } catch (e) {
+                  console.warn("LocalStorage quota full, history stored in memory");
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to retrieve server history logs", e);
+      }
+
+      // If server data was not loaded (e.g. hosted on static Vercel, offline, or empty), fetch from Firestore
+      if (!historyLoaded) {
+        try {
+          const firestoreRecords = await fetchAssessmentsFromFirestore(150);
+          if (firestoreRecords && firestoreRecords.length > 0) {
+            console.log(`[Firebase History] Restored ${firestoreRecords.length} real assessments from Firestore`);
+            setHistory(firestoreRecords);
+            historyLoaded = true;
+            try {
+              localStorage.setItem('wbs_ftw_history', JSON.stringify(firestoreRecords.slice(0, 100)));
+            } catch (e) {}
+          }
+        } catch (fbHistErr) {
+          console.warn("[Firebase Recovery] History fetch error:", fbHistErr);
+        }
+      }
+
+      // Final fallback to cached localStorage if still empty
+      if (!historyLoaded) {
+        const saved = localStorage.getItem('wbs_ftw_history');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setHistory(parsed);
+              historyLoaded = true;
             }
           } catch (err) {
             console.error(err);
           }
-        } else {
-          // Default initial fallback logs
-          const initLogs: CustomAssessment[] = [
-            {
-              id: "WBS-FTW-90214",
-              timestamp: "2026-05-22T08:14:02Z",
-              nik: "88204911",
-              nama: "Aris Setiawan",
-              jabatan: "Operator Excavator",
-              dept: "Produksi",
-              tanggalPengisian: "2026-05-22",
-              jamPengisian: "08:10",
-              sleep12Session1Bed: "23:00",
-              sleep12Session1Wake: "06:00",
-              sleep12Session2Bed: "",
-              sleep12Session2Wake: "",
-              hasSleep12Session2: false,
-              totalSleep12: 7.0,
-              sleep36Session1Bed: "22:30",
-              sleep36Session1Wake: "05:00",
-              sleep36Session2Bed: "",
-              sleep36Session2Wake: "",
-              hasSleep36Session2: false,
-              totalSleep36: 13.5,
-              consumesObat: false,
-              hasPersonalProblem: false,
-              totalFatigueScore: 1,
-              readinessScore: 92,
-              fatigueCategory: "NORMAL",
-              finalDecision: "FIT"
-            },
-            {
-              id: "WBS-FTW-71402",
-              timestamp: "2026-05-21T18:45:00Z",
-              nik: "A5021",
-              nama: "Rina Wijaya",
-              jabatan: "Safety Officer",
-              dept: "HSE",
-              tanggalPengisian: "2026-05-21",
-              jamPengisian: "18:30",
-              sleep12Session1Bed: "23:30",
-              sleep12Session1Wake: "04:30",
-              sleep12Session2Bed: "",
-              sleep12Session2Wake: "",
-              hasSleep12Session2: false,
-              totalSleep12: 5.0,
-              sleep36Session1Bed: "23:00",
-              sleep36Session1Wake: "04:00",
-              sleep36Session2Bed: "",
-              sleep36Session2Wake: "",
-              hasSleep36Session2: false,
-              totalSleep36: 10.0,
-              consumesObat: true,
-              hasPersonalProblem: false,
-              totalFatigueScore: 13,
-              readinessScore: 35,
-              fatigueCategory: "REJECT",
-              finalDecision: "UNFIT"
-            }
-          ];
-          setHistory(initLogs);
-          localStorage.setItem('wbs_ftw_history', JSON.stringify(initLogs));
-        }
-      }
-
-      // Quota Saver: Only fetch from Firestore if local history is completely blank
-      const localHistRaw = localStorage.getItem('wbs_ftw_history');
-      const isHistoryEmpty = !localHistRaw || localHistRaw === '[]';
-      if (isHistoryEmpty) {
-        try {
-          // Bounded query (limit 50) to protect Firestore read quota
-          const firestoreRecords = await fetchAssessmentsFromFirestore(50);
-          if (firestoreRecords && firestoreRecords.length > 0) {
-            console.log(`[Firebase Recovery] Restored ${firestoreRecords.length} assessments from Firestore (Limit 50)`);
-            setHistory(firestoreRecords);
-            localStorage.setItem('wbs_ftw_history', JSON.stringify(firestoreRecords));
-          }
-        } catch (fbHistErr) {
-          console.warn("[Firebase Recovery] History fetch warning:", fbHistErr);
         }
       }
     };
@@ -3221,40 +3143,58 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                   
                   {/* TAB 1: INTERACTIVE FATIGUE & FIT TO WORK DASHBOARD */}
                   {adminActiveTab === 'dashboard' && (() => {
-                    // Gather records matching filters
-                    const filteredRecords = history.filter(record => {
-                      // 1. Date filters
-                      if (adminFilterStartDate && record.tanggalPengisian < adminFilterStartDate) {
+                    // Helper to normalize date strings to YYYY-MM-DD
+                    const normalizeDateStr = (d?: string) => {
+                      if (!d) return '';
+                      const clean = d.trim().split(' ')[0].replace(/\//g, '-');
+                      const parts = clean.split('-');
+                      if (parts.length === 3) {
+                        if (parts[0].length === 4) {
+                          return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                        } else if (parts[2].length === 4) {
+                          return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                        }
+                      }
+                      return clean;
+                    };
+
+                    // 1. Gather records in the selected Period (Date range & Shift) for overall KPI Summary
+                    const periodRecords = history.filter(record => {
+                      const recDate = normalizeDateStr(record.tanggalPengisian);
+                      if (adminFilterStartDate && recDate && recDate < adminFilterStartDate) {
                         return false;
                       }
-                      if (adminFilterEndDate && record.tanggalPengisian > adminFilterEndDate) {
+                      if (adminFilterEndDate && recDate && recDate > adminFilterEndDate) {
                         return false;
                       }
                       
-                      // 2. Shift filters
+                      // Shift filters
                       if (adminFilterShift !== 'ALL') {
                         const isDayShift = checkIsDayShift(record.jamPengisian);
                         if (adminFilterShift === 'DAY' && !isDayShift) return false;
                         if (adminFilterShift === 'NIGHT' && isDayShift) return false;
                       }
 
-                      // 3. Status filters
+                      return true;
+                    });
+
+                    // Stats breakdown for the selected period
+                    const periodTotalCount = periodRecords.length;
+                    const fitCount = periodRecords.filter(r => r.finalDecision === 'FIT').length;
+                    const fitCondCount = periodRecords.filter(r => r.finalDecision === 'FIT_CONDITIONAL').length;
+                    const restCount = periodRecords.filter(r => r.finalDecision === 'REST_BEFORE_WORK').length;
+                    const unfitCount = periodRecords.filter(r => r.finalDecision === 'UNFIT').length;
+                    const problematicCount = periodTotalCount - fitCount;
+
+                    // 2. Gather records filtered for table view (applying Status filter)
+                    const filteredRecords = periodRecords.filter(record => {
                       if (adminFilterStatus === 'PROBLEMATIC') {
                         return record.finalDecision !== 'FIT';
                       } else if (adminFilterStatus !== 'ALL') {
                         return record.finalDecision === adminFilterStatus;
                       }
-
                       return true;
                     });
-
-                    // Stats breakdown
-                    const totalCount = filteredRecords.length;
-                    const fitCount = filteredRecords.filter(r => r.finalDecision === 'FIT').length;
-                    const fitCondCount = filteredRecords.filter(r => r.finalDecision === 'FIT_CONDITIONAL').length;
-                    const restCount = filteredRecords.filter(r => r.finalDecision === 'REST_BEFORE_WORK').length;
-                    const unfitCount = filteredRecords.filter(r => r.finalDecision === 'UNFIT').length;
-                    const problematicCount = totalCount - fitCount;
 
                     return (
                       <div className="flex flex-col gap-6">
@@ -3315,8 +3255,8 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                 value={adminFilterStatus}
                                 onChange={(e) => setAdminFilterStatus(e.target.value as any)}
                               >
-                                <option value="PROBLEMATIC">⚠️ {lang === 'ID' ? 'Hanya Bermasalah (Kurang/Tidak Fit)' : 'Problematic / Kurang Fit Only'}</option>
                                 <option value="ALL">📋 {lang === 'ID' ? 'Semua Status (Seluruh Laporan)' : 'All Status (Show All)'}</option>
+                                <option value="PROBLEMATIC">⚠️ {lang === 'ID' ? 'Hanya Bermasalah (Kurang/Tidak Fit)' : 'Problematic / Kurang Fit Only'}</option>
                                 <option value="FIT">🟢 FIT TO WORK</option>
                                 <option value="FIT_CONDITIONAL">🟡 BEKERJA DALAM PENGAWASAN KHUSUS</option>
                                 <option value="REST_BEFORE_WORK">🟠 WAJIB ISTIRAHAT SEBELUM BEKERJA</option>
@@ -3335,7 +3275,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                 setAdminFilterStartDate('');
                                 setAdminFilterEndDate('');
                                 setAdminFilterShift('ALL');
-                                setAdminFilterStatus('PROBLEMATIC');
+                                setAdminFilterStatus('ALL');
                               }}
                               className="bg-neutral-200 hover:bg-neutral-300 text-neutral-700 text-[10px] font-black uppercase py-1 px-3 border border-neutral-300 rounded cursor-pointer transition shadow-sm"
                             >
@@ -3347,15 +3287,15 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                         {/* Summary Widget Badge Cards */}
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                           <div className="bg-white border border-neutral-200 rounded-xl p-3 text-center shadow-xs">
-                            <span className="block text-[9px] font-black text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'TOTAL PENILAIAN' : 'TOTAL FILTERED'}</span>
-                            <span className="block text-xl font-mono font-black text-neutral-900 mt-1">{totalCount}</span>
+                            <span className="block text-[9px] font-black text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'TOTAL PENILAIAN' : 'TOTAL PERIOD'}</span>
+                            <span className="block text-xl font-mono font-black text-neutral-900 mt-1">{periodTotalCount}</span>
                             <span className="text-[8.5px] text-neutral-400 font-bold block mt-0.5 uppercase">Laporan</span>
                           </div>
 
                           <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-center shadow-xs">
                             <span className="block text-[9px] font-black text-rose-700 uppercase tracking-wider">⚠️ {lang === 'ID' ? 'BERMASALAH' : 'CURBED ISSUES'}</span>
                             <span className="block text-xl font-mono font-black text-rose-800 mt-1">{problematicCount}</span>
-                            <span className="text-[8.5px] text-rose-500 font-bold block mt-0.5 uppercase">({totalCount > 0 ? Math.round((problematicCount/totalCount)*100) : 0}%) Kurang Fit</span>
+                            <span className="text-[8.5px] text-rose-500 font-bold block mt-0.5 uppercase">({periodTotalCount > 0 ? Math.round((problematicCount/periodTotalCount)*100) : 0}%) Kurang Fit</span>
                           </div>
 
                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center shadow-sm">
@@ -3399,7 +3339,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                 <span>{lang === 'ID' ? 'Unduh Spreadsheet (Excel/CSV)' : 'Download Spreadsheet'}</span>
                               </button>
                               <span className="bg-neutral-800 text-white text-[9px] px-2 py-1 font-mono font-bold rounded-full h-fit shrink-0">
-                                {totalCount} Logs Match
+                                {filteredRecords.length} Logs Match
                               </span>
                             </div>
                           </div>
