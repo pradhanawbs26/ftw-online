@@ -241,14 +241,24 @@ export async function pruneOldAssessmentsFromFirestore(daysOld: number = 30): Pr
  * - Consolidated approach: 200 employees = 1 single document, requiring exactly 1 Read and 1 Write!
  * - Saves 99.5% on Firestore Reads, Writes, and Document Indexing Storage Overhead!
  */
+const DUMMY_NIKS_PURGE_SET = new Set([
+  "88204911", "A0483", "A5021", "A8274", "A0912", "A3821", "88112233", "88556677"
+]);
+
 export async function saveRosterToFirestore(
   employees: Record<string, { nama: string; jabatan: string; dept: string }>
 ): Promise<boolean> {
   try {
     const docRef = doc(db, 'directory', 'roster');
-    const count = Object.keys(employees).length;
+    const cleaned: Record<string, { nama: string; jabatan: string; dept: string }> = {};
+    for (const [k, v] of Object.entries(employees)) {
+      if (!DUMMY_NIKS_PURGE_SET.has(k)) {
+        cleaned[k] = v;
+      }
+    }
+    const count = Object.keys(cleaned).length;
     await setDoc(docRef, {
-      roster: employees,
+      roster: cleaned,
       count,
       updatedAt: new Date().toISOString()
     });
@@ -271,7 +281,13 @@ export async function fetchRosterFromFirestore(): Promise<Record<string, { nama:
     if (snapshot.exists()) {
       const data = snapshot.data();
       if (data && data.roster && typeof data.roster === 'object') {
-        return data.roster;
+        const cleaned: Record<string, any> = {};
+        for (const [k, v] of Object.entries(data.roster)) {
+          if (!DUMMY_NIKS_PURGE_SET.has(k)) {
+            cleaned[k] = v;
+          }
+        }
+        return cleaned;
       }
     }
 
@@ -308,6 +324,35 @@ export async function syncEmployeeToFirestore(
   } catch (error) {
     console.warn('[Firestore] Gagal menyimpan karyawan ke Firestore:', error);
     return false;
+  }
+}
+
+/**
+ * Single-read targeted lookup for an individual employee by NIK from Firestore.
+ * Consumes exactly 1 Read. Used when a new employee enters their NIK and it is
+ * not yet cached in the local roster.
+ */
+export async function fetchSingleEmployeeFromFirestore(
+  nik: string
+): Promise<{ nama: string; jabatan: string; dept: string } | null> {
+  const cleanNik = nik.trim().toUpperCase();
+  if (!cleanNik || DUMMY_NIKS_PURGE_SET.has(cleanNik)) return null;
+
+  try {
+    const docRef = doc(db, 'employees', cleanNik);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const d = snap.data();
+      return {
+        nama: d.nama || '',
+        jabatan: d.jabatan || '',
+        dept: d.dept || ''
+      };
+    }
+    return null;
+  } catch (error) {
+    console.warn(`[Firestore] Lookup NIK ${cleanNik} gagal:`, error);
+    return null;
   }
 }
 
@@ -371,7 +416,7 @@ export async function fetchEmployeesFromFirestore(): Promise<Record<string, { na
     const result: Record<string, { nama: string; jabatan: string; dept: string }> = {};
     snapshot.forEach((d) => {
       const data = d.data();
-      if (data && data.nik) {
+      if (data && data.nik && !DUMMY_NIKS_PURGE_SET.has(data.nik)) {
         result[data.nik] = {
           nama: data.nama || '',
           jabatan: data.jabatan || '',
@@ -385,3 +430,21 @@ export async function fetchEmployeesFromFirestore(): Promise<Record<string, { na
     return {};
   }
 }
+
+/**
+ * Permanently purge the 8 Google AI Studio default dummy employees from Firebase Firestore
+ */
+export async function purgeDummyEmployeesFromFirestore(): Promise<void> {
+  const dummyNiks = ["88204911", "A0483", "A5021", "A8274", "A0912", "A3821", "88112233", "88556677"];
+  try {
+    const batch = writeBatch(db);
+    for (const nik of dummyNiks) {
+      batch.delete(doc(db, 'employees', nik));
+    }
+    await batch.commit();
+    console.log("[Firestore] Purged dummy employee documents from Firestore");
+  } catch (e) {
+    // Non-blocking
+  }
+}
+

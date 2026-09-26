@@ -13,16 +13,9 @@ const HISTORY_FILE = path.join(DATA_DIR, "history.json");
 const CONFIG_FILE = path.join(DATA_DIR, "config.json");
 const EMPLOYEES_FILE = path.join(DATA_DIR, "employees.json");
 
-const DEFAULT_EMPLOYEES = {
-  "88204911": { nama: "Aris Setiawan", jabatan: "Operator Excavator", dept: "Produksi" },
-  "A0483": { nama: "Andi Saputra", jabatan: "Driver Dump Truck", dept: "Logistik & Transport" },
-  "A5021": { nama: "Rina Wijaya", jabatan: "Safety Officer", dept: "HSE" },
-  "A8274": { nama: "Budi Pratama", jabatan: "Mechanic Supervisor", dept: "Engineering" },
-  "A0912": { nama: "Siti Rahma", jabatan: "Admin Finance", dept: "Finance & Admin" },
-  "A3821": { nama: "Dani Setiawan", jabatan: "Mine Surveyor", dept: "Survey" },
-  "88112233": { nama: "Guntur Wibowo", jabatan: "Operator Bulldozer", dept: "Produksi" },
-  "88556677": { nama: "Sandi Wijaya", jabatan: "Drill Specialist", dept: "Exploration" }
-};
+// List of Google AI Studio dummy/demo employee NIKs that must be completely excluded
+const DUMMY_NIKS_TO_PURGE = ["88204911", "A0483", "A5021", "A8274", "A0912", "A3821", "88112233", "88556677"];
+const DEFAULT_EMPLOYEES: Record<string, { nama: string; jabatan: string; dept: string }> = {};
 
 // Ensure data directory and files exist
 if (!fs.existsSync(DATA_DIR)) {
@@ -38,7 +31,26 @@ if (!fs.existsSync(CONFIG_FILE)) {
 }
 
 if (!fs.existsSync(EMPLOYEES_FILE)) {
-  fs.writeFileSync(EMPLOYEES_FILE, JSON.stringify(DEFAULT_EMPLOYEES, null, 2));
+  fs.writeFileSync(EMPLOYEES_FILE, JSON.stringify({}, null, 2));
+} else {
+  // Purge any dummy records from existing employees.json
+  try {
+    const raw = fs.readFileSync(EMPLOYEES_FILE, "utf-8");
+    const emp = JSON.parse(raw);
+    let changed = false;
+    for (const d of DUMMY_NIKS_TO_PURGE) {
+      if (emp[d]) {
+        delete emp[d];
+        changed = true;
+      }
+    }
+    if (changed) {
+      fs.writeFileSync(EMPLOYEES_FILE, JSON.stringify(emp, null, 2));
+      console.log("[Clean-Up] Successfully purged default dummy employees from employees.json");
+    }
+  } catch (e: any) {
+    console.error("Failed to clean dummy employees from server file", e.message);
+  }
 }
 
 // ---------------- CORPO SYNC ENGINE (GOOGLE SHEETS) ----------------
@@ -263,6 +275,118 @@ app.get("/api/history", (req, res) => {
   }
 });
 
+// Helper for date normalization
+function normalizeDateStr(dateStr?: string): string {
+  if (!dateStr) return "";
+  const clean = String(dateStr).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+  const parts = clean.split(/[/.-]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    }
+    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+  }
+  return clean;
+}
+
+function timeToMinutes(tStr?: string): number {
+  if (!tStr) return 0;
+  const parts = String(tStr).trim().split(':');
+  const h = parseInt(parts[0], 10) || 0;
+  const m = parseInt(parts[1], 10) || 0;
+  return h * 60 + m;
+}
+
+// 1b. Pull NIKs and Operator assessments by Date & Shift (e.g. Shift 2: 16:00 - 18:00)
+app.get("/api/ftw/shift-operators", (req, res) => {
+  try {
+    const rawDate = (req.query.date as string) || new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
+    const targetDate = normalizeDateStr(rawDate);
+    const shiftParam = ((req.query.shift as string) || "2").toUpperCase();
+    const isShift2 = shiftParam === "2" || shiftParam === "NIGHT" || shiftParam === "MALAM";
+    const timeStart = req.query.startTime ? timeToMinutes(req.query.startTime as string) : null;
+    const timeEnd = req.query.endTime ? timeToMinutes(req.query.endTime as string) : null;
+    const statusFilter = (req.query.status as string)?.toUpperCase();
+
+    if (!fs.existsSync(HISTORY_FILE)) {
+      res.json({
+        success: true,
+        query: { date: targetDate, shift: isShift2 ? "Shift 2 (Malam)" : "Shift 1 (Siang)" },
+        summary: { totalSubmissions: 0, uniqueOperators: 0, fitCount: 0, unfitCount: 0 },
+        nikList: [],
+        fitNikList: [],
+        unfitNikList: [],
+        operators: []
+      });
+      return;
+    }
+
+    const data = fs.readFileSync(HISTORY_FILE, "utf-8");
+    const history: any[] = JSON.parse(data);
+
+    // Filter by date and shift / time
+    const matched = history.filter((item: any) => {
+      const itemDate = normalizeDateStr(item.tanggalPengisian || item.timestamp?.slice(0, 10));
+      if (targetDate && itemDate !== targetDate) return false;
+
+      const itemMins = timeToMinutes(item.jamPengisian);
+      const itemIsDay = itemMins >= 60 && itemMins < 780; // 01:00 - 12:59
+      const itemIsNight = !itemIsDay; // 13:00 - 00:59
+
+      if (isShift2 && !itemIsNight) return false;
+      if (!isShift2 && !itemIsDay) return false;
+
+      // Optional precise time range e.g. 16:00 - 18:00
+      if (timeStart !== null && itemMins < timeStart) return false;
+      if (timeEnd !== null && itemMins > timeEnd) return false;
+
+      if (statusFilter && item.finalDecision !== statusFilter) return false;
+
+      return true;
+    });
+
+    const nikList = Array.from(new Set(matched.map((r: any) => r.nik))).filter(Boolean);
+    const fitRecords = matched.filter((r: any) => r.finalDecision === "FIT" || r.finalDecision === "FIT_CONDITIONAL");
+    const fitNikList = Array.from(new Set(fitRecords.map((r: any) => r.nik))).filter(Boolean);
+    const unfitRecords = matched.filter((r: any) => r.finalDecision === "UNFIT" || r.finalDecision === "REST_BEFORE_WORK");
+    const unfitNikList = Array.from(new Set(unfitRecords.map((r: any) => r.nik))).filter(Boolean);
+
+    res.json({
+      success: true,
+      query: {
+        date: targetDate,
+        shift: isShift2 ? "Shift 2 (Malam)" : "Shift 1 (Siang)",
+        timeRange: timeStart !== null && timeEnd !== null ? `${req.query.startTime} - ${req.query.endTime}` : "Semua jam shift",
+      },
+      summary: {
+        totalSubmissions: matched.length,
+        uniqueOperators: nikList.length,
+        fitCount: fitNikList.length,
+        unfitCount: unfitNikList.length
+      },
+      nikList,
+      fitNikList,
+      unfitNikList,
+      operators: matched.map((r: any) => ({
+        nik: r.nik,
+        nama: r.nama,
+        jabatan: r.jabatan,
+        dept: r.dept,
+        jamPengisian: r.jamPengisian,
+        finalDecision: r.finalDecision,
+        isFitToWork: r.finalDecision === "FIT" || r.finalDecision === "FIT_CONDITIONAL",
+        readinessScore: r.readinessScore,
+        totalSleep12: r.totalSleep12,
+        totalSleep36: r.totalSleep36,
+        id: r.id
+      }))
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: "Failed to query shift operators", details: error.message });
+  }
+});
+
 // 2. Add an assessment record
 app.post("/api/history", async (req, res) => {
   try {
@@ -370,10 +494,17 @@ app.post("/api/sync-karyawan-webhook", async (req, res) => {
 app.get("/api/employees", (req, res) => {
   try {
     if (fs.existsSync(EMPLOYEES_FILE)) {
-      const data = fs.readFileSync(EMPLOYEES_FILE, "utf-8");
-      res.json(JSON.parse(data));
+      const data = JSON.parse(fs.readFileSync(EMPLOYEES_FILE, "utf-8"));
+      // Ensure dummy employees are strictly excluded
+      const cleanData: Record<string, any> = {};
+      for (const [k, v] of Object.entries(data)) {
+        if (!DUMMY_NIKS_TO_PURGE.includes(k)) {
+          cleanData[k] = v;
+        }
+      }
+      res.json(cleanData);
     } else {
-      res.json(DEFAULT_EMPLOYEES);
+      res.json({});
     }
   } catch (error: any) {
     res.status(500).json({ error: "Failed to read employees list", details: error.message });

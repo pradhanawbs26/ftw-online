@@ -48,20 +48,25 @@ import {
   fetchEmployeesFromFirestore,
   saveRosterToFirestore,
   fetchRosterFromFirestore,
-  pruneOldAssessmentsFromFirestore
+  pruneOldAssessmentsFromFirestore,
+  purgeDummyEmployeesFromFirestore,
+  fetchSingleEmployeeFromFirestore
 } from './firebase';
 
-// PT. Wahana Bara Sentosa Base Employee Database (Fallback if Google Sheets is not synced)
-const DEFAULT_EMPLOYEE_DB: Record<string, { nama: string; jabatan: string; dept: string }> = {
-  "88204911": { nama: "Aris Setiawan", jabatan: "Operator Excavator", dept: "Produksi" },
-  "A0483": { nama: "Andi Saputra", jabatan: "Driver Dump Truck", dept: "Logistik & Transport" },
-  "A5021": { nama: "Rina Wijaya", jabatan: "Safety Officer", dept: "HSE" },
-  "A8274": { nama: "Budi Pratama", jabatan: "Mechanic Supervisor", dept: "Engineering" },
-  "A0912": { nama: "Siti Rahma", jabatan: "Admin Finance", dept: "Finance & Admin" },
-  "A3821": { nama: "Dani Setiawan", jabatan: "Mine Surveyor", dept: "Survey" },
-  "88112233": { nama: "Guntur Wibowo", jabatan: "Operator Bulldozer", dept: "Produksi" },
-  "88556677": { nama: "Sandi Wijaya", jabatan: "Drill Specialist", dept: "Exploration" }
-};
+// List of Google AI Studio dummy/demo employee NIKs that must be completely removed from production
+export const DUMMY_NIKS_PURGE_SET = new Set([
+  "88204911", // Aris Setiawan
+  "A0483",    // Andi Saputra
+  "A5021",    // Rina Wijaya
+  "A8274",    // Budi Pratama
+  "A0912",    // Siti Rahma
+  "A3821",    // Dani Setiawan
+  "88112233", // Guntur Wibowo
+  "88556677"  // Sandi Wijaya
+]);
+
+// Clean fallback (empty in production so no dummy demo data is ever injected)
+const DEFAULT_EMPLOYEE_DB: Record<string, { nama: string; jabatan: string; dept: string }> = {};
 
 interface CustomAssessment {
   id: string;
@@ -340,20 +345,34 @@ export default function App() {
   const [copiedScript, setCopiedScript] = useState<boolean>(false);
   const [logoFailed, setLogoFailed] = useState<boolean>(false);
 
-  // Dynamic Employee Database state which updates from Google Sheets
+  // Dynamic Employee Database state which updates from Google Sheets / Server API
   const [employeeDb, setEmployeeDb] = useState<Record<string, { nama: string; jabatan: string; dept: string }>>(() => {
     const localDb = localStorage.getItem('wbs_sheets_employee_db');
     if (localDb) {
       try {
-        return JSON.parse(localDb);
+        const parsed = JSON.parse(localDb);
+        const cleaned: Record<string, { nama: string; jabatan: string; dept: string }> = {};
+        for (const [k, v] of Object.entries(parsed)) {
+          if (!DUMMY_NIKS_PURGE_SET.has(k)) {
+            cleaned[k] = v as any;
+          }
+        }
+        return cleaned;
       } catch (e) {
-        return DEFAULT_EMPLOYEE_DB;
+        return {};
       }
     }
-    return DEFAULT_EMPLOYEE_DB;
+    return {};
   });
 
   const badgeRef = useRef<HTMLDivElement>(null);
+
+  // States & Guards for Single-Read Cloud Lookups and Quota Safety
+  const [isSearchingNikCloud, setIsSearchingNikCloud] = useState<boolean>(false);
+  const queriedNiksRef = useRef<Set<string>>(new Set());
+  const [isCloudSyncing, setIsCloudSyncing] = useState<boolean>(false);
+  const [lastCloudSyncTime, setLastCloudSyncTime] = useState<string>('');
+  const lastSyncTimestampRef = useRef<number>(0);
 
   // Load config, employees list and assessment history on startup with self-healing credentials
   useEffect(() => {
@@ -405,28 +424,23 @@ export default function App() {
         }
       }
 
-      // Load employees DB from server with self-healing to prevent resetting to 8 people
+      // 1. Load employees DB from server API
+      let loadedEmpCount = 0;
       try {
         const empResp = await fetch('/api/employees');
         if (empResp.ok) {
           const empData = await empResp.json();
           if (empData && typeof empData === 'object' && Object.keys(empData).length > 0) {
-            const localSaved = localStorage.getItem('wbs_sheets_employee_db');
-            let localParsed: any = null;
-            if (localSaved) {
-              try { localParsed = JSON.parse(localSaved); } catch (e) { }
+            const cleanData: Record<string, any> = {};
+            for (const [k, v] of Object.entries(empData)) {
+              if (!DUMMY_NIKS_PURGE_SET.has(k)) {
+                cleanData[k] = v;
+              }
             }
-
-            const isServerDefault = Object.keys(empData).length === 8 && Object.keys(empData).every(k => k in DEFAULT_EMPLOYEE_DB);
-            const hasLocalCustomData = localParsed && typeof localParsed === 'object' && Object.keys(localParsed).length > 8;
-
-            if (isServerDefault && hasLocalCustomData) {
-              console.log("[Self-Heal] Server returned default 8-employee template, but client has richer database. Restoring server's database...");
-              setEmployeeDb(localParsed);
-              await saveEmployeeDb(localParsed);
-            } else {
-              setEmployeeDb(empData);
-              localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(empData));
+            if (Object.keys(cleanData).length > 0) {
+              setEmployeeDb(cleanData);
+              localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(cleanData));
+              loadedEmpCount = Object.keys(cleanData).length;
             }
           }
         }
@@ -434,22 +448,51 @@ export default function App() {
         console.warn("Failed to load employees list on startup", e);
       }
 
-      // Consult Firestore single-read roster to ensure any cloud-registered employees are fully merged
-      try {
-        // Use consolidated single-document roster (1 Read only!)
-        const firestoreEmployees = await fetchRosterFromFirestore();
-        if (firestoreEmployees && Object.keys(firestoreEmployees).length > 0) {
-          setEmployeeDb(prev => {
-            const merged = { ...firestoreEmployees, ...prev };
-            localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(merged));
-            return merged;
-          });
+      // 2. Read from localStorage if server was offline/static
+      if (loadedEmpCount === 0) {
+        const localSaved = localStorage.getItem('wbs_sheets_employee_db');
+        if (localSaved) {
+          try {
+            const parsed = JSON.parse(localSaved);
+            const cleanLocal: Record<string, any> = {};
+            for (const [k, v] of Object.entries(parsed)) {
+              if (!DUMMY_NIKS_PURGE_SET.has(k)) cleanLocal[k] = v;
+            }
+            if (Object.keys(cleanLocal).length > 0) {
+              setEmployeeDb(cleanLocal);
+              localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(cleanLocal));
+              loadedEmpCount = Object.keys(cleanLocal).length;
+            }
+          } catch (e) {}
         }
-      } catch (fbErr) {
-        console.warn("[Firebase Recovery] Employees fetch warning:", fbErr);
       }
 
-      // Load history: 1) Try Server /api/history, 2) Fallback to Firestore, 3) Fallback to LocalStorage
+      // CRITICAL QUOTA SAVER:
+      // Only consult Firestore IF BOTH server and localStorage had zero employees (Disaster recovery only)!
+      // Normal employee form visits will consume ZERO Firestore reads!
+      if (loadedEmpCount === 0) {
+        try {
+          const firestoreEmployees = await fetchRosterFromFirestore();
+          if (firestoreEmployees && Object.keys(firestoreEmployees).length > 0) {
+            const cleanFs: Record<string, any> = {};
+            for (const [k, v] of Object.entries(firestoreEmployees)) {
+              if (!DUMMY_NIKS_PURGE_SET.has(k)) cleanFs[k] = v;
+            }
+            if (Object.keys(cleanFs).length > 0) {
+              setEmployeeDb(cleanFs);
+              localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(cleanFs));
+            }
+          }
+        } catch (fbErr) {
+          console.warn("[Firebase Recovery] Employees fetch warning:", fbErr);
+        }
+      }
+
+      // Silently purge default dummy employees from Firestore collection in background
+      purgeDummyEmployeesFromFirestore().catch(() => {});
+
+      // 3. Load history: 1) Try Server /api/history, 2) Fallback to LocalStorage
+      // CRITICAL READ SAVER: Do not query Firestore assessments collection on general user page loads!
       let historyLoaded = false;
       try {
         const historyResp = await fetch('/api/history');
@@ -483,24 +526,7 @@ export default function App() {
         console.warn("Failed to retrieve server history logs", e);
       }
 
-      // If server data was not loaded (e.g. hosted on static Vercel, offline, or empty), fetch from Firestore
-      if (!historyLoaded) {
-        try {
-          const firestoreRecords = await fetchAssessmentsFromFirestore(150);
-          if (firestoreRecords && firestoreRecords.length > 0) {
-            console.log(`[Firebase History] Restored ${firestoreRecords.length} real assessments from Firestore`);
-            setHistory(firestoreRecords);
-            historyLoaded = true;
-            try {
-              localStorage.setItem('wbs_ftw_history', JSON.stringify(firestoreRecords.slice(0, 100)));
-            } catch (e) {}
-          }
-        } catch (fbHistErr) {
-          console.warn("[Firebase Recovery] History fetch error:", fbHistErr);
-        }
-      }
-
-      // Final fallback to cached localStorage if still empty
+      // Final fallback to cached localStorage if offline
       if (!historyLoaded) {
         const saved = localStorage.getItem('wbs_ftw_history');
         if (saved) {
@@ -513,6 +539,22 @@ export default function App() {
           } catch (err) {
             console.error(err);
           }
+        }
+      }
+
+      // If still not loaded (e.g. on Vercel static hosting or brand new device with no local history):
+      if (!historyLoaded) {
+        try {
+          const fsRecords = await fetchAssessmentsFromFirestore(100);
+          if (fsRecords && fsRecords.length > 0) {
+            setHistory(fsRecords);
+            historyLoaded = true;
+            try {
+              localStorage.setItem('wbs_ftw_history', JSON.stringify(fsRecords.slice(0, 100)));
+            } catch (e) { }
+          }
+        } catch (e) {
+          console.warn("Firestore history fallback warning:", e);
         }
       }
     };
@@ -536,19 +578,127 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Autofill lookup when NIK changes
+  // Autofill lookup when NIK changes with safe single-read cloud fallback for new employees
   useEffect(() => {
-    if (employeeDb[nik]) {
-      setNama(employeeDb[nik].nama);
-      setJabatan(employeeDb[nik].jabatan);
-      setDept(employeeDb[nik].dept);
+    const cleanNik = nik.trim().toUpperCase();
+    if (!cleanNik) {
       setIsManualOverride(false);
-    } else {
-      if (nik.trim() !== '') {
-        setIsManualOverride(true);
-      }
+      return;
     }
+
+    // 1. Known employee from local cache -> 0 Firestore Reads!
+    if (employeeDb[cleanNik]) {
+      setNama(employeeDb[cleanNik].nama);
+      setJabatan(employeeDb[cleanNik].jabatan);
+      setDept(employeeDb[cleanNik].dept);
+      setIsManualOverride(false);
+      return;
+    }
+
+    // 2. Check if already queried before or too short to prevent infinite loops / wasted reads
+    if (queriedNiksRef.current.has(cleanNik) || cleanNik.length < 5) {
+      setIsManualOverride(true);
+      return;
+    }
+
+    // 3. Debounced targeted single-read to Firestore for new/un-cached employees
+    const timer = setTimeout(async () => {
+      queriedNiksRef.current.add(cleanNik);
+      try {
+        setIsSearchingNikCloud(true);
+        const cloudEmp = await fetchSingleEmployeeFromFirestore(cleanNik);
+        if (cloudEmp && cloudEmp.nama) {
+          setNama(cloudEmp.nama);
+          setJabatan(cloudEmp.jabatan);
+          setDept(cloudEmp.dept);
+          setIsManualOverride(false);
+          // Cache in state & localStorage so it is never fetched again (0 reads next time)
+          setEmployeeDb(prev => {
+            const updated = { ...prev, [cleanNik]: cloudEmp };
+            localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(updated));
+            return updated;
+          });
+        } else {
+          setIsManualOverride(true);
+        }
+      } catch (err) {
+        console.warn("[Cloud NIK Lookup] Error:", err);
+        setIsManualOverride(true);
+      } finally {
+        setIsSearchingNikCloud(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
   }, [nik, employeeDb]);
+
+  // Function to pull real latest assessments from Firestore with bounded limit (150 docs)
+  const syncAssessmentsFromCloud = async (isManualClick: boolean = false) => {
+    const now = Date.now();
+    // Throttle automatic syncs to at least 20 seconds apart
+    if (!isManualClick && now - lastSyncTimestampRef.current < 20000) {
+      return;
+    }
+    lastSyncTimestampRef.current = now;
+
+    try {
+      setIsCloudSyncing(true);
+      const cloudRecords = await fetchAssessmentsFromFirestore(150);
+      if (cloudRecords && cloudRecords.length > 0) {
+        setHistory(prev => {
+          const map = new Map<string, CustomAssessment>();
+          prev.forEach(r => { if (r && r.id) map.set(r.id, r); });
+          cloudRecords.forEach(r => { if (r && r.id) map.set(r.id, r); });
+          const merged = Array.from(map.values());
+          merged.sort((a, b) => {
+            const ta = a.timestamp || `${a.tanggalPengisian} ${a.jamPengisian}` || '';
+            const tb = b.timestamp || `${b.tanggalPengisian} ${b.jamPengisian}` || '';
+            return tb.localeCompare(ta);
+          });
+          try {
+            localStorage.setItem('wbs_ftw_history', JSON.stringify(merged.slice(0, 100)));
+          } catch (e) { }
+          return merged;
+        });
+      }
+      const timeStr = new Date().toLocaleTimeString('id-ID', { hour12: false });
+      setLastCloudSyncTime(timeStr);
+    } catch (err) {
+      console.warn("[Cloud Assessment Sync] Error:", err);
+    } finally {
+      setIsCloudSyncing(false);
+    }
+  };
+
+  // Automatic sync when Admin opens the dashboard or regains browser focus
+  useEffect(() => {
+    if (!showAdminOverlay || !isAdminAuthenticated || adminActiveTab !== 'dashboard') {
+      return;
+    }
+
+    // 1. Run immediate sync when admin enters the dashboard
+    syncAssessmentsFromCloud(false);
+
+    // 2. Poll every 2 minutes while looking at the dashboard
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        syncAssessmentsFromCloud(false);
+      }
+    }, 120000);
+
+    // 3. Sync on window focus if tab was in background
+    const handleFocus = () => {
+      if (!document.hidden) {
+        syncAssessmentsFromCloud(false);
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [showAdminOverlay, isAdminAuthenticated, adminActiveTab]);
 
   const saveToHistory = async (newHistory: CustomAssessment[], newRecord?: CustomAssessment) => {
     setHistory(newHistory);
@@ -873,15 +1023,23 @@ export default function App() {
   // Helper to persist the modified employee DB both to local storage, the server database, and Firebase Firestore backup
   const saveEmployeeDb = async (updatedDb: Record<string, { nama: string; jabatan: string; dept: string }>) => {
     try {
-      setEmployeeDb(updatedDb);
-      localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(updatedDb));
+      // Purge any dummy records before saving
+      const cleanDb: Record<string, { nama: string; jabatan: string; dept: string }> = {};
+      for (const [k, v] of Object.entries(updatedDb)) {
+        if (!DUMMY_NIKS_PURGE_SET.has(k)) {
+          cleanDb[k] = v;
+        }
+      }
+
+      setEmployeeDb(cleanDb);
+      localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(cleanDb));
       
       // 1. Save to Express server local storage (data/employees.json)
       try {
         const resp = await fetch("/api/employees", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updatedDb)
+          body: JSON.stringify(cleanDb)
         });
         if (!resp.ok) {
           console.warn("Notice: Server local file response:", await resp.text());
@@ -892,7 +1050,7 @@ export default function App() {
 
       // 2. BACKUP TO FIREBASE FIRESTORE
       try {
-        await syncEmployeesBatchToFirestore(updatedDb);
+        await syncEmployeesBatchToFirestore(cleanDb);
         console.log("[Firebase Backup] Employees successfully synced to Firestore (ftw-wbs)");
       } catch (fbErr) {
         console.warn("[Firebase Backup] Warning syncing to Firestore:", fbErr);
@@ -2008,73 +2166,89 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                 </div>
 
                 {/* Database Search Ticker popup info block */}
-                <div className="bg-neutral-50 px-3.5 py-2.5 rounded-lg border border-neutral-200 flex items-center justify-between shadow-xs">
-                  <div className="flex items-center gap-2">
-                    <span className={`h-2.5 w-2.5 rounded-full ${
-                      employeeDb[nik] ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500 animate-pulse'
-                    }`}></span>
-                    <span className="text-[10px] font-bold text-neutral-700 uppercase">
-                      {employeeDb[nik] 
-                        ? (lang === 'ID' ? 'Karyawan Terverifikasi' : 'VERIFIED EMPLOYEE') 
-                        : (lang === 'ID' ? 'Input Manual / Baru' : 'MANUAL DATA INPUT / NEW')
-                      }
-                    </span>
-                  </div>
-                  {employeeDb[nik] && (
-                    <span className="text-[8.5px] font-extrabold uppercase text-emerald-700 font-mono bg-emerald-100 px-2.5 py-0.5 rounded-md">
-                      Autofill OK
-                    </span>
-                  )}
-                </div>
+                {(() => {
+                  const cleanNik = nik.trim().toUpperCase();
+                  const isVerified = !!employeeDb[cleanNik];
+                  return (
+                    <div className="bg-neutral-50 px-3.5 py-2.5 rounded-lg border border-neutral-200 flex items-center justify-between shadow-xs">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2.5 w-2.5 rounded-full ${
+                          isSearchingNikCloud 
+                            ? 'bg-sky-500 animate-ping' 
+                            : (isVerified ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500 animate-pulse')
+                        }`}></span>
+                        <span className="text-[10px] font-bold text-neutral-700 uppercase">
+                          {isSearchingNikCloud 
+                            ? (lang === 'ID' ? 'Memeriksa NIK ke Cloud...' : 'Checking Cloud Database...') 
+                            : (isVerified 
+                                ? (lang === 'ID' ? 'Karyawan Terverifikasi' : 'VERIFIED EMPLOYEE') 
+                                : (lang === 'ID' ? 'Input Manual / Karyawan Baru' : 'MANUAL DATA INPUT / NEW')
+                              )
+                          }
+                        </span>
+                      </div>
+                      {isVerified && (
+                        <span className="text-[8.5px] font-extrabold uppercase text-emerald-700 font-mono bg-emerald-100 px-2.5 py-0.5 rounded-md">
+                          Autofill OK
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Autocompleted Fields Card */}
-                <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200/80 flex flex-col gap-3.5 shadow-xs">
-                  
-                  {/* Nama Field */}
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[9.5px] font-extrabold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Nama Lengkap Karyawan' : 'Full Name'}</span>
-                    <input 
-                      type="text" 
-                      value={nama}
-                      disabled={!isManualOverride && !!employeeDb[nik]}
-                      onChange={(e) => setNama(e.target.value)}
-                      className={`w-full bg-white border ${
-                        !isManualOverride && !!employeeDb[nik] ? 'border-neutral-200 text-neutral-400 font-semibold' : 'border-neutral-300 text-neutral-900 focus:ring-1 focus:ring-rose-500 font-bold'
-                      } text-xs py-2 px-3 rounded-lg outline-none`}
-                      placeholder="Masukkan nama lengkap"
-                    />
-                  </div>
+                {(() => {
+                  const cleanNik = nik.trim().toUpperCase();
+                  const isVerified = !isManualOverride && !!employeeDb[cleanNik];
+                  return (
+                    <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200/80 flex flex-col gap-3.5 shadow-xs">
+                      {/* Nama Field */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[9.5px] font-extrabold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Nama Lengkap Karyawan' : 'Full Name'}</span>
+                        <input 
+                          type="text" 
+                          value={nama}
+                          disabled={isVerified}
+                          onChange={(e) => setNama(e.target.value)}
+                          className={`w-full bg-white border ${
+                            isVerified ? 'border-neutral-200 text-neutral-400 font-semibold' : 'border-neutral-300 text-neutral-900 focus:ring-1 focus:ring-rose-500 font-bold'
+                          } text-xs py-2 px-3 rounded-lg outline-none`}
+                          placeholder="Masukkan nama lengkap"
+                        />
+                      </div>
 
-                  {/* Jabatan & Dept Row */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[9.5px] font-extrabold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Jabatan' : 'Job Title'}</span>
-                      <input 
-                        type="text" 
-                        value={jabatan}
-                        disabled={!isManualOverride && !!employeeDb[nik]}
-                        onChange={(e) => setJabatan(e.target.value)}
-                        className={`w-full bg-white border ${
-                          !isManualOverride && !!employeeDb[nik] ? 'border-neutral-200 text-neutral-400 font-semibold' : 'border-neutral-300 text-neutral-900 focus:ring-1 focus:ring-rose-500'
-                        } text-xs py-2 px-3 rounded-lg outline-none font-medium`}
-                        placeholder="Operator, Driver, dll"
-                      />
+                      {/* Jabatan & Dept Row */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[9.5px] font-extrabold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Jabatan' : 'Job Title'}</span>
+                          <input 
+                            type="text" 
+                            value={jabatan}
+                            disabled={isVerified}
+                            onChange={(e) => setJabatan(e.target.value)}
+                            className={`w-full bg-white border ${
+                              isVerified ? 'border-neutral-200 text-neutral-400 font-semibold' : 'border-neutral-300 text-neutral-900 focus:ring-1 focus:ring-rose-500'
+                            } text-xs py-2 px-3 rounded-lg outline-none font-medium`}
+                            placeholder="Operator, Driver, dll"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[9.5px] font-extrabold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Departemen' : 'Department'}</span>
+                          <input 
+                            type="text" 
+                            value={dept}
+                            disabled={isVerified}
+                            onChange={(e) => setDept(e.target.value)}
+                            className={`w-full bg-white border ${
+                              isVerified ? 'border-neutral-200 text-neutral-400 font-semibold' : 'border-neutral-300 text-neutral-900 focus:ring-1 focus:ring-rose-500'
+                            } text-xs py-2 px-3 rounded-lg outline-none font-medium`}
+                            placeholder="Produksi, HSE, dll"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[9.5px] font-extrabold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Departemen' : 'Department'}</span>
-                      <input 
-                        type="text" 
-                        value={dept}
-                        disabled={!isManualOverride && !!employeeDb[nik]}
-                        onChange={(e) => setDept(e.target.value)}
-                        className={`w-full bg-white border ${
-                          !isManualOverride && !!employeeDb[nik] ? 'border-neutral-200 text-neutral-400 font-semibold' : 'border-neutral-300 text-neutral-900 focus:ring-1 focus:ring-rose-500'
-                        } text-xs py-2 px-3 rounded-lg outline-none font-medium`}
-                        placeholder="Produksi, Logistik, dll"
-                      />
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 {/* Tanggal & Jam Pengisian */}
                 <div className="grid grid-cols-2 gap-3 w-full">
@@ -3198,7 +3372,41 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
 
                     return (
                       <div className="flex flex-col gap-6">
-                        
+                        {/* Live Cloud Sync Status Banner */}
+                        <div className="bg-emerald-950/90 border border-emerald-800 text-white px-4 py-2.5 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-sm">
+                          <div className="flex items-center gap-2.5">
+                            <span className="relative flex h-2.5 w-2.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                            </span>
+                            <div>
+                              <span className="text-xs font-black uppercase tracking-wider text-emerald-100 flex items-center gap-1.5">
+                                <span>{lang === 'ID' ? 'Sinkronisasi Otomatis Firestore Aktif' : 'Real-time Firestore Auto-Sync Active'}</span>
+                              </span>
+                              <p className="text-[10px] text-emerald-300 font-medium">
+                                {lang === 'ID' 
+                                  ? 'Data laporan terbaru diperbarui otomatis dari cloud tanpa perlu klik tombol manual.' 
+                                  : 'Latest assessment reports update automatically from cloud in background.'}
+                                {lastCloudSyncTime && (
+                                  <span className="ml-1.5 font-mono text-emerald-200 font-bold">
+                                    ({lang === 'ID' ? 'Sinkron terakhir:' : 'Last sync:'} {lastCloudSyncTime})
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => syncAssessmentsFromCloud(true)}
+                            disabled={isCloudSyncing}
+                            className="bg-emerald-800 hover:bg-emerald-700 active:bg-emerald-900 text-white font-bold text-[10.5px] uppercase tracking-wider px-3 py-1.5 rounded-lg border border-emerald-600 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${isCloudSyncing ? 'animate-spin text-emerald-300' : ''}`} />
+                            <span>{isCloudSyncing ? (lang === 'ID' ? 'Menyinkronkan...' : 'Syncing...') : (lang === 'ID' ? 'Sinkronkan Sekarang' : 'Sync Now')}</span>
+                          </button>
+                        </div>
+
                         {/* Interactive Toolbar Filter */}
                         <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
                           <h4 className="text-xs font-black text-rose-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
@@ -3265,22 +3473,40 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                             </div>
                           </div>
 
-                          <div className="mt-3.5 flex justify-between items-center bg-neutral-50 border border-neutral-200/60 p-2 rounded-lg">
+                          <div className="mt-3.5 flex flex-wrap justify-between items-center bg-neutral-50 border border-neutral-200/60 p-2 rounded-lg gap-2">
                             <span className="text-[10px] text-neutral-500 font-semibold">
                               * {lang === 'ID' ? 'Kriteria Shift dinilai berdasarkan jam pengisian sertifikat laporan secara tepat.' : 'Shift determined based on the exact submission timestamp hour.'}
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setAdminFilterStartDate('');
-                                setAdminFilterEndDate('');
-                                setAdminFilterShift('ALL');
-                                setAdminFilterStatus('ALL');
-                              }}
-                              className="bg-neutral-200 hover:bg-neutral-300 text-neutral-700 text-[10px] font-black uppercase py-1 px-3 border border-neutral-300 rounded cursor-pointer transition shadow-sm"
-                            >
-                              🔄 Clear Filters
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const niks = Array.from(new Set(periodRecords.map(r => r.nik))).filter(Boolean);
+                                  if (niks.length === 0) {
+                                    alert(lang === 'ID' ? 'Tidak ada data NIK pada filter ini' : 'No NIKs in this filter');
+                                    return;
+                                  }
+                                  navigator.clipboard.writeText(niks.join('\n'));
+                                  alert(lang === 'ID' ? `✅ Berhasil menyalin ${niks.length} NIK karyawan/operator untuk shift & tanggal ini ke clipboard!` : `✅ Copied ${niks.length} operator NIKs to clipboard!`);
+                                }}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase py-1 px-2.5 rounded cursor-pointer transition shadow-xs flex items-center gap-1"
+                                title="Salin daftar NIK ke clipboard untuk setting operator"
+                              >
+                                📋 Salin Daftar NIK ({Array.from(new Set(periodRecords.map(r => r.nik))).filter(Boolean).length})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAdminFilterStartDate('');
+                                  setAdminFilterEndDate('');
+                                  setAdminFilterShift('ALL');
+                                  setAdminFilterStatus('ALL');
+                                }}
+                                className="bg-neutral-200 hover:bg-neutral-300 text-neutral-700 text-[10px] font-black uppercase py-1 px-3 border border-neutral-300 rounded cursor-pointer transition shadow-sm"
+                              >
+                                🔄 Clear Filters
+                              </button>
+                            </div>
                           </div>
                         </div>
 
@@ -3672,7 +3898,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                 <input 
                                   type="text"
                                   className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-1.5 px-2.5 text-xs font-bold placeholder-neutral-400 focus:ring-1 focus:ring-rose-500 text-neutral-900"
-                                  placeholder="Aris Setiawan"
+                                  placeholder="Nama Lengkap Karyawan"
                                   value={newEmpNama}
                                   onChange={(e) => setNewEmpNama(e.target.value)}
                                 />
@@ -3680,9 +3906,9 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                               <div>
                                 <label className="block text-[9.5px] font-black text-neutral-600 uppercase mb-1">{lang === 'ID' ? 'Jabatan:' : 'Position:'}</label>
                                 <input 
-                                  type="text"
+                                  type="text" 
                                   className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-1.5 px-2.5 text-xs font-bold placeholder-neutral-400 focus:ring-1 focus:ring-rose-500 text-neutral-900"
-                                  placeholder="Operator Excavator"
+                                  placeholder="Operator / Driver / Staff"
                                   value={newEmpJabatan}
                                   onChange={(e) => setNewEmpJabatan(e.target.value)}
                                 />
@@ -3690,9 +3916,9 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                               <div>
                                 <label className="block text-[9.5px] font-black text-neutral-600 uppercase mb-1">Departemen:</label>
                                 <input 
-                                  type="text"
+                                  type="text" 
                                   className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-1.5 px-2.5 text-xs font-bold placeholder-neutral-400 focus:ring-1 focus:ring-rose-500 text-neutral-900"
-                                  placeholder="Produksi"
+                                  placeholder="Produksi / HSE / Logistik"
                                   value={newEmpDept}
                                   onChange={(e) => setNewEmpDept(e.target.value)}
                                 />
@@ -3742,8 +3968,8 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                   className="w-full bg-neutral-50 border border-neutral-250 rounded-lg p-2 text-[11px] font-mono font-medium focus:ring-1 focus:ring-rose-500 text-neutral-850"
                                   rows={4}
                                   placeholder={lang === 'ID' 
-                                    ? "88204911\tAris Setiawan\tOperator\tProduksi\n88204912\tSiti Rahma\tAdmin\tFinance"
-                                    : "88204911\tAris Setiawan\tOperator\tProduksi\n88204912\tSiti Rahma\tAdmin\tFinance"
+                                    ? "206900001\tBudi Santoso\tDriver DT\tLogistik\n206900002\tAgus Setiawan\tOperator\tProduksi"
+                                    : "206900001\tBudi Santoso\tDriver DT\tLogistik\n206900002\tAgus Setiawan\tOperator\tProduksi"
                                   }
                                   value={bulkInputText}
                                   onChange={(e) => {
