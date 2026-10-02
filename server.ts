@@ -655,6 +655,7 @@ app.post("/api/config", (req, res) => {
 
 // 7. Send WhatsApp message via Fonnte Gateway API
 app.post("/api/send-wa-fonnte", async (req, res) => {
+  res.setHeader("Content-Type", "application/json");
   try {
     let { token, target, message } = req.body;
 
@@ -697,7 +698,8 @@ app.post("/api/send-wa-fonnte", async (req, res) => {
       headers: {
         "Authorization": cleanToken
       },
-      body: params
+      body: params,
+      signal: AbortSignal.timeout(15000)
     });
 
     const responseText = await fonnteRes.text();

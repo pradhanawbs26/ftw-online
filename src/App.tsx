@@ -994,66 +994,114 @@ export default function App() {
     }
   };
 
-  // Test Fonnte WhatsApp Message Dispatch
+  // Test Fonnte WhatsApp Message Dispatch with Dual Strategy (Proxy + Direct Fallback)
   const handleTestFonnteWA = async () => {
-    if (!fonnteToken.trim()) {
+    const cleanToken = fonnteToken.trim();
+    const cleanTarget = fonnteTarget.trim();
+
+    if (!cleanToken) {
       alert(lang === 'ID' ? 'Harap masukkan Token API Fonnte terlebih dahulu!' : 'Please enter Fonnte API Token first!');
       return;
     }
-    if (!fonnteTarget.trim()) {
+    if (!cleanTarget) {
       alert(lang === 'ID' ? 'Harap masukkan nomor WhatsApp atau ID Grup tujuan!' : 'Please enter target phone number or WhatsApp Group ID!');
       return;
     }
 
-    setFonnteTestStatus({ loading: true });
+    setFonnteTestStatus({ loading: true, message: undefined });
     try {
-      const sampleMsg = `🧪 *TES KONEKSI WHATSAPP (FONNTE)* 🧪
-━━━━━━━━━━━━━━━━━━━━━
-Sistem *Fit to Work PT. Wahana Bara Sentosa* berhasil terhubung dengan Gateway Fonnte!
+      const sampleMsg = `🧪 *TES KONEKSI WHATSAPP (FONNTE)* 🧪\n━━━━━━━━━━━━━━━━━━━━━\nSistem *Fit to Work PT. Wahana Bara Sentosa* berhasil terhubung dengan Gateway Fonnte!\n\n📅 *Waktu Uji:* ${new Date().toLocaleString('id-ID')}\n📱 *Target Tujuan:* ${cleanTarget}\n✅ *Status Gateway:* TERHUBUNG & SIAP MENGIRIM ALERT\n\nNotifikasi darurat akan otomatis dikirimkan ke grup ini saat ada karyawan yang melaporkan kondisi:\n1. ⛔ *UNFIT*\n2. ⚠️ *BUTUH ISTIRAHAT*\n3. ⚠️ *BUTUH PENGAWASAN KHUSUS*\n━━━━━━━━━━━━━━━━━━━━━\n_Pesan uji coba otomatis sistem FTW WBS_`;
 
-📅 *Waktu Uji:* ${new Date().toLocaleString('id-ID')}
-📱 *Target Tujuan:* ${fonnteTarget.trim()}
-✅ *Status Gateway:* TERHUBUNG & SIAP MENGIRIM ALERT
+      let isSuccess = false;
+      let feedbackMsg = '';
 
-Notifikasi darurat akan otomatis dikirimkan ke grup ini saat ada karyawan yang melaporkan kondisi:
-1. ⛔ *UNFIT*
-2. ⚠️ *BUTUH ISTIRAHAT*
-3. ⚠️ *BUTUH PENGAWASAN KHUSUS*
-━━━━━━━━━━━━━━━━━━━━━
-_Pesan uji coba otomatis sistem FTW WBS_`;
+      // 1. Try via server-side proxy
+      try {
+        const resp = await fetch('/api/send-wa-fonnte', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: cleanToken,
+            target: cleanTarget,
+            message: sampleMsg
+          })
+        });
 
-      const resp = await fetch('/api/send-wa-fonnte', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: fonnteToken.trim(),
-          target: fonnteTarget.trim(),
-          message: sampleMsg
-        })
-      });
+        const text = await resp.text();
+        let data: any = {};
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { error: text || `HTTP ${resp.status}` };
+        }
 
-      const data = await resp.json();
-      if (resp.ok && data.success) {
+        if (resp.ok && data.success) {
+          isSuccess = true;
+          feedbackMsg = `Pesan uji coba berhasil terkirim ke ${cleanTarget}!`;
+        } else if (data.error) {
+          feedbackMsg = data.error;
+        }
+      } catch (proxyErr: any) {
+        console.warn("[Fonnte Proxy Warning, falling back to direct call]:", proxyErr);
+      }
+
+      // 2. Direct browser fallback if proxy failed or returned an error
+      if (!isSuccess) {
+        try {
+          const directParams = new URLSearchParams();
+          directParams.append('target', cleanTarget);
+          directParams.append('message', sampleMsg);
+          directParams.append('countryCode', '62');
+
+          const directRes = await fetch('https://api.fonnte.com/send', {
+            method: 'POST',
+            headers: {
+              'Authorization': cleanToken
+            },
+            body: directParams
+          });
+
+          const directText = await directRes.text();
+          let directData: any = {};
+          try {
+            directData = JSON.parse(directText);
+          } catch {
+            directData = { raw: directText };
+          }
+
+          if (directRes.ok && directData.status === true) {
+            isSuccess = true;
+            feedbackMsg = `Pesan uji coba berhasil terkirim ke ${cleanTarget}!`;
+          } else {
+            feedbackMsg = directData.reason || directData.message || directData.error || feedbackMsg || 'Gagal mengirim pesan melalui Fonnte';
+          }
+        } catch (directErr: any) {
+          if (!feedbackMsg) {
+            feedbackMsg = directErr.message || 'Koneksi ke gateway Fonnte gagal';
+          }
+        }
+      }
+
+      if (isSuccess) {
         setFonnteTestStatus({ 
           loading: false, 
           success: true, 
-          message: `Berhasil terkirim ke ${fonnteTarget.trim()}!` 
+          message: feedbackMsg 
         });
-        addLog(`[Fonnte Test] Pesan uji coba berhasil dikirim ke ${fonnteTarget}`);
+        addLog(`[Fonnte Test] Pesan uji coba berhasil dikirim ke ${cleanTarget}`);
       } else {
-        const errorDesc = data.error || 'Gagal mengirim pesan via Fonnte';
         setFonnteTestStatus({ 
           loading: false, 
           success: false, 
-          message: errorDesc 
+          message: feedbackMsg || 'Koneksi gagal saat menghubungi Fonnte' 
         });
-        addLog(`[Fonnte Test Error] ${errorDesc}`);
+        addLog(`[Fonnte Test Error] ${feedbackMsg}`);
       }
     } catch (err: any) {
       setFonnteTestStatus({ 
         loading: false, 
         success: false, 
-        message: 'Koneksi gagal: ' + err.message 
+        message: 'Koneksi gagal: ' + (err.message || 'Terjadi kesalahan sistem') 
       });
       addLog(`[Fonnte Test Exception] ${err.message}`);
     }
@@ -1062,6 +1110,11 @@ _Pesan uji coba otomatis sistem FTW WBS_`;
   // Automatic Fonnte WhatsApp Notification Dispatcher for Unfit / Rest / Supervision
   const handleSendFonnteNotification = async (record: CustomAssessment) => {
     try {
+      const cleanToken = fonnteToken.trim();
+      const cleanTarget = fonnteTarget.trim();
+
+      if (!cleanToken || !cleanTarget) return;
+
       let statusLabel = 'FIT';
       let statusIcon = '✅';
       let tindakan = 'Karyawan diizinkan bekerja normal sesuai standar keselamatan.';
@@ -1080,57 +1133,87 @@ _Pesan uji coba otomatis sistem FTW WBS_`;
         tindakan = 'Karyawan diizinkan bekerja HANYA dengan PENGAWASAN KETAT oleh Pengawas/Supervisor shift berjalan terkait konsumsi obat/kondisi fisik.';
       }
 
-      const message = `🚨 *NOTIFIKASI FIT TO WORK (WBS)* 🚨
-━━━━━━━━━━━━━━━━━━━━━
-${statusIcon} *STATUS: ${statusLabel}*
+      const message = `🚨 *NOTIFIKASI FIT TO WORK (WBS)* 🚨\n━━━━━━━━━━━━━━━━━━━━━\n${statusIcon} *STATUS: ${statusLabel}*\n\n👤 *Data Karyawan:*\n• *Nama:* ${record.nama}\n• *NIK:* ${record.nik}\n• *Departemen:* ${record.dept}\n• *Jabatan:* ${record.jabatan}\n• *Waktu Lapor:* ${record.tanggalPengisian} pukul ${record.jamPengisian}\n\n💤 *Parameter Tidur & Kelelahan:*\n• *Total Tidur 12 Jam:* ${record.totalSleep12} Jam\n• *Total Tidur 36 Jam:* ${record.totalSleep36} Jam\n• *Fatigue Score:* ${record.totalFatigueScore} (${record.fatigueCategory})\n• *Readiness Score:* ${record.readinessScore}%\n\n📋 *Catatan Khusus:*\n• *Konsumsi Obat:* ${record.consumesObat ? '⚠️ YA (Perlu Perhatian)' : 'Tidak'}\n• *Masalah Pribadi:* ${record.hasPersonalProblem ? '⚠️ YA (Berpotensi Distraksi)' : 'Tidak'}\n\n📢 *Rekomendasi Tindakan Pengawas:*\n${tindakan}\n━━━━━━━━━━━━━━━━━━━━━\n_Sistem Fit to Work Online PT. Wahana Bara Sentosa_`;
 
-👤 *Data Karyawan:*
-• *Nama:* ${record.nama}
-• *NIK:* ${record.nik}
-• *Departemen:* ${record.dept}
-• *Jabatan:* ${record.jabatan}
-• *Waktu Lapor:* ${record.tanggalPengisian} pukul ${record.jamPengisian}
+      let isSuccess = false;
+      let errMsg = '';
 
-💤 *Parameter Tidur & Kelelahan:*
-• *Total Tidur 12 Jam:* ${record.totalSleep12} Jam
-• *Total Tidur 36 Jam:* ${record.totalSleep36} Jam
-• *Fatigue Score:* ${record.totalFatigueScore} (${record.fatigueCategory})
-• *Readiness Score:* ${record.readinessScore}%
+      // 1. Try server proxy
+      try {
+        const resp = await fetch('/api/send-wa-fonnte', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: cleanToken,
+            target: cleanTarget,
+            message: message
+          })
+        });
 
-📋 *Catatan Khusus:*
-• *Konsumsi Obat:* ${record.consumesObat ? '⚠️ YA (Perlu Perhatian)' : 'Tidak'}
-• *Masalah Pribadi:* ${record.hasPersonalProblem ? '⚠️ YA (Berpotensi Distraksi)' : 'Tidak'}
+        const text = await resp.text();
+        let resData: any = {};
+        try {
+          resData = JSON.parse(text);
+        } catch {
+          resData = { error: text || `HTTP ${resp.status}` };
+        }
 
-📢 *Rekomendasi Tindakan Pengawas:*
-${tindakan}
-━━━━━━━━━━━━━━━━━━━━━
-_Sistem Fit to Work Online PT. Wahana Bara Sentosa_`;
+        if (resp.ok && resData.success) {
+          isSuccess = true;
+        } else {
+          errMsg = resData.error || '';
+        }
+      } catch (proxyErr) {
+        console.warn("[Fonnte Proxy Notification Warning, trying direct]:", proxyErr);
+      }
 
-      const resp = await fetch('/api/send-wa-fonnte', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: fonnteToken.trim(),
-          target: fonnteTarget.trim(),
-          message: message
-        })
-      });
+      // 2. Direct client fallback if proxy failed
+      if (!isSuccess) {
+        try {
+          const directParams = new URLSearchParams();
+          directParams.append('target', cleanTarget);
+          directParams.append('message', message);
+          directParams.append('countryCode', '62');
 
-      const resData = await resp.json();
-      if (resp.ok && resData.success) {
+          const directRes = await fetch('https://api.fonnte.com/send', {
+            method: 'POST',
+            headers: {
+              'Authorization': cleanToken
+            },
+            body: directParams
+          });
+
+          const directText = await directRes.text();
+          let directData: any = {};
+          try {
+            directData = JSON.parse(directText);
+          } catch {
+            directData = { raw: directText };
+          }
+
+          if (directRes.ok && directData.status === true) {
+            isSuccess = true;
+          } else {
+            errMsg = directData.reason || directData.message || errMsg || 'Gagal mengirim pesan via Fonnte';
+          }
+        } catch (directErr: any) {
+          errMsg = directErr.message || errMsg;
+        }
+      }
+
+      if (isSuccess) {
         setWaNotificationSent(true);
-        setWaNotificationStatus(`Notifikasi WhatsApp terkirim ke ${fonnteTarget}`);
+        setWaNotificationStatus(`Notifikasi WhatsApp terkirim ke ${cleanTarget}`);
         addLog(`[Fonnte WA] Berhasil mengirim alert ${statusLabel} untuk ${record.nama} (${record.nik})`);
       } else {
-        const errMsg = resData.error || 'Gagal mengirim pesan via Fonnte';
         setWaNotificationStatus(`Gagal kirim WA: ${errMsg}`);
         addLog(`[Fonnte WA Error] ${errMsg}`);
       }
     } catch (err: any) {
       console.error('[Fonnte WA Error]:', err);
-      const errMsg = err.message || 'Kesalahan koneksi Fonnte';
-      setWaNotificationStatus(`Gagal kirim WA: ${errMsg}`);
-      addLog(`[Fonnte WA Exception] ${errMsg}`);
+      const errText = err.message || 'Kesalahan koneksi Fonnte';
+      setWaNotificationStatus(`Gagal kirim WA: ${errText}`);
+      addLog(`[Fonnte WA Exception] ${errText}`);
     }
   };
 
