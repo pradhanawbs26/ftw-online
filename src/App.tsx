@@ -28,7 +28,11 @@ import {
   LogIn,
   LogOut,
   Check,
-  Flame
+  Flame,
+  MessageSquare,
+  Send,
+  Bell,
+  ExternalLink
 } from 'lucide-react';
 import { calculateHoursFromTimeStrings } from './utils';
 import html2canvas from 'html2canvas';
@@ -67,6 +71,62 @@ export const DUMMY_NIKS_PURGE_SET = new Set([
 
 // Clean fallback (empty in production so no dummy demo data is ever injected)
 const DEFAULT_EMPLOYEE_DB: Record<string, { nama: string; jabatan: string; dept: string }> = {};
+
+// In-memory fallback map if iframe sandbox blocks access to localStorage / sessionStorage
+const memoryStorage = new Map<string, string>();
+
+const safeStorage = {
+  get: (key: string, fallback: string = ''): string => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const val = window.localStorage.getItem(key);
+        if (val !== null) return val;
+      }
+    } catch (e) {}
+    return memoryStorage.get(key) ?? fallback;
+  },
+  set: (key: string, value: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, value);
+      }
+    } catch (e) {}
+    memoryStorage.set(key, value);
+  },
+  remove: (key: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } catch (e) {}
+    memoryStorage.delete(key);
+  },
+  getSession: (key: string, fallback: string = ''): string => {
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        const val = window.sessionStorage.getItem(key);
+        if (val !== null) return val;
+      }
+    } catch (e) {}
+    return memoryStorage.get(`sess_${key}`) ?? fallback;
+  },
+  setSession: (key: string, value: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        window.sessionStorage.setItem(key, value);
+      }
+    } catch (e) {}
+    memoryStorage.set(`sess_${key}`, value);
+  },
+  removeSession: (key: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        window.sessionStorage.removeItem(key);
+      }
+    } catch (e) {}
+    memoryStorage.delete(`sess_${key}`);
+  }
+};
 
 interface CustomAssessment {
   id: string;
@@ -241,6 +301,17 @@ export const checkIsDayShift = (jamStr: string): boolean => {
   return false;
 };
 
+// Helper to ensure records are strictly unique by ID
+export const deduplicateAssessments = (records: CustomAssessment[]): CustomAssessment[] => {
+  const map = new Map<string, CustomAssessment>();
+  for (const r of records) {
+    if (r && r.id && !map.has(r.id)) {
+      map.set(r.id, r);
+    }
+  }
+  return Array.from(map.values());
+};
+
 export default function App() {
   // Config & Firebase Hooks
   const [firebaseLoaded, setFirebaseLoaded] = useState<boolean>(false);
@@ -287,10 +358,10 @@ export default function App() {
   // Registry / History lists
   const [history, setHistory] = useState<CustomAssessment[]>(() => {
     try {
-      const saved = localStorage.getItem('wbs_ftw_history');
+      const saved = safeStorage.get('wbs_ftw_history');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return deduplicateAssessments(parsed);
       }
     } catch (e) {}
     return [];
@@ -301,9 +372,11 @@ export default function App() {
   const [showConfirmSubmitModal, setShowConfirmSubmitModal] = useState<boolean>(false);
   const [hasJustSubmitted, setHasJustSubmitted] = useState<boolean>(false);
 
-  // Admin Panel States
-  const [showAdminOverlay, setShowAdminOverlay] = useState<boolean>(false);
-  const [adminActiveTab, setAdminActiveTab] = useState<'dashboard' | 'employees' | 'sheets_sync' | 'firebase_backup'>('dashboard');
+  // Admin Dedicated Page & Navigation States
+  const [isAdminPage, setIsAdminPage] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && window.location.hash === '#admin';
+  });
+  const [adminActiveTab, setAdminActiveTab] = useState<'dashboard' | 'employees' | 'fonnte_wa' | 'sheets_sync' | 'firebase_backup'>('dashboard');
   const [firebaseSyncing, setFirebaseSyncing] = useState<boolean>(false);
   const [firebaseStatusMsg, setFirebaseStatusMsg] = useState<string>('');
   const [pruneDays, setPruneDays] = useState<number>(30);
@@ -317,9 +390,32 @@ export default function App() {
   const [bulkInputText, setBulkInputText] = useState<string>('');
   const [bulkPreviewData, setBulkPreviewData] = useState<{ nik: string; nama: string; jabatan: string; dept: string }[]>([]);
 
+  // Fonnte WhatsApp Gateway Integration States
+  const [fonnteToken, setFonnteToken] = useState<string>(() => {
+    return safeStorage.get('wbs_fonnte_token', '');
+  });
+  const [fonnteTarget, setFonnteTarget] = useState<string>(() => {
+    return safeStorage.get('wbs_fonnte_target', '');
+  });
+  const [fonnteEnabled, setFonnteEnabled] = useState<boolean>(() => {
+    return safeStorage.get('wbs_fonnte_enabled', 'false') === 'true';
+  });
+  const [fonnteAlertUnfit, setFonnteAlertUnfit] = useState<boolean>(() => {
+    return safeStorage.get('wbs_fonnte_alert_unfit', 'true') === 'true';
+  });
+  const [fonnteAlertRest, setFonnteAlertRest] = useState<boolean>(() => {
+    return safeStorage.get('wbs_fonnte_alert_rest', 'true') === 'true';
+  });
+  const [fonnteAlertConditional, setFonnteAlertConditional] = useState<boolean>(() => {
+    return safeStorage.get('wbs_fonnte_alert_conditional', 'true') === 'true';
+  });
+  const [fonnteTestStatus, setFonnteTestStatus] = useState<{ loading: boolean; success?: boolean; message?: string }>({ loading: false });
+  const [waNotificationSent, setWaNotificationSent] = useState<boolean>(false);
+  const [waNotificationStatus, setWaNotificationStatus] = useState<string>('');
+
   // Admin Authentication States
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
-    return sessionStorage.getItem('wbs_admin_auth') === 'true';
+    return safeStorage.getSession('wbs_admin_auth') === 'true';
   });
   const [adminUsernameInput, setAdminUsernameInput] = useState<string>('');
   const [adminPasswordInput, setAdminPasswordInput] = useState<string>('');
@@ -335,10 +431,10 @@ export default function App() {
   // Google Sheets Management States
   const [showSheetsModal, setShowSheetsModal] = useState<boolean>(false);
   const [spreadsheetId, setSpreadsheetId] = useState<string>(() => {
-    return localStorage.getItem('wbs_spreadsheet_id') || '15xOHL87QqqYUkwZRyNe3tG1riYgea3-4B6jaXFnbEfI';
+    return safeStorage.get('wbs_spreadsheet_id', '15xOHL87QqqYUkwZRyNe3tG1riYgea3-4B6jaXFnbEfI');
   });
   const [webhookUrl, setWebhookUrl] = useState<string>(() => {
-    return localStorage.getItem('wbs_sheets_webhook_url') || '';
+    return safeStorage.get('wbs_sheets_webhook_url', '');
   });
   const [sheetsConnectionStatus, setSheetsConnectionStatus] = useState<'DISCONNECTED' | 'CONNECTED' | 'SYNCING'>('DISCONNECTED');
   const [sheetsLogs, setSheetsLogs] = useState<string[]>([]);
@@ -347,9 +443,9 @@ export default function App() {
 
   // Dynamic Employee Database state which updates from Google Sheets / Server API
   const [employeeDb, setEmployeeDb] = useState<Record<string, { nama: string; jabatan: string; dept: string }>>(() => {
-    const localDb = localStorage.getItem('wbs_sheets_employee_db');
-    if (localDb) {
-      try {
+    try {
+      const localDb = safeStorage.get('wbs_sheets_employee_db');
+      if (localDb) {
         const parsed = JSON.parse(localDb);
         const cleaned: Record<string, { nama: string; jabatan: string; dept: string }> = {};
         for (const [k, v] of Object.entries(parsed)) {
@@ -358,10 +454,8 @@ export default function App() {
           }
         }
         return cleaned;
-      } catch (e) {
-        return {};
       }
-    }
+    } catch (e) {}
     return {};
   });
 
@@ -386,13 +480,38 @@ export default function App() {
           const config = await configResp.json();
           serverSpreadsheetId = config.spreadsheetId || '';
           serverWebhookUrl = config.webhookUrl || '';
+
+          if (config.fonnteToken !== undefined) {
+            setFonnteToken(config.fonnteToken);
+            safeStorage.set('wbs_fonnte_token', config.fonnteToken);
+          }
+          if (config.fonnteTarget !== undefined) {
+            setFonnteTarget(config.fonnteTarget);
+            safeStorage.set('wbs_fonnte_target', config.fonnteTarget);
+          }
+          if (config.fonnteEnabled !== undefined) {
+            setFonnteEnabled(Boolean(config.fonnteEnabled));
+            safeStorage.set('wbs_fonnte_enabled', String(config.fonnteEnabled));
+          }
+          if (config.fonnteAlertUnfit !== undefined) {
+            setFonnteAlertUnfit(Boolean(config.fonnteAlertUnfit));
+            safeStorage.set('wbs_fonnte_alert_unfit', String(config.fonnteAlertUnfit));
+          }
+          if (config.fonnteAlertRest !== undefined) {
+            setFonnteAlertRest(Boolean(config.fonnteAlertRest));
+            safeStorage.set('wbs_fonnte_alert_rest', String(config.fonnteAlertRest));
+          }
+          if (config.fonnteAlertConditional !== undefined) {
+            setFonnteAlertConditional(Boolean(config.fonnteAlertConditional));
+            safeStorage.set('wbs_fonnte_alert_conditional', String(config.fonnteAlertConditional));
+          }
         }
       } catch (e) {
         console.warn("Failed to fetch server credentials", e);
       }
 
-      const localId = localStorage.getItem('wbs_spreadsheet_id') || '';
-      const localWebhook = localStorage.getItem('wbs_sheets_webhook_url') || '';
+      const localId = safeStorage.get('wbs_spreadsheet_id', '');
+      const localWebhook = safeStorage.get('wbs_sheets_webhook_url', '');
 
       // Fallback to designated sheet if completely clean
       const resolvedId = serverSpreadsheetId || localId || '15xOHL87QqqYUkwZRyNe3tG1riYgea3-4B6jaXFnbEfI';
@@ -402,10 +521,10 @@ export default function App() {
       setWebhookUrl(resolvedWebhook);
 
       if (resolvedId) {
-        localStorage.setItem('wbs_spreadsheet_id', resolvedId);
+        safeStorage.set('wbs_spreadsheet_id', resolvedId);
       }
       if (resolvedWebhook) {
-        localStorage.setItem('wbs_sheets_webhook_url', resolvedWebhook);
+        safeStorage.set('wbs_sheets_webhook_url', resolvedWebhook);
       }
 
       // Self-heal: If the server configuration has missing keys, restore them from our browser cache instantly
@@ -415,7 +534,13 @@ export default function App() {
           await fetch('/api/config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ spreadsheetId: resolvedId, webhookUrl: resolvedWebhook })
+            body: JSON.stringify({ 
+              spreadsheetId: resolvedId, 
+              webhookUrl: resolvedWebhook,
+              fonnteToken: safeStorage.get('wbs_fonnte_token', ''),
+              fonnteTarget: safeStorage.get('wbs_fonnte_target', ''),
+              fonnteEnabled: safeStorage.get('wbs_fonnte_enabled', 'false') === 'true'
+            })
           });
           // Call force-sync so the server pulls the database from the sheet right away
           await fetch('/api/sync-force', { method: 'POST' });
@@ -439,7 +564,7 @@ export default function App() {
             }
             if (Object.keys(cleanData).length > 0) {
               setEmployeeDb(cleanData);
-              localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(cleanData));
+              safeStorage.set('wbs_sheets_employee_db', JSON.stringify(cleanData));
               loadedEmpCount = Object.keys(cleanData).length;
             }
           }
@@ -448,9 +573,9 @@ export default function App() {
         console.warn("Failed to load employees list on startup", e);
       }
 
-      // 2. Read from localStorage if server was offline/static
+      // 2. Read from local storage if server was offline/static
       if (loadedEmpCount === 0) {
-        const localSaved = localStorage.getItem('wbs_sheets_employee_db');
+        const localSaved = safeStorage.get('wbs_sheets_employee_db');
         if (localSaved) {
           try {
             const parsed = JSON.parse(localSaved);
@@ -460,7 +585,7 @@ export default function App() {
             }
             if (Object.keys(cleanLocal).length > 0) {
               setEmployeeDb(cleanLocal);
-              localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(cleanLocal));
+              safeStorage.set('wbs_sheets_employee_db', JSON.stringify(cleanLocal));
               loadedEmpCount = Object.keys(cleanLocal).length;
             }
           } catch (e) {}
@@ -480,7 +605,7 @@ export default function App() {
             }
             if (Object.keys(cleanFs).length > 0) {
               setEmployeeDb(cleanFs);
-              localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(cleanFs));
+              safeStorage.set('wbs_sheets_employee_db', JSON.stringify(cleanFs));
             }
           }
         } catch (fbErr) {
@@ -510,14 +635,10 @@ export default function App() {
 
               const cleanServerData = data.filter(filterGarbage);
               if (cleanServerData.length > 0) {
-                setHistory(cleanServerData);
+                const uniqueData = deduplicateAssessments(cleanServerData);
+                setHistory(uniqueData);
                 historyLoaded = true;
-                try {
-                  // Only cache top 100 items to avoid DOMException QuotaExceededError crashing the app
-                  localStorage.setItem('wbs_ftw_history', JSON.stringify(cleanServerData.slice(0, 100)));
-                } catch (e) {
-                  console.warn("LocalStorage quota full, history stored in memory");
-                }
+                safeStorage.set('wbs_ftw_history', JSON.stringify(uniqueData.slice(0, 100)));
               }
             }
           }
@@ -526,14 +647,15 @@ export default function App() {
         console.warn("Failed to retrieve server history logs", e);
       }
 
-      // Final fallback to cached localStorage if offline
+      // Final fallback to cached history if offline
       if (!historyLoaded) {
-        const saved = localStorage.getItem('wbs_ftw_history');
+        const saved = safeStorage.get('wbs_ftw_history');
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setHistory(parsed);
+              const uniqueData = deduplicateAssessments(parsed);
+              setHistory(uniqueData);
               historyLoaded = true;
             }
           } catch (err) {
@@ -547,11 +669,10 @@ export default function App() {
         try {
           const fsRecords = await fetchAssessmentsFromFirestore(100);
           if (fsRecords && fsRecords.length > 0) {
-            setHistory(fsRecords);
+            const uniqueFs = deduplicateAssessments(fsRecords);
+            setHistory(uniqueFs);
             historyLoaded = true;
-            try {
-              localStorage.setItem('wbs_ftw_history', JSON.stringify(fsRecords.slice(0, 100)));
-            } catch (e) { }
+            safeStorage.set('wbs_ftw_history', JSON.stringify(uniqueFs.slice(0, 100)));
           }
         } catch (e) {
           console.warn("Firestore history fallback warning:", e);
@@ -612,10 +733,10 @@ export default function App() {
           setJabatan(cloudEmp.jabatan);
           setDept(cloudEmp.dept);
           setIsManualOverride(false);
-          // Cache in state & localStorage so it is never fetched again (0 reads next time)
+          // Cache in state & memory/storage so it is never fetched again (0 reads next time)
           setEmployeeDb(prev => {
             const updated = { ...prev, [cleanNik]: cloudEmp };
-            localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(updated));
+            safeStorage.set('wbs_sheets_employee_db', JSON.stringify(updated));
             return updated;
           });
         } else {
@@ -655,9 +776,7 @@ export default function App() {
             const tb = b.timestamp || `${b.tanggalPengisian} ${b.jamPengisian}` || '';
             return tb.localeCompare(ta);
           });
-          try {
-            localStorage.setItem('wbs_ftw_history', JSON.stringify(merged.slice(0, 100)));
-          } catch (e) { }
+          safeStorage.set('wbs_ftw_history', JSON.stringify(merged.slice(0, 100)));
           return merged;
         });
       }
@@ -670,9 +789,22 @@ export default function App() {
     }
   };
 
+  // Sync URL hash for dedicated Admin Page navigation
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#admin') {
+        setIsAdminPage(true);
+      } else if (!window.location.hash || window.location.hash === '#') {
+        setIsAdminPage(false);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   // Automatic sync when Admin opens the dashboard or regains browser focus
   useEffect(() => {
-    if (!showAdminOverlay || !isAdminAuthenticated || adminActiveTab !== 'dashboard') {
+    if (!isAdminPage || !isAdminAuthenticated || adminActiveTab !== 'dashboard') {
       return;
     }
 
@@ -698,11 +830,12 @@ export default function App() {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [showAdminOverlay, isAdminAuthenticated, adminActiveTab]);
+  }, [isAdminPage, isAdminAuthenticated, adminActiveTab]);
 
   const saveToHistory = async (newHistory: CustomAssessment[], newRecord?: CustomAssessment) => {
-    setHistory(newHistory);
-    localStorage.setItem('wbs_ftw_history', JSON.stringify(newHistory));
+    const uniqueHistory = deduplicateAssessments(newHistory);
+    setHistory(uniqueHistory);
+    safeStorage.set('wbs_ftw_history', JSON.stringify(uniqueHistory));
 
     // Also dispatch to central online server database
     if (newRecord) {
@@ -775,7 +908,7 @@ export default function App() {
   const handleSaveSpreadsheetId = async (id: string) => {
     const cleaned = id.trim();
     setSpreadsheetId(cleaned);
-    localStorage.setItem('wbs_spreadsheet_id', cleaned);
+    safeStorage.set('wbs_spreadsheet_id', cleaned);
     addLog(`Spreadsheet ID disimpan: ${cleaned}`);
 
     // Update config on server
@@ -795,7 +928,7 @@ export default function App() {
   const handleSaveWebhookUrl = async (url: string) => {
     const cleaned = url.trim();
     setWebhookUrl(cleaned);
-    localStorage.setItem('wbs_sheets_webhook_url', cleaned);
+    safeStorage.set('wbs_sheets_webhook_url', cleaned);
     addLog(`Webhook URL disimpan: ${cleaned ? cleaned.substring(0, 35) + "..." : "KOSONG"}`);
 
     try {
@@ -805,19 +938,206 @@ export default function App() {
         body: JSON.stringify({ spreadsheetId, webhookUrl: cleaned })
       });
       addLog("Webhook URL disinkronkan ke server pusat.");
-      alert(lang === 'ID' 
-        ? "Webhook otomatisasi Google Sheets berhasil disimpan di server pusat!" 
-        : "Google Sheets automation webhook successfully saved on the central server!"
-      );
     } catch (e: any) {
       console.error("Failed to sync webhook URL to server configuration", e);
+    }
+  };
+
+  // Save Fonnte WhatsApp Gateway Configuration
+  const handleSaveFonnteConfig = async (
+    tokenVal: string, 
+    targetVal: string, 
+    enabledVal: boolean,
+    unfitVal: boolean,
+    restVal: boolean,
+    condVal: boolean
+  ) => {
+    const cleanToken = tokenVal.trim();
+    const cleanTarget = targetVal.trim();
+
+    setFonnteToken(cleanToken);
+    setFonnteTarget(cleanTarget);
+    setFonnteEnabled(enabledVal);
+    setFonnteAlertUnfit(unfitVal);
+    setFonnteAlertRest(restVal);
+    setFonnteAlertConditional(condVal);
+
+    safeStorage.set('wbs_fonnte_token', cleanToken);
+    safeStorage.set('wbs_fonnte_target', cleanTarget);
+    safeStorage.set('wbs_fonnte_enabled', String(enabledVal));
+    safeStorage.set('wbs_fonnte_alert_unfit', String(unfitVal));
+    safeStorage.set('wbs_fonnte_alert_rest', String(restVal));
+    safeStorage.set('wbs_fonnte_alert_conditional', String(condVal));
+
+    addLog(`[Fonnte WA] Konfigurasi disimpan (Target: ${cleanTarget || 'KOSONG'}, Status: ${enabledVal ? 'AKTIF' : 'NONAKTIF'})`);
+
+    try {
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          spreadsheetId,
+          webhookUrl,
+          fonnteToken: cleanToken,
+          fonnteTarget: cleanTarget,
+          fonnteEnabled: enabledVal,
+          fonnteAlertUnfit: unfitVal,
+          fonnteAlertRest: restVal,
+          fonnteAlertConditional: condVal
+        })
+      });
+      addLog("[Fonnte WA] Konfigurasi berhasil disinkronkan ke server pusat.");
+      alert(lang === 'ID' ? '✅ Konfigurasi WhatsApp (Fonnte) berhasil disimpan!' : '✅ WhatsApp (Fonnte) configuration saved successfully!');
+    } catch (e: any) {
+      console.error("Failed to sync Fonnte config to server", e);
+      addLog("[Fonnte Error] Gagal simpan ke server: " + e.message);
+    }
+  };
+
+  // Test Fonnte WhatsApp Message Dispatch
+  const handleTestFonnteWA = async () => {
+    if (!fonnteToken.trim()) {
+      alert(lang === 'ID' ? 'Harap masukkan Token API Fonnte terlebih dahulu!' : 'Please enter Fonnte API Token first!');
+      return;
+    }
+    if (!fonnteTarget.trim()) {
+      alert(lang === 'ID' ? 'Harap masukkan nomor WhatsApp atau ID Grup tujuan!' : 'Please enter target phone number or WhatsApp Group ID!');
+      return;
+    }
+
+    setFonnteTestStatus({ loading: true });
+    try {
+      const sampleMsg = `🧪 *TES KONEKSI WHATSAPP (FONNTE)* 🧪
+━━━━━━━━━━━━━━━━━━━━━
+Sistem *Fit to Work PT. Wahana Bara Sentosa* berhasil terhubung dengan Gateway Fonnte!
+
+📅 *Waktu Uji:* ${new Date().toLocaleString('id-ID')}
+📱 *Target Tujuan:* ${fonnteTarget.trim()}
+✅ *Status Gateway:* TERHUBUNG & SIAP MENGIRIM ALERT
+
+Notifikasi darurat akan otomatis dikirimkan ke grup ini saat ada karyawan yang melaporkan kondisi:
+1. ⛔ *UNFIT*
+2. ⚠️ *BUTUH ISTIRAHAT*
+3. ⚠️ *BUTUH PENGAWASAN KHUSUS*
+━━━━━━━━━━━━━━━━━━━━━
+_Pesan uji coba otomatis sistem FTW WBS_`;
+
+      const resp = await fetch('/api/send-wa-fonnte', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: fonnteToken.trim(),
+          target: fonnteTarget.trim(),
+          message: sampleMsg
+        })
+      });
+
+      const data = await resp.json();
+      if (resp.ok && data.success) {
+        setFonnteTestStatus({ 
+          loading: false, 
+          success: true, 
+          message: `Berhasil terkirim ke ${fonnteTarget.trim()}!` 
+        });
+        addLog(`[Fonnte Test] Pesan uji coba berhasil dikirim ke ${fonnteTarget}`);
+      } else {
+        const errorDesc = data.error || 'Gagal mengirim pesan via Fonnte';
+        setFonnteTestStatus({ 
+          loading: false, 
+          success: false, 
+          message: errorDesc 
+        });
+        addLog(`[Fonnte Test Error] ${errorDesc}`);
+      }
+    } catch (err: any) {
+      setFonnteTestStatus({ 
+        loading: false, 
+        success: false, 
+        message: 'Koneksi gagal: ' + err.message 
+      });
+      addLog(`[Fonnte Test Exception] ${err.message}`);
+    }
+  };
+
+  // Automatic Fonnte WhatsApp Notification Dispatcher for Unfit / Rest / Supervision
+  const handleSendFonnteNotification = async (record: CustomAssessment) => {
+    try {
+      let statusLabel = 'FIT';
+      let statusIcon = '✅';
+      let tindakan = 'Karyawan diizinkan bekerja normal sesuai standar keselamatan.';
+
+      if (record.finalDecision === 'UNFIT') {
+        statusLabel = 'UNFIT / TIDAK FIT BEKERJA';
+        statusIcon = '⛔';
+        tindakan = 'Karyawan TIDAK DIIZINKAN bekerja/mengoperasikan unit. Pengawas/Supervisor wajib segera mengarahkan karyawan ke klinik/ruang istirahat dan menyiapkan operator pengganti.';
+      } else if (record.finalDecision === 'REST_BEFORE_WORK') {
+        statusLabel = 'BUTUH ISTIRAHAT SEBELUM BEKERJA';
+        statusIcon = '⚠️';
+        tindakan = 'Karyawan WAJIB istirahat tambahan sebelum bekerja. Lakukan evaluasi ulang kondisi fisik sebelum diizinkan mengoperasikan unit/alat berat.';
+      } else if (record.finalDecision === 'FIT_CONDITIONAL' || record.consumesObat || record.hasPersonalProblem) {
+        statusLabel = 'BUTUH PENGAWASAN KHUSUS (FIT DENGAN CATATAN)';
+        statusIcon = '⚠️';
+        tindakan = 'Karyawan diizinkan bekerja HANYA dengan PENGAWASAN KETAT oleh Pengawas/Supervisor shift berjalan terkait konsumsi obat/kondisi fisik.';
+      }
+
+      const message = `🚨 *NOTIFIKASI FIT TO WORK (WBS)* 🚨
+━━━━━━━━━━━━━━━━━━━━━
+${statusIcon} *STATUS: ${statusLabel}*
+
+👤 *Data Karyawan:*
+• *Nama:* ${record.nama}
+• *NIK:* ${record.nik}
+• *Departemen:* ${record.dept}
+• *Jabatan:* ${record.jabatan}
+• *Waktu Lapor:* ${record.tanggalPengisian} pukul ${record.jamPengisian}
+
+💤 *Parameter Tidur & Kelelahan:*
+• *Total Tidur 12 Jam:* ${record.totalSleep12} Jam
+• *Total Tidur 36 Jam:* ${record.totalSleep36} Jam
+• *Fatigue Score:* ${record.totalFatigueScore} (${record.fatigueCategory})
+• *Readiness Score:* ${record.readinessScore}%
+
+📋 *Catatan Khusus:*
+• *Konsumsi Obat:* ${record.consumesObat ? '⚠️ YA (Perlu Perhatian)' : 'Tidak'}
+• *Masalah Pribadi:* ${record.hasPersonalProblem ? '⚠️ YA (Berpotensi Distraksi)' : 'Tidak'}
+
+📢 *Rekomendasi Tindakan Pengawas:*
+${tindakan}
+━━━━━━━━━━━━━━━━━━━━━
+_Sistem Fit to Work Online PT. Wahana Bara Sentosa_`;
+
+      const resp = await fetch('/api/send-wa-fonnte', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: fonnteToken.trim(),
+          target: fonnteTarget.trim(),
+          message: message
+        })
+      });
+
+      const resData = await resp.json();
+      if (resp.ok && resData.success) {
+        setWaNotificationSent(true);
+        setWaNotificationStatus(`Notifikasi WhatsApp terkirim ke ${fonnteTarget}`);
+        addLog(`[Fonnte WA] Berhasil mengirim alert ${statusLabel} untuk ${record.nama} (${record.nik})`);
+      } else {
+        const errMsg = resData.error || 'Gagal mengirim pesan via Fonnte';
+        setWaNotificationStatus(`Gagal kirim WA: ${errMsg}`);
+        addLog(`[Fonnte WA Error] ${errMsg}`);
+      }
+    } catch (err: any) {
+      console.error('[Fonnte WA Error]:', err);
+      const errMsg = err.message || 'Kesalahan koneksi Fonnte';
+      setWaNotificationStatus(`Gagal kirim WA: ${errMsg}`);
+      addLog(`[Fonnte WA Exception] ${errMsg}`);
     }
   };
 
   // Create new active corporate spreadsheet with default templates
   const handleCreateNewSpreadsheet = async () => {
     if (!sheetsToken) {
-      alert(lang === 'ID' ? "Harap hubungkan akun Google Admin Anda terlebih dahulu!" : "Please login to your Google Admin account first!");
+      addLog(lang === 'ID' ? "Harap hubungkan akun Google Admin Anda terlebih dahulu!" : "Please login to your Google Admin account first!");
       return;
     }
     try {
@@ -850,7 +1170,7 @@ export default function App() {
       const data = await resp.json();
       const newSpreadsheetId = data.spreadsheetId;
       setSpreadsheetId(newSpreadsheetId);
-      localStorage.setItem('wbs_spreadsheet_id', newSpreadsheetId);
+      safeStorage.set('wbs_spreadsheet_id', newSpreadsheetId);
       addLog(`Spreadsheet terbuat! ID: ${newSpreadsheetId}`);
 
       // Push to backend server
@@ -1032,7 +1352,7 @@ export default function App() {
       }
 
       setEmployeeDb(cleanDb);
-      localStorage.setItem('wbs_sheets_employee_db', JSON.stringify(cleanDb));
+      safeStorage.set('wbs_sheets_employee_db', JSON.stringify(cleanDb));
       
       // 1. Save to Express server local storage (data/employees.json)
       try {
@@ -1362,7 +1682,7 @@ export default function App() {
         if (toAdd.length > 0) {
           const mergedHist = [...toAdd, ...history];
           setHistory(mergedHist);
-          localStorage.setItem('wbs_ftw_history', JSON.stringify(mergedHist));
+          safeStorage.set('wbs_ftw_history', JSON.stringify(mergedHist));
           for (const item of toAdd) {
             try {
               await fetch('/api/history', {
@@ -1380,7 +1700,6 @@ export default function App() {
         : `✅ Successfully restored ${empCount} employees (1 Read) and ${histCount} assessment records from Firebase Firestore!`;
 
       setFirebaseStatusMsg(msg);
-      alert(msg);
     } catch (err: any) {
       console.error("Firebase restore error:", err);
       const errMsg = `❌ Gagal restore dari Firebase: ${err.message || err}`;
@@ -1747,22 +2066,29 @@ export default function App() {
     saveToHistory([newRecord, ...history], newRecord);
 
     // Save submission date to local storage specifically to check again
-    localStorage.setItem(`wbs_ftw_submitted_${nik.trim().toLowerCase()}_${tanggalPengisian}`, 'true');
+    safeStorage.set(`wbs_ftw_submitted_${nik.trim().toLowerCase()}_${tanggalPengisian}`, 'true');
 
     // If Google Sheets is connected, push automatically
     if (sheetsToken && spreadsheetId) {
       handlePushResultToSheets(newRecord);
-      alert(
-        lang === 'ID' 
-          ? `Sukses Online! Data berhasil dikirim dan tersimpan di database online pusat PT. Wahana Bara Sentosa & di-backup otomatis ke Google Spreadsheet admin. (Laporan ID: ${recordId})`
-          : `Success Online! Data saved to PT. Wahana Bara Sentosa central online database and securely backed up to admin's Google Spreadsheet. (Report ID: ${recordId})`
-      );
-    } else {
-      alert(
-        lang === 'ID' 
-          ? `Sukses Online! Penilaian dikirim dan disimpan ke database online pusat PT. Wahana Bara Sentosa. (Laporan ID: ${recordId}).`
-          : `Success Online! Assessment saved to PT. Wahana Bara Sentosa central cloud database. (Report ID: ${recordId}).`
-      );
+    }
+
+    // Reset notification state and dispatch Fonnte WhatsApp alert if conditions match
+    setWaNotificationSent(false);
+    setWaNotificationStatus('');
+
+    const isUnfit = newRecord.finalDecision === 'UNFIT';
+    const isRest = newRecord.finalDecision === 'REST_BEFORE_WORK';
+    const isConditional = newRecord.finalDecision === 'FIT_CONDITIONAL' || newRecord.consumesObat || newRecord.hasPersonalProblem;
+
+    const shouldNotify = (
+      (isUnfit && fonnteAlertUnfit) ||
+      (isRest && fonnteAlertRest) ||
+      (isConditional && fonnteAlertConditional)
+    );
+
+    if (fonnteEnabled && fonnteToken && fonnteTarget && shouldNotify) {
+      handleSendFonnteNotification(newRecord);
     }
 
     setHasJustSubmitted(true);
@@ -1966,9 +2292,8 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
             />
           </div>
           <div className="hidden sm:flex flex-col">
-            <span className="text-[10.5px] font-black tracking-widest text-[#e11d48] leading-none uppercase flex items-center gap-1.5">
-              Fatigue Management 
-              <span className="px-1 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-250 font-sans text-[7.5px] tracking-normal font-black animate-pulse uppercase">● Cloud Sync</span>
+            <span className="text-[10.5px] font-black tracking-widest text-[#e11d48] leading-none uppercase">
+              Fatigue Management
             </span>
             <span className="text-[10px] tracking-wide text-neutral-900 font-extrabold leading-none mt-1.5 uppercase">FIT TO WORK ONLINE PT. WBS</span>
           </div>
@@ -1990,17 +2315,18 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
             <span className="hidden xs:inline">{lang === 'ID' ? 'Riwayat' : 'Registry'}</span>
           </button>
 
-          {/* Menu Admin - Custom Employee & Integration Panel */}
+          {/* Halaman Admin - Dedicated Administration Page */}
           <button 
             type="button"
             onClick={() => {
               setAdminNikFilter('');
-              setShowAdminOverlay(true);
+              setIsAdminPage(true);
+              window.location.hash = '#admin';
             }}
             className="text-[10px] sm:text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white border border-rose-500 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
           >
             <ShieldAlert className="w-3.5 h-3.5 text-white animate-pulse" />
-            <span className="hidden xs:inline">{lang === 'ID' ? 'Menu Admin' : 'Admin Panel'}</span>
+            <span className="hidden xs:inline">{lang === 'ID' ? 'Halaman Admin' : 'Admin Portal'}</span>
             <span className="xs:hidden">ADMIN</span>
           </button>
 
@@ -2600,6 +2926,23 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
 
                 <div className="flex-1 overflow-y-auto max-h-[440px] pr-1.5 flex flex-col gap-4">
                   
+                  {/* WhatsApp Alert Status Banner if dispatched */}
+                  {waNotificationSent && (
+                    <div className="bg-emerald-50 border border-emerald-300 text-emerald-900 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2.5 shadow-xs">
+                      <span className="text-lg">📱</span>
+                      <div>
+                        <p className="font-bold leading-tight">
+                          {lang === 'ID' ? 'Notifikasi WhatsApp Otomatis Terkirim' : 'WhatsApp Notification Dispatched'}
+                        </p>
+                        <p className="text-[11px] text-emerald-700 leading-snug">
+                          {lang === 'ID' 
+                            ? `Laporan kondisi telah otomatis diteruskan ke grup WA Pengawas (${fonnteTarget || 'Tujuan'}) via Fonnte.` 
+                            : `Safety condition alert has been automatically sent to supervisor WA group via Fonnte.`}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* HIDDEN / CAPTURABLE HIGH RES REGISTER BADGE CARD (Pure Custom Styling for Capture) */}
                   <div className="p-0.5 border border-dashed border-neutral-300 rounded-2xl bg-white shadow-xs">
                     <div 
@@ -2979,8 +3322,8 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                   </p>
                 </div>
               ) : (
-                filteredHistory.map((record) => (
-                  <div key={record.id} className="bg-white border border-neutral-200 p-4 rounded-xl flex flex-col gap-2.5 relative shadow-xs">
+                filteredHistory.map((record, index) => (
+                  <div key={record.id ? `${record.id}-${index}` : index} className="bg-white border border-neutral-200 p-4 rounded-xl flex flex-col gap-2.5 relative shadow-xs">
                     
                     {/* Top Row ID */}
                     <div className="flex justify-between items-start">
@@ -3123,68 +3466,95 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
       )}
 
       {/* ---------------------------------------------------------------------------------- */}
-      {/* ADMIN CONTROL PANEL OVERLAY */}
+      {/* HALAMAN ADMIN TERSENDIRI (DEDICATED FULL-SCREEN ADMIN PAGE) */}
       {/* ---------------------------------------------------------------------------------- */}
-      {showAdminOverlay && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 animate-fadeIn text-neutral-800">
-          <div className="bg-white rounded-2xl border border-neutral-200 w-full max-w-4xl flex flex-col max-h-[92vh] shadow-2xl overflow-hidden">
-            
-            {/* Modal Header */}
-            <div className="bg-rose-900 text-white px-6 py-4 flex justify-between items-center shrink-0">
+      {isAdminPage && (
+        <div className="fixed inset-0 z-50 bg-slate-100 overflow-y-auto flex flex-col font-sans">
+          
+          {/* Header Navigasi Halaman Admin */}
+          <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap justify-between items-center gap-3">
               <div className="flex items-center gap-3">
-                <div className="bg-rose-800 p-2 rounded-lg border border-rose-700">
-                  <ShieldAlert className="w-5 h-5 text-rose-100 animate-pulse" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-wider leading-none">
-                    {lang === 'ID' ? 'Pusat Kendali Admin' : 'Admin Control Center'}
-                  </h3>
-                  <p className="text-[10px] text-rose-200 font-bold mt-1 uppercase tracking-tight">
-                    PT. WAHANA BARA SENTOSA
-                  </p>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setIsAdminPage(false);
+                    window.location.hash = '';
+                    setEditingEmpNik(null);
+                    setSelectedDashboardRecordId(null);
+                  }}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-100 hover:text-white px-3.5 py-1.5 rounded-lg border border-slate-700 text-xs font-bold flex items-center gap-2 transition cursor-pointer shadow-xs"
+                >
+                  <ArrowLeft className="w-4 h-4 text-rose-400" />
+                  <span>{lang === 'ID' ? '← Kembali ke Formulir Asesmen' : '← Back to Assessment Form'}</span>
+                </button>
+
+                <div className="h-6 w-px bg-slate-700 hidden sm:block"></div>
+
+                <div className="flex items-center gap-2.5">
+                  <div className="bg-white p-1 rounded-md shrink-0">
+                    <img 
+                      src="https://res.cloudinary.com/dgjnlxf69/image/upload/v1790130590/Logo_FTW_ul1dz4.png" 
+                      alt="Logo FTW" 
+                      className="h-7 w-auto object-contain"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = '/logo-ftw.png';
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <h1 className="text-sm font-black uppercase tracking-wider text-white leading-none">
+                      {lang === 'ID' ? 'Halaman Admin Pusat' : 'Central Admin Portal'}
+                    </h1>
+                    <p className="text-[10px] text-slate-400 font-medium leading-none mt-1">
+                      PT. Wahana Bara Sentosa • Fatigue Management System
+                    </p>
+                  </div>
                 </div>
               </div>
-              
-              {isAdminAuthenticated ? (
-                <div className="flex items-center gap-2">
+
+              <div className="flex items-center gap-2">
+                <button 
+                  type="button"
+                  onClick={() => setLang(lang === 'ID' ? 'EN' : 'ID')}
+                  className="text-xs font-bold bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                >
+                  <span>🌎 {lang}</span>
+                </button>
+
+                {isAdminAuthenticated ? (
                   <button 
                     type="button"
                     onClick={() => {
                       setIsAdminAuthenticated(false);
-                      sessionStorage.removeItem('wbs_admin_auth');
+                      safeStorage.removeSession('wbs_admin_auth');
                       setAdminUsernameInput('');
                       setAdminPasswordInput('');
                     }}
-                    className="bg-rose-950 hover:bg-rose-900 text-rose-200 hover:text-white border border-rose-800 rounded-lg py-1 px-2.5 font-bold text-[10.5px] cursor-pointer transition shadow-sm uppercase tracking-wider"
+                    className="bg-rose-900 hover:bg-rose-800 text-rose-100 hover:text-white border border-rose-700 rounded-lg py-1.5 px-3 font-bold text-xs cursor-pointer transition shadow-sm uppercase tracking-wider flex items-center gap-1.5"
                   >
-                    🚪 Logout
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Logout</span>
                   </button>
+                ) : (
                   <button 
                     type="button"
                     onClick={() => {
-                      setShowAdminOverlay(false);
-                      setEditingEmpNik(null);
-                      setSelectedDashboardRecordId(null);
+                      setIsAdminPage(false);
+                      window.location.hash = '';
                     }}
-                    className="bg-rose-800 hover:bg-rose-750 text-white border border-rose-600 rounded-lg py-1 px-2.5 font-bold text-[10.5px] cursor-pointer transition shadow-sm uppercase tracking-wider"
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg py-1.5 px-3 font-bold text-xs cursor-pointer transition shadow-sm"
                   >
-                    ✕ Close
+                    ✕ Tutup
                   </button>
-                </div>
-              ) : (
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setShowAdminOverlay(false);
-                    setEditingEmpNik(null);
-                    setSelectedDashboardRecordId(null);
-                  }}
-                  className="bg-rose-800 hover:bg-rose-700 text-white border border-rose-600 rounded-lg py-1.5 px-3 font-semibold text-xs cursor-pointer transition shadow-sm"
-                >
-                  ✕ Close
-                </button>
-              )}
+                )}
+              </div>
             </div>
+          </header>
+
+          {/* Kontainer Utama Halaman Admin */}
+          <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex-1 flex flex-col">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col flex-1 overflow-hidden">
 
             {!isAdminAuthenticated ? (
               /* SECURE LOGIN SCREEN */
@@ -3194,7 +3564,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     e.preventDefault();
                     if (adminUsernameInput.trim() === 'admin' && adminPasswordInput === 'wbsadmin123') {
                       setIsAdminAuthenticated(true);
-                      sessionStorage.setItem('wbs_admin_auth', 'true');
+                      safeStorage.setSession('wbs_admin_auth', 'true');
                       setAdminLoginError('');
                     } else {
                       setAdminLoginError(lang === 'ID' ? 'Username atau password salah!' : 'Invalid username or password!');
@@ -3289,6 +3659,18 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                   </button>
                   <button
                     type="button"
+                    onClick={() => setAdminActiveTab('fonnte_wa')}
+                    className={`py-2 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition shrink-0 flex items-center gap-1.5 ${
+                      adminActiveTab === 'fonnte_wa' 
+                        ? 'bg-rose-600 text-white shadow-sm' 
+                        : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-250'
+                    }`}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>📱 WhatsApp Alert (Fonnte)</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setAdminActiveTab('sheets_sync')}
                     className={`py-2 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition shrink-0 ${
                       adminActiveTab === 'sheets_sync' 
@@ -3333,7 +3715,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     };
 
                     // 1. Gather records in the selected Period (Date range & Shift) for overall KPI Summary
-                    const periodRecords = history.filter(record => {
+                    const periodRecords = deduplicateAssessments(history).filter(record => {
                       const recDate = normalizeDateStr(record.tanggalPengisian);
                       if (adminFilterStartDate && recDate && recDate < adminFilterStartDate) {
                         return false;
@@ -3361,52 +3743,17 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     const problematicCount = periodTotalCount - fitCount;
 
                     // 2. Gather records filtered for table view (applying Status filter)
-                    const filteredRecords = periodRecords.filter(record => {
+                    const filteredRecords = deduplicateAssessments(periodRecords.filter(record => {
                       if (adminFilterStatus === 'PROBLEMATIC') {
                         return record.finalDecision !== 'FIT';
                       } else if (adminFilterStatus !== 'ALL') {
                         return record.finalDecision === adminFilterStatus;
                       }
                       return true;
-                    });
+                    }));
 
                     return (
                       <div className="flex flex-col gap-6">
-                        {/* Live Cloud Sync Status Banner */}
-                        <div className="bg-emerald-950/90 border border-emerald-800 text-white px-4 py-2.5 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-sm">
-                          <div className="flex items-center gap-2.5">
-                            <span className="relative flex h-2.5 w-2.5">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                            </span>
-                            <div>
-                              <span className="text-xs font-black uppercase tracking-wider text-emerald-100 flex items-center gap-1.5">
-                                <span>{lang === 'ID' ? 'Sinkronisasi Otomatis Firestore Aktif' : 'Real-time Firestore Auto-Sync Active'}</span>
-                              </span>
-                              <p className="text-[10px] text-emerald-300 font-medium">
-                                {lang === 'ID' 
-                                  ? 'Data laporan terbaru diperbarui otomatis dari cloud tanpa perlu klik tombol manual.' 
-                                  : 'Latest assessment reports update automatically from cloud in background.'}
-                                {lastCloudSyncTime && (
-                                  <span className="ml-1.5 font-mono text-emerald-200 font-bold">
-                                    ({lang === 'ID' ? 'Sinkron terakhir:' : 'Last sync:'} {lastCloudSyncTime})
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => syncAssessmentsFromCloud(true)}
-                            disabled={isCloudSyncing}
-                            className="bg-emerald-800 hover:bg-emerald-700 active:bg-emerald-900 text-white font-bold text-[10.5px] uppercase tracking-wider px-3 py-1.5 rounded-lg border border-emerald-600 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
-                          >
-                            <RefreshCw className={`w-3.5 h-3.5 ${isCloudSyncing ? 'animate-spin text-emerald-300' : ''}`} />
-                            <span>{isCloudSyncing ? (lang === 'ID' ? 'Menyinkronkan...' : 'Syncing...') : (lang === 'ID' ? 'Sinkronkan Sekarang' : 'Sync Now')}</span>
-                          </button>
-                        </div>
-
                         {/* Interactive Toolbar Filter */}
                         <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
                           <h4 className="text-xs font-black text-rose-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
@@ -3558,6 +3905,16 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
+                                onClick={() => syncAssessmentsFromCloud(true)}
+                                disabled={isCloudSyncing}
+                                className="bg-white hover:bg-neutral-100 text-neutral-700 font-bold text-[10.5px] px-2.5 py-1.5 rounded-lg border border-neutral-300 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+                                title={lastCloudSyncTime ? `Terakhir sinkron: ${lastCloudSyncTime}` : 'Segarkan data'}
+                              >
+                                <RefreshCw className={`w-3.5 h-3.5 ${isCloudSyncing ? 'animate-spin text-emerald-600' : 'text-neutral-600'}`} />
+                                <span className="hidden sm:inline">{isCloudSyncing ? (lang === 'ID' ? 'Memuat...' : 'Syncing...') : (lang === 'ID' ? 'Segarkan' : 'Refresh')}</span>
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => handleExportCSV(filteredRecords)}
                                 className="bg-emerald-600 hover:bg-emerald-700 font-bold text-white text-[10.5px] px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm tracking-wide"
                               >
@@ -3584,7 +3941,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-neutral-150">
-                                {filteredRecords.map((rec) => {
+                                {filteredRecords.map((rec, index) => {
                                   // Parse shift
                                   const isDay = checkIsDayShift(rec.jamPengisian);
                                   
@@ -3592,7 +3949,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                   const sleepheroLow = rec.totalSleep12 < 6;
 
                                   return (
-                                    <tr key={rec.id} className={`hover:bg-neutral-50/70 transition-colors ${rec.finalDecision === 'UNFIT' ? 'bg-rose-50/20' : rec.finalDecision === 'REST_BEFORE_WORK' ? 'bg-orange-50/10' : ''}`}>
+                                    <tr key={rec.id ? `${rec.id}-${index}` : index} className={`hover:bg-neutral-50/70 transition-colors ${rec.finalDecision === 'UNFIT' ? 'bg-rose-50/20' : rec.finalDecision === 'REST_BEFORE_WORK' ? 'bg-orange-50/10' : ''}`}>
                                       <td className="px-4 py-3 text-center whitespace-nowrap align-middle">
                                         <div className="font-bold text-neutral-900 font-mono text-[11px]">
                                           {rec.tanggalPengisian}
@@ -4181,6 +4538,231 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     </div>
                   )}
 
+                  {/* TAB: WHATSAPP ALERT (FONNTE API) INTEGRATION */}
+                  {adminActiveTab === 'fonnte_wa' && (
+                    <div className="flex flex-col gap-6 animate-fadeIn text-neutral-800">
+                      
+                      {/* Top Header Card */}
+                      <div className="bg-gradient-to-r from-emerald-800 to-teal-900 text-white rounded-xl p-5 shadow-sm border border-emerald-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="flex items-center gap-3.5 font-sans">
+                          <div className="bg-emerald-700/80 p-2.5 rounded-lg border border-emerald-600 shadow-xs shrink-0 flex items-center justify-center">
+                            <MessageSquare className="w-6 h-6 text-emerald-100" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-base font-black uppercase tracking-wider leading-none">
+                                {lang === 'ID' ? 'Integrasi WhatsApp Gateway (Fonnte API)' : 'WhatsApp Gateway Integration (Fonnte API)'}
+                              </h4>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                fonnteEnabled && fonnteToken && fonnteTarget 
+                                  ? 'bg-emerald-300 text-emerald-950 font-black' 
+                                  : 'bg-slate-700 text-slate-200'
+                              }`}>
+                                {fonnteEnabled && fonnteToken && fonnteTarget ? '● AKTIF' : '○ NONAKTIF'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-emerald-100 mt-1.5 leading-relaxed font-sans">
+                              {lang === 'ID'
+                                ? 'Kirim notifikasi otomatis langsung ke Grup WhatsApp Pengawas & HSE saat ada karyawan melaporkan kondisi Unfit, Butuh Istirahat, atau Pengawasan Khusus.'
+                                : 'Automatically dispatch urgent WhatsApp alerts directly to Supervisor/HSE WhatsApp group when an employee reports Unfit, Needs Rest, or Special Supervision.'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Master Toggle */}
+                        <label className="flex items-center gap-2.5 bg-white/10 hover:bg-white/15 px-4 py-2.5 rounded-xl border border-white/20 cursor-pointer transition shrink-0 select-none">
+                          <input 
+                            type="checkbox"
+                            checked={fonnteEnabled}
+                            onChange={(e) => {
+                              const nextVal = e.target.checked;
+                              setFonnteEnabled(nextVal);
+                              handleSaveFonnteConfig(fonnteToken, fonnteTarget, nextVal, fonnteAlertUnfit, fonnteAlertRest, fonnteAlertConditional);
+                            }}
+                            className="w-4 h-4 accent-emerald-400 cursor-pointer"
+                          />
+                          <span className="text-xs font-bold uppercase tracking-wider text-white">
+                            {lang === 'ID' ? 'Aktifkan Alert WA' : 'Enable WA Alerts'}
+                          </span>
+                        </label>
+                      </div>
+
+                      {/* Credentials & Target Card */}
+                      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex flex-col gap-5">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
+                          <span>🔑</span>
+                          <span>{lang === 'ID' ? 'Konfigurasi Token Fonnte & Target WhatsApp' : 'Fonnte Token & Target Configuration'}</span>
+                        </h4>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1.5 tracking-wider">
+                              {lang === 'ID' ? 'Token API Fonnte:' : 'Fonnte API Token:'}
+                            </label>
+                            <input 
+                              type="text"
+                              value={fonnteToken}
+                              onChange={(e) => setFonnteToken(e.target.value)}
+                              placeholder="Contoh: a1b2c3d4e5f6g7h8..."
+                              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-mono font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
+                            />
+                            <p className="text-[10.5px] text-slate-500 mt-1">
+                              {lang === 'ID' ? (
+                                <>Didapatkan dari dashboard akun <a href="https://fonnte.com" target="_blank" rel="noreferrer" className="text-emerald-700 underline font-semibold">fonnte.com</a> di menu <b>Device</b>.</>
+                              ) : (
+                                <>Available in your <a href="https://fonnte.com" target="_blank" rel="noreferrer" className="text-emerald-700 underline font-semibold">fonnte.com</a> dashboard under <b>Device</b>.</>
+                              )}
+                            </p>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1.5 tracking-wider">
+                              {lang === 'ID' ? 'Target WhatsApp (ID Grup / Nomor):' : 'WhatsApp Target (Group ID / Phone):'}
+                            </label>
+                            <input 
+                              type="text"
+                              value={fonnteTarget}
+                              onChange={(e) => setFonnteTarget(e.target.value)}
+                              placeholder="Contoh: 120363028123456789@g.us atau 08123456789"
+                              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-mono font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
+                            />
+                            <p className="text-[10.5px] text-slate-500 mt-1">
+                              {lang === 'ID' ? (
+                                <>Untuk grup gunakan <b>ID Grup</b> (format: <code>...@g.us</code>). Untuk nomor pribadi gunakan format <code>08...</code> atau <code>628...</code>. Bisa dipisah koma jika banyak.</>
+                              ) : (
+                                <>For groups use <b>Group ID</b> (e.g. <code>...@g.us</code>). For phone numbers use <code>08...</code> or <code>628...</code>.</>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Triggers selection */}
+                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col gap-3">
+                          <label className="text-[11px] font-black uppercase tracking-wider text-slate-700">
+                            {lang === 'ID' 
+                              ? 'Kondisi Karyawan Yang Memicu Notifikasi WA Otomatis:' 
+                              : 'Employee Conditions Triggering Automated WhatsApp Alerts:'}
+                          </label>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <label className="flex items-start gap-2.5 bg-white p-3 rounded-lg border border-slate-200 cursor-pointer hover:border-rose-400 transition shadow-2xs">
+                              <input 
+                                type="checkbox"
+                                checked={fonnteAlertUnfit}
+                                onChange={(e) => setFonnteAlertUnfit(e.target.checked)}
+                                className="mt-0.5 w-4 h-4 accent-rose-600 cursor-pointer"
+                              />
+                              <div>
+                                <span className="text-xs font-bold text-rose-700 block">⛔ Status UNFIT</span>
+                                <span className="text-[10.5px] text-slate-500 leading-tight block mt-0.5">
+                                  {lang === 'ID' ? 'Kelelahan tinggi (Score ≥ 12) / Dilarang bekerja.' : 'Severe fatigue (Score ≥ 12) / Work rejected.'}
+                                </span>
+                              </div>
+                            </label>
+
+                            <label className="flex items-start gap-2.5 bg-white p-3 rounded-lg border border-slate-200 cursor-pointer hover:border-amber-400 transition shadow-2xs">
+                              <input 
+                                type="checkbox"
+                                checked={fonnteAlertRest}
+                                onChange={(e) => setFonnteAlertRest(e.target.checked)}
+                                className="mt-0.5 w-4 h-4 accent-amber-500 cursor-pointer"
+                              />
+                              <div>
+                                <span className="text-xs font-bold text-amber-700 block">⚠️ Butuh Istirahat</span>
+                                <span className="text-[10.5px] text-slate-500 leading-tight block mt-0.5">
+                                  {lang === 'ID' ? 'Kelelahan sedang (Score 9-11) / Wajib istirahat.' : 'Moderate fatigue (Score 9-11) / Rest required.'}
+                                </span>
+                              </div>
+                            </label>
+
+                            <label className="flex items-start gap-2.5 bg-white p-3 rounded-lg border border-slate-200 cursor-pointer hover:border-blue-400 transition shadow-2xs">
+                              <input 
+                                type="checkbox"
+                                checked={fonnteAlertConditional}
+                                onChange={(e) => setFonnteAlertConditional(e.target.checked)}
+                                className="mt-0.5 w-4 h-4 accent-blue-600 cursor-pointer"
+                              />
+                              <div>
+                                <span className="text-xs font-bold text-blue-700 block">⚠️ Pengawasan Khusus</span>
+                                <span className="text-[10.5px] text-slate-500 leading-tight block mt-0.5">
+                                  {lang === 'ID' ? 'Konsumsi obat, masalah pribadi, atau Score 7-8.' : 'Medication, personal stress, or Score 7-8.'}
+                                </span>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleSaveFonnteConfig(
+                                fonnteToken, 
+                                fonnteTarget, 
+                                fonnteEnabled,
+                                fonnteAlertUnfit,
+                                fonnteAlertRest,
+                                fonnteAlertConditional
+                              )}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs uppercase tracking-wider transition shadow-sm flex items-center gap-2 cursor-pointer"
+                            >
+                              <Check className="w-4 h-4" />
+                              <span>{lang === 'ID' ? 'Simpan Konfigurasi WA' : 'Save WA Settings'}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={fonnteTestStatus.loading}
+                              onClick={handleTestFonnteWA}
+                              className="bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition shadow-sm flex items-center gap-2 cursor-pointer"
+                            >
+                              <Send className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>{fonnteTestStatus.loading ? (lang === 'ID' ? 'Mengirim...' : 'Sending...') : (lang === 'ID' ? 'Tes Kirim Pesan WA' : 'Test WA Alert')}</span>
+                            </button>
+                          </div>
+
+                          {fonnteTestStatus.message && (
+                            <div className={`text-xs font-semibold px-3 py-1.5 rounded-lg border flex items-center gap-1.5 ${
+                              fonnteTestStatus.success 
+                                ? 'bg-emerald-50 text-emerald-850 border-emerald-300' 
+                                : 'bg-rose-50 text-rose-850 border-rose-300'
+                            }`}>
+                              <span>{fonnteTestStatus.success ? '✅' : '❌'}</span>
+                              <span>{fonnteTestStatus.message}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Guide & Instructions Card */}
+                      <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 flex flex-col gap-4">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                          <span>📖</span>
+                          <span>{lang === 'ID' ? 'Panduan Menghubungkan WhatsApp Grup dengan Fonnte' : 'Fonnte WhatsApp Group Connection Guide'}</span>
+                        </h4>
+                        
+                        <ol className="list-decimal list-inside text-xs text-slate-600 space-y-2 leading-relaxed">
+                          <li>
+                            <b>Buat Akun & Sambungkan Perangkat:</b> Buka <a href="https://fonnte.com" target="_blank" rel="noreferrer" className="text-emerald-700 font-bold underline hover:text-emerald-800">fonnte.com</a>, daftar akun, lalu pada menu <b>Device</b>, klik <b>Connect</b> dan scan QR code menggunakan nomor WhatsApp yang dijadikan pengirim alert.
+                          </li>
+                          <li>
+                            <b>Salin API Token:</b> Salin token perangkat dari dashboard Fonnte ke kolom <b>Token API Fonnte</b> di atas.
+                          </li>
+                          <li>
+                            <b>Masukkan Akun ke Grup WhatsApp:</b> Tambahkan nomor WhatsApp Fonnte Anda ke dalam Grup WhatsApp Pengawas/HSE PT. Wahana Bara Sentosa.
+                          </li>
+                          <li>
+                            <b>Dapatkan ID Grup WhatsApp:</b> Pada menu Fonnte atau via list groups, salin ID Grup (format: <code>120363028123456789@g.us</code>) dan tempel ke kolom <b>Target WhatsApp</b>.
+                          </li>
+                          <li>
+                            <b>Uji Coba:</b> Klik tombol <b>Tes Kirim Pesan WA</b> untuk memastikan pesan uji coba masuk ke grup WhatsApp Anda.
+                          </li>
+                        </ol>
+                      </div>
+                    </div>
+                  )}
+
                   {/* TAB 3: GOOGLE SHEETS INTEGRATION & SYNCHRONIZATION SUMMARY */}
                   {adminActiveTab === 'sheets_sync' && (
                     <div className="flex flex-col gap-6 animate-fadeIn text-neutral-800">
@@ -4755,24 +5337,29 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
 
                 </div>
 
-                {/* Modal Footer */}
-                <div className="p-4 bg-white text-center border-t border-neutral-200 shrink-0">
+                {/* Admin Page Footer */}
+                <div className="p-4 bg-white border-t border-slate-200 flex flex-wrap justify-between items-center gap-3 shrink-0">
+                  <span className="text-xs text-slate-500 font-medium">
+                    Fit to Work PT. Wahana Bara Sentosa • Central Admin Portal
+                  </span>
                   <button 
                     type="button"
                     onClick={() => {
-                      setShowAdminOverlay(false);
+                      setIsAdminPage(false);
+                      window.location.hash = '';
                       setEditingEmpNik(null);
                       setSelectedDashboardRecordId(null);
                     }}
-                    className="w-full bg-neutral-950 hover:bg-black font-bold py-2.5 px-6 rounded-lg text-xs cursor-pointer text-white transition uppercase tracking-widest text-[11px]"
+                    className="bg-slate-900 hover:bg-black font-bold py-2.5 px-6 rounded-lg text-xs cursor-pointer text-white transition uppercase tracking-wider text-[11px]"
                   >
-                    {lang === 'ID' ? 'Kembali Ke Menu Utama' : 'Return to main panel'}
+                    {lang === 'ID' ? '← Kembali Ke Formulir Asesmen' : '← Return to Assessment Form'}
                   </button>
                 </div>
               </>
             )}
 
-          </div>
+            </div>
+          </main>
         </div>
       )}
 

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -14,10 +14,121 @@
     <meta property="og:description" content="Aplikasi Fit to Work untuk menilai kelayakan kerja karyawan berdasarkan durasi tidur, jam terjaga, konsumsi obat, dan masalah pribadi sebelum memulai shift kerja." />
     <meta property="og:image" content="https://res.cloudinary.com/dgjnlxf69/image/upload/v1790130590/Logo_FTW_ul1dz4.png" />
     <meta property="og:image:alt" content="Logo Fit To Work PT. WBS" />
+
+    <style>
+      /* Ensure base styling prevents blank white flashes */
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #f8fafc;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      #root {
+        min-height: 100vh;
+        width: 100%;
+      }
+      .preloader-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        box-sizing: border-box;
+      }
+      .preloader-card {
+        background: #ffffff;
+        border-radius: 1.25rem;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e2e8f0;
+        padding: 2rem;
+        max-width: 24rem;
+        width: 100%;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+      }
+      .preloader-spinner {
+        width: 2.5rem;
+        height: 2.5rem;
+        border: 3px solid #e2e8f0;
+        border-top-color: #0284c7;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      .reload-btn {
+        background: #0284c7;
+        color: #ffffff;
+        border: none;
+        border-radius: 0.75rem;
+        padding: 0.65rem 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.5rem;
+      }
+      .reload-btn:hover {
+        background: #0369a1;
+      }
+    </style>
+
+    <script>
+      // Global error listener to prevent blank white screen on script execution errors
+      window.addEventListener('error', function(event) {
+        var root = document.getElementById('root');
+        if (root && !root.dataset.rendered) {
+          root.innerHTML = '<div class="preloader-container">' +
+            '<div class="preloader-card">' +
+            '<div style="font-size: 2.5rem;">⚠️</div>' +
+            '<h2 style="margin: 0; font-size: 1.125rem; font-weight: 700; color: #1e293b;">Gagal Memuat Aplikasi</h2>' +
+            '<p style="margin: 0; font-size: 0.8125rem; color: #64748b; line-height: 1.5;">' +
+            (event.message || 'Terjadi kesalahan saat memproses modul aplikasi.') +
+            '</p>' +
+            '<button class="reload-btn" onclick="window.location.reload(true)">Muat Ulang Halaman</button>' +
+            '</div></div>';
+        }
+      });
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="preloader-container">
+        <div class="preloader-card">
+          <img 
+            src="https://res.cloudinary.com/dgjnlxf69/image/upload/v1790130590/Logo_FTW_ul1dz4.png" 
+            alt="Logo FTW" 
+            style="width: 4rem; height: 4rem; object-fit: contain;"
+            onerror="this.style.display='none'"
+          />
+          <div>
+            <h1 style="margin: 0; font-size: 1.125rem; font-weight: 700; color: #0f172a;">Fit to Work PT. WBS</h1>
+            <p style="margin: 0.25rem 0 0; font-size: 0.8125rem; color: #64748b;">Memuat sistem asesmen...</p>
+          </div>
+          <div class="preloader-spinner"></div>
+          <div id="delayed-reload" style="display: none; margin-top: 0.5rem;">
+            <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.5rem;">Membutuhkan waktu lebih lama dari biasanya?</p>
+            <button class="reload-btn" onclick="window.location.reload(true)">Muat Ulang / Reload</button>
+          </div>
+        </div>
+      </div>
+      <script>
+        // If app hasn't mounted in 3.5 seconds, display the reload button
+        setTimeout(function() {
+          var delayed = document.getElementById('delayed-reload');
+          if (delayed) delayed.style.display = 'block';
+        }, 3500);
+      </script>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

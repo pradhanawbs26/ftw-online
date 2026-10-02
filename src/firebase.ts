@@ -3,8 +3,6 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { 
   initializeFirestore,
   getFirestore, 
-  persistentLocalCache,
-  persistentMultipleTabManager,
   collection, 
   doc, 
   setDoc, 
@@ -16,34 +14,29 @@ import {
   orderBy,
   limit
 } from 'firebase/firestore';
-import appletConfig from '../firebase-applet-config.json';
-
 export const firebaseConfig = {
-  apiKey: appletConfig.apiKey || "AIzaSyBMw_xLTuTK66i2TFn6Iotg43AFvFBtxZ8",
-  authDomain: appletConfig.authDomain || "ftw-wbs.firebaseapp.com",
-  projectId: appletConfig.projectId || "ftw-wbs",
-  storageBucket: appletConfig.storageBucket || "ftw-wbs.firebasestorage.app",
-  messagingSenderId: appletConfig.messagingSenderId || "558288446517",
-  appId: appletConfig.appId || "1:558288446517:web:612a2986ec377a71163d7c"
+  apiKey: "AIzaSyBMw_xLTuTK66i2TFn6Iotg43AFvFBtxZ8",
+  authDomain: "ftw-wbs.firebaseapp.com",
+  projectId: "ftw-wbs",
+  storageBucket: "ftw-wbs.firebasestorage.app",
+  messagingSenderId: "558288446517",
+  appId: "1:558288446517:web:612a2986ec377a71163d7c"
 };
 
 // Initialize Firebase App
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Initialize Firestore with Persistent Multi-Tab Local Cache (IndexedDB)
-// Default database contains all 229 employees and 6,497 assessments
+// Initialize Firestore instance reliably across normal tabs and sandboxed iframes
 let firestoreInstance: any;
-
 try {
-  firestoreInstance = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager()
-    })
-  });
-} catch (e: any) {
-  // If already initialized or persistent cache active
   firestoreInstance = getFirestore(app);
+} catch (e: any) {
+  try {
+    firestoreInstance = initializeFirestore(app, {});
+  } catch (err: any) {
+    console.warn('[Firestore] Initialization warning:', err);
+  }
 }
 
 export const db = firestoreInstance;

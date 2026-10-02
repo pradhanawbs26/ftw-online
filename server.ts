@@ -178,11 +178,11 @@ async function syncFromGoogleSheet() {
           if (firstHeader !== "ID" && firstHeader !== "ID LAPORAN" && firstHeader !== "ID_LAPORAN" && !firstHeader.includes("LAPORAN") && !firstHeader.includes("ID")) {
             console.log(`[Sync] Skipping 'Laporan_Fit' sheet sync. Header '${firstHeader}' does not match expected assessment headers.`);
           } else {
-            const history: any[] = [];
+            const historyMap = new Map<string, any>();
             for (let i = 1; i < rows.length; i++) {
               const row = rows[i];
               const id = row[0] ? row[0].trim() : "";
-              if (id && id !== "ID" && id !== "ID LAPORAN" && id !== "ID_LAPORAN") {
+              if (id && id !== "ID" && id !== "ID LAPORAN" && id !== "ID_LAPORAN" && !historyMap.has(id)) {
                 const totalFatigueScore = parseInt(row[11]) || 0;
                 const readinessScore = Math.max(0, 100 - (totalFatigueScore * 7.5));
                 const consumesObat = row[9] === 'Ya / Yes' || row[9] === 'Ya' || row[9] === 'Yes' || row[9] === 'true';
@@ -230,9 +230,10 @@ async function syncFromGoogleSheet() {
                   fatigueCategory,
                   finalDecision: row[12] ? row[12].trim() : ""
                 };
-                history.push(record);
+                historyMap.set(id, record);
               }
             }
+            const history = Array.from(historyMap.values());
             if (history.length > 0) {
               // Convert to newest-first order
               const reversedHistory = history.reverse();
@@ -269,7 +270,17 @@ app.post("/api/sync-force", async (req, res) => {
 app.get("/api/history", (req, res) => {
   try {
     const data = fs.readFileSync(HISTORY_FILE, "utf-8");
-    res.json(JSON.parse(data));
+    const parsed = JSON.parse(data);
+    if (Array.isArray(parsed)) {
+      const map = new Map<string, any>();
+      for (const item of parsed) {
+        if (item && item.id && !map.has(item.id)) {
+          map.set(item.id, item);
+        }
+      }
+      return res.json(Array.from(map.values()));
+    }
+    res.json([]);
   } catch (error: any) {
     res.status(500).json({ error: "Failed to read history logs", details: error.message });
   }
@@ -512,14 +523,17 @@ app.get("/api/employees", (req, res) => {
 });
 
 // Firebase client config endpoint
-app.get("/firebase-applet-config.json", (req, res) => {
+app.get("/firebase-applet-config.json", (req, res, next) => {
+  if (req.query.import !== undefined || req.headers.accept?.includes("text/javascript")) {
+    return next();
+  }
   res.json({
     apiKey: "AIzaSyBMw_xLTuTK66i2TFn6Iotg43AFvFBtxZ8",
     authDomain: "ftw-wbs.firebaseapp.com",
     projectId: "ftw-wbs",
     storageBucket: "ftw-wbs.firebasestorage.app",
     messagingSenderId: "558288446517",
-    appId: "1:558288446517:web:f7dde6f01f4accb1163d7c"
+    appId: "1:558288446517:web:612a2986ec377a71163d7c"
   });
 });
 
@@ -600,18 +614,123 @@ app.get("/api/config", (req, res) => {
   }
 });
 
-// 6. Save configuration (Spreadsheet ID & Webhook)
+// 6. Save configuration (Spreadsheet ID, Webhook, and Fonnte WA)
 app.post("/api/config", (req, res) => {
   try {
-    const { spreadsheetId, webhookUrl } = req.body;
+    const { 
+      spreadsheetId, 
+      webhookUrl,
+      fonnteToken,
+      fonnteTarget,
+      fonnteEnabled,
+      fonnteAlertUnfit,
+      fonnteAlertRest,
+      fonnteAlertConditional
+    } = req.body;
+
+    let existingConfig: any = {};
+    if (fs.existsSync(CONFIG_FILE)) {
+      try {
+        existingConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+      } catch (e) {}
+    }
+
     const config = { 
-      spreadsheetId: spreadsheetId || "",
-      webhookUrl: webhookUrl || ""
+      ...existingConfig,
+      spreadsheetId: spreadsheetId !== undefined ? spreadsheetId : (existingConfig.spreadsheetId || ""),
+      webhookUrl: webhookUrl !== undefined ? webhookUrl : (existingConfig.webhookUrl || ""),
+      fonnteToken: fonnteToken !== undefined ? fonnteToken : (existingConfig.fonnteToken || ""),
+      fonnteTarget: fonnteTarget !== undefined ? fonnteTarget : (existingConfig.fonnteTarget || ""),
+      fonnteEnabled: fonnteEnabled !== undefined ? Boolean(fonnteEnabled) : (existingConfig.fonnteEnabled || false),
+      fonnteAlertUnfit: fonnteAlertUnfit !== undefined ? Boolean(fonnteAlertUnfit) : (existingConfig.fonnteAlertUnfit ?? true),
+      fonnteAlertRest: fonnteAlertRest !== undefined ? Boolean(fonnteAlertRest) : (existingConfig.fonnteAlertRest ?? true),
+      fonnteAlertConditional: fonnteAlertConditional !== undefined ? Boolean(fonnteAlertConditional) : (existingConfig.fonnteAlertConditional ?? true)
     };
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
     res.json({ success: true, config });
   } catch (error: any) {
     res.status(500).json({ error: "Failed to save configuration", details: error.message });
+  }
+});
+
+// 7. Send WhatsApp message via Fonnte Gateway API
+app.post("/api/send-wa-fonnte", async (req, res) => {
+  try {
+    let { token, target, message } = req.body;
+
+    // Fallback to server config if not explicitly passed
+    if ((!token || !target) && fs.existsSync(CONFIG_FILE)) {
+      try {
+        const configData = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+        token = token || configData.fonnteToken;
+        target = target || configData.fonnteTarget;
+      } catch (e) {}
+    }
+
+    if (!token || !String(token).trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Token API Fonnte belum diatur. Silakan atur token di Menu Admin -> Tab Integrasi WhatsApp." 
+      });
+    }
+    if (!target || !String(target).trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Target nomor atau ID Grup WA Fonnte belum diatur. Silakan tentukan nomor tujuan / ID grup di Menu Admin." 
+      });
+    }
+    if (!message || !String(message).trim()) {
+      return res.status(400).json({ success: false, error: "Pesan WhatsApp tidak boleh kosong." });
+    }
+
+    const cleanToken = String(token).trim();
+    const cleanTarget = String(target).trim();
+
+    // Prepare URLSearchParams for Fonnte endpoint
+    const params = new URLSearchParams();
+    params.append("target", cleanTarget);
+    params.append("message", String(message).trim());
+    params.append("countryCode", "62");
+
+    const fonnteRes = await fetch("https://api.fonnte.com/send", {
+      method: "POST",
+      headers: {
+        "Authorization": cleanToken
+      },
+      body: params
+    });
+
+    const responseText = await fonnteRes.text();
+    let responseData: any = {};
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = { raw: responseText };
+    }
+
+    console.log("[Fonnte WA Response]:", fonnteRes.status, responseData);
+
+    // Fonnte returns { status: true, ... } on success, or { status: false, reason: "..." }
+    if (!fonnteRes.ok || responseData.status === false) {
+      return res.status(fonnteRes.status >= 400 ? fonnteRes.status : 400).json({
+        success: false,
+        error: responseData.reason || responseData.message || responseData.error || "Gagal mengirim pesan melalui Fonnte",
+        details: responseData
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Pesan WhatsApp berhasil dikirim ke " + cleanTarget,
+      data: responseData
+    });
+  } catch (error: any) {
+    console.error("[Fonnte WA Server Error]:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "Terjadi kesalahan server saat menghubungi Fonnte: " + error.message,
+      details: error.message 
+    });
   }
 });
 
@@ -623,7 +742,7 @@ app.get(["/health", "/healthz", "/_health", "/ping"], (req, res) => {
 // Setup Vite Dev Server / Static Assets serving
 async function startServer() {
   const distPath = path.join(process.cwd(), "dist");
-  const isProduction = process.env.NODE_ENV === "production" || fs.existsSync(path.join(distPath, "index.html"));
+  const isProduction = process.env.NODE_ENV === "production" || (process.env.NODE_ENV !== "development" && fs.existsSync(path.join(distPath, "index.html")));
 
   if (!isProduction) {
     console.log("Starting server in DEVELOPMENT mode with Vite Middleware...");
@@ -633,6 +752,24 @@ async function startServer() {
       appType: "spa",
     });
     app.use(vite.middlewares);
+
+    // Fallback for SPA routing in development
+    app.use("*", async (req, res, next) => {
+      const url = req.originalUrl;
+      try {
+        const indexHtmlPath = path.join(process.cwd(), "index.html");
+        if (fs.existsSync(indexHtmlPath)) {
+          let template = fs.readFileSync(indexHtmlPath, "utf-8");
+          template = await vite.transformIndexHtml(url, template);
+          res.status(200).set({ "Content-Type": "text/html" }).end(template);
+        } else {
+          next();
+        }
+      } catch (e: any) {
+        vite.ssrFixStacktrace(e);
+        next(e);
+      }
+    });
   } else {
     console.log("Starting server in PRODUCTION mode...");
     app.use(express.static(distPath));

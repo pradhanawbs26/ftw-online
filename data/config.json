@@ -1,4 +1,10 @@
 {
   "spreadsheetId": "15xOHL87QqqYUkwZRyNe3tG1riYgea3-4B6jaXFnbEfI",
-  "webhookUrl": ""
+  "webhookUrl": "",
+  "fonnteToken": "",
+  "fonnteTarget": "",
+  "fonnteEnabled": false,
+  "fonnteAlertUnfit": true,
+  "fonnteAlertRest": true,
+  "fonnteAlertConditional": true
 }
