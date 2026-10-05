@@ -26,8 +26,30 @@ if (!fs.existsSync(HISTORY_FILE)) {
   fs.writeFileSync(HISTORY_FILE, JSON.stringify([]));
 }
 
+const DEFAULT_CONFIG = {
+  spreadsheetId: "15xOHL87QqqYUkwZRyNe3tG1riYgea3-4B6jaXFnbEfI",
+  webhookUrl: "",
+  fonnteToken: "iNfrBRnqQj4izhPo4PKL",
+  fonnteTarget: "120363042234367353@g.us",
+  fonnteEnabled: true,
+  fonnteAlertUnfit: true,
+  fonnteAlertRest: true,
+  fonnteAlertConditional: true
+};
+
 if (!fs.existsSync(CONFIG_FILE)) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify({ spreadsheetId: "15xOHL87QqqYUkwZRyNe3tG1riYgea3-4B6jaXFnbEfI", webhookUrl: "" }, null, 2));
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2));
+} else {
+  try {
+    const existing = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+    const merged = {
+      ...DEFAULT_CONFIG,
+      ...existing,
+      fonnteToken: (existing.fonnteToken && String(existing.fonnteToken).trim()) ? existing.fonnteToken : DEFAULT_CONFIG.fonnteToken,
+      fonnteTarget: (existing.fonnteTarget && String(existing.fonnteTarget).trim()) ? existing.fonnteTarget : DEFAULT_CONFIG.fonnteTarget
+    };
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(merged, null, 2));
+  } catch (e) {}
 }
 
 if (!fs.existsSync(EMPLOYEES_FILE)) {
@@ -398,6 +420,118 @@ app.get("/api/ftw/shift-operators", (req, res) => {
   }
 });
 
+// Helper to automatically dispatch WhatsApp alert via Fonnte Gateway for Unfit / Rest / Supervision
+async function dispatchFonnteWhatsAppAlert(record: any): Promise<{ sent: boolean; message: string; details?: any }> {
+  try {
+    let token = "iNfrBRnqQj4izhPo4PKL";
+    let target = "120363042234367353@g.us";
+    let enabled = true;
+    let alertUnfit = true;
+    let alertRest = true;
+    let alertConditional = true;
+
+    if (fs.existsSync(CONFIG_FILE)) {
+      try {
+        const cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+        if (cfg.fonnteToken && String(cfg.fonnteToken).trim()) token = String(cfg.fonnteToken).trim();
+        if (cfg.fonnteTarget && String(cfg.fonnteTarget).trim()) target = String(cfg.fonnteTarget).trim();
+        if (cfg.fonnteEnabled !== undefined) enabled = Boolean(cfg.fonnteEnabled);
+        if (cfg.fonnteAlertUnfit !== undefined) alertUnfit = Boolean(cfg.fonnteAlertUnfit);
+        if (cfg.fonnteAlertRest !== undefined) alertRest = Boolean(cfg.fonnteAlertRest);
+        if (cfg.fonnteAlertConditional !== undefined) alertConditional = Boolean(cfg.fonnteAlertConditional);
+      } catch (e) {}
+    }
+
+    if (!enabled) {
+      console.log("[Fonnte Dispatch] Skipped: Alert WA is currently disabled.");
+      return { sent: false, message: "Alert WA dinonaktifkan di pengaturan." };
+    }
+
+    if (!token || !target) {
+      console.warn("[Fonnte Dispatch] Skipped: Token or target missing.");
+      return { sent: false, message: "Token atau Target WA Fonnte belum diatur." };
+    }
+
+    const isUnfit = record.finalDecision === "UNFIT";
+    const isRest = record.finalDecision === "REST_BEFORE_WORK";
+    const isConditional = record.finalDecision === "FIT_CONDITIONAL" || Boolean(record.consumesObat) || Boolean(record.hasPersonalProblem);
+
+    const shouldNotify = (
+      (isUnfit && alertUnfit) ||
+      (isRest && alertRest) ||
+      (isConditional && alertConditional)
+    );
+
+    if (!shouldNotify) {
+      console.log(`[Fonnte Dispatch] Record ${record.id} (${record.nama}) status is ${record.finalDecision}, notification criteria not met.`);
+      return { sent: false, message: "Status tidak memerlukan notifikasi darurat." };
+    }
+
+    let statusLabel = "FIT";
+    let statusIcon = "✅";
+    let tindakan = "Karyawan diizinkan bekerja normal sesuai standar keselamatan.";
+
+    if (isUnfit) {
+      statusLabel = "UNFIT / TIDAK FIT BEKERJA";
+      statusIcon = "⛔";
+      tindakan = "Karyawan TIDAK DIIZINKAN bekerja/mengoperasikan unit. Pengawas/Supervisor wajib segera mengarahkan karyawan ke klinik/ruang istirahat dan menyiapkan operator pengganti.";
+    } else if (isRest) {
+      statusLabel = "BUTUH ISTIRAHAT SEBELUM BEKERJA";
+      statusIcon = "⚠️";
+      tindakan = "Karyawan WAJIB istirahat tambahan sebelum bekerja. Lakukan evaluasi ulang kondisi fisik sebelum diizinkan mengoperasikan unit/alat berat.";
+    } else if (isConditional) {
+      statusLabel = "BUTUH PENGAWASAN KHUSUS (FIT DENGAN CATATAN)";
+      statusIcon = "⚠️";
+      tindakan = "Karyawan diizinkan bekerja HANYA dengan PENGAWASAN KETAT oleh Pengawas/Supervisor shift berjalan terkait konsumsi obat/kondisi fisik.";
+    }
+
+    const message = `🚨 *NOTIFIKASI FIT TO WORK (WBS)* 🚨\n━━━━━━━━━━━━━━━━━━━━━\n${statusIcon} *STATUS: ${statusLabel}*\n\n👤 *Data Karyawan:*\n• *Nama:* ${record.nama || "-"}\n• *NIK:* ${record.nik || "-"}\n• *Departemen:* ${record.dept || "-"}\n• *Jabatan:* ${record.jabatan || "-"}\n• *Waktu Lapor:* ${record.tanggalPengisian || "-"} pukul ${record.jamPengisian || "-"}\n\n💤 *Parameter Tidur & Kelelahan:*\n• *Total Tidur 12 Jam:* ${record.totalSleep12 ?? "-"} Jam\n• *Total Tidur 36 Jam:* ${record.totalSleep36 ?? "-"} Jam\n• *Fatigue Score:* ${record.totalFatigueScore ?? "-"} (${record.fatigueCategory || "-"})\n• *Readiness Score:* ${record.readinessScore ?? "-"}%\n\n📋 *Catatan Khusus:*\n• *Konsumsi Obat:* ${record.consumesObat ? "⚠️ YA (Perlu Perhatian)" : "Tidak"}\n• *Masalah Pribadi:* ${record.hasPersonalProblem ? "⚠️ YA (Berpotensi Distraksi)" : "Tidak"}\n\n📢 *Rekomendasi Tindakan Pengawas:*\n${tindakan}\n━━━━━━━━━━━━━━━━━━━━━\n_Sistem Fit to Work Online PT. Wahana Bara Sentosa_`;
+
+    console.log(`[Fonnte Dispatch] Sending automated alert for ${record.nama} (${record.nik}) [${record.finalDecision}] to target: ${target}`);
+
+    const params = new URLSearchParams();
+    params.append("target", target.trim());
+    params.append("message", message.trim());
+    params.append("countryCode", "62");
+
+    const fonnteRes = await fetch("https://api.fonnte.com/send", {
+      method: "POST",
+      headers: {
+        "Authorization": token.trim()
+      },
+      body: params,
+      signal: AbortSignal.timeout(15000)
+    });
+
+    const responseText = await fonnteRes.text();
+    let responseData: any = {};
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = { raw: responseText };
+    }
+
+    if (fonnteRes.ok && responseData.status === true) {
+      console.log(`[Fonnte Dispatch Success] Alert sent to ${target} for ${record.nik} (${record.nama})!`);
+      return { 
+        sent: true, 
+        message: `Pesan WhatsApp berhasil dikirim ke grup/tujuan (${target})`,
+        details: responseData 
+      };
+    } else {
+      console.warn(`[Fonnte Dispatch Warning] Fonnte API response:`, responseData);
+      return { 
+        sent: false, 
+        message: responseData.reason || responseData.message || responseData.error || "Gagal mengirim pesan melalui Fonnte",
+        details: responseData 
+      };
+    }
+  } catch (error: any) {
+    console.error("[Fonnte Dispatch Exception]:", error.message);
+    return { sent: false, message: error.message };
+  }
+}
+
 // 2. Add an assessment record
 app.post("/api/history", async (req, res) => {
   try {
@@ -442,7 +576,16 @@ app.post("/api/history", async (req, res) => {
       console.warn("Failsafe warning: Google Sheets Webhook forwarding failed", whError.message);
     }
     
-    res.json({ success: true, record: newRecord });
+    // Automatically dispatch Fonnte WhatsApp alert for Unfit / Rest / Supervision
+    let waAlertResult = { sent: false, message: "" };
+    try {
+      waAlertResult = await dispatchFonnteWhatsAppAlert(newRecord);
+    } catch (waErr: any) {
+      console.warn("[Fonnte Alert Exception during record save]:", waErr.message);
+      waAlertResult = { sent: false, message: waErr.message };
+    }
+
+    res.json({ success: true, record: newRecord, waAlert: waAlertResult });
   } catch (error: any) {
     res.status(500).json({ error: "Failed to save record", details: error.message });
   }
@@ -607,8 +750,27 @@ app.delete("/api/employees/:nik", (req, res) => {
 
 app.get("/api/config", (req, res) => {
   try {
-    const data = fs.readFileSync(CONFIG_FILE, "utf-8");
-    res.json(JSON.parse(data));
+    let cfg: any = {
+      spreadsheetId: "15xOHL87QqqYUkwZRyNe3tG1riYgea3-4B6jaXFnbEfI",
+      webhookUrl: "",
+      fonnteToken: "iNfrBRnqQj4izhPo4PKL",
+      fonnteTarget: "120363042234367353@g.us",
+      fonnteEnabled: true,
+      fonnteAlertUnfit: true,
+      fonnteAlertRest: true,
+      fonnteAlertConditional: true
+    };
+    if (fs.existsSync(CONFIG_FILE)) {
+      const data = fs.readFileSync(CONFIG_FILE, "utf-8");
+      const saved = JSON.parse(data);
+      cfg = {
+        ...cfg,
+        ...saved,
+        fonnteToken: (saved.fonnteToken && String(saved.fonnteToken).trim()) ? String(saved.fonnteToken).trim() : cfg.fonnteToken,
+        fonnteTarget: (saved.fonnteTarget && String(saved.fonnteTarget).trim()) ? String(saved.fonnteTarget).trim() : cfg.fonnteTarget
+      };
+    }
+    res.json(cfg);
   } catch (error: any) {
     res.status(500).json({ error: "Failed to read configuration", details: error.message });
   }
@@ -628,23 +790,32 @@ app.post("/api/config", (req, res) => {
       fonnteAlertConditional
     } = req.body;
 
-    let existingConfig: any = {};
+    let existingConfig: any = {
+      spreadsheetId: "15xOHL87QqqYUkwZRyNe3tG1riYgea3-4B6jaXFnbEfI",
+      webhookUrl: "",
+      fonnteToken: "iNfrBRnqQj4izhPo4PKL",
+      fonnteTarget: "120363042234367353@g.us",
+      fonnteEnabled: true,
+      fonnteAlertUnfit: true,
+      fonnteAlertRest: true,
+      fonnteAlertConditional: true
+    };
     if (fs.existsSync(CONFIG_FILE)) {
       try {
-        existingConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+        existingConfig = { ...existingConfig, ...JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8")) };
       } catch (e) {}
     }
 
     const config = { 
       ...existingConfig,
-      spreadsheetId: spreadsheetId !== undefined ? spreadsheetId : (existingConfig.spreadsheetId || ""),
-      webhookUrl: webhookUrl !== undefined ? webhookUrl : (existingConfig.webhookUrl || ""),
-      fonnteToken: fonnteToken !== undefined ? fonnteToken : (existingConfig.fonnteToken || ""),
-      fonnteTarget: fonnteTarget !== undefined ? fonnteTarget : (existingConfig.fonnteTarget || ""),
-      fonnteEnabled: fonnteEnabled !== undefined ? Boolean(fonnteEnabled) : (existingConfig.fonnteEnabled || false),
-      fonnteAlertUnfit: fonnteAlertUnfit !== undefined ? Boolean(fonnteAlertUnfit) : (existingConfig.fonnteAlertUnfit ?? true),
-      fonnteAlertRest: fonnteAlertRest !== undefined ? Boolean(fonnteAlertRest) : (existingConfig.fonnteAlertRest ?? true),
-      fonnteAlertConditional: fonnteAlertConditional !== undefined ? Boolean(fonnteAlertConditional) : (existingConfig.fonnteAlertConditional ?? true)
+      spreadsheetId: (spreadsheetId !== undefined && String(spreadsheetId).trim()) ? String(spreadsheetId).trim() : existingConfig.spreadsheetId,
+      webhookUrl: webhookUrl !== undefined ? String(webhookUrl).trim() : existingConfig.webhookUrl,
+      fonnteToken: (fonnteToken !== undefined && String(fonnteToken).trim()) ? String(fonnteToken).trim() : (existingConfig.fonnteToken || "iNfrBRnqQj4izhPo4PKL"),
+      fonnteTarget: (fonnteTarget !== undefined && String(fonnteTarget).trim()) ? String(fonnteTarget).trim() : (existingConfig.fonnteTarget || "120363042234367353@g.us"),
+      fonnteEnabled: fonnteEnabled !== undefined ? Boolean(fonnteEnabled) : existingConfig.fonnteEnabled,
+      fonnteAlertUnfit: fonnteAlertUnfit !== undefined ? Boolean(fonnteAlertUnfit) : existingConfig.fonnteAlertUnfit,
+      fonnteAlertRest: fonnteAlertRest !== undefined ? Boolean(fonnteAlertRest) : existingConfig.fonnteAlertRest,
+      fonnteAlertConditional: fonnteAlertConditional !== undefined ? Boolean(fonnteAlertConditional) : existingConfig.fonnteAlertConditional
     };
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
     res.json({ success: true, config });
@@ -668,18 +839,9 @@ app.post("/api/send-wa-fonnte", async (req, res) => {
       } catch (e) {}
     }
 
-    if (!token || !String(token).trim()) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Token API Fonnte belum diatur. Silakan atur token di Menu Admin -> Tab Integrasi WhatsApp." 
-      });
-    }
-    if (!target || !String(target).trim()) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Target nomor atau ID Grup WA Fonnte belum diatur. Silakan tentukan nomor tujuan / ID grup di Menu Admin." 
-      });
-    }
+    token = token || "iNfrBRnqQj4izhPo4PKL";
+    target = target || "120363042234367353@g.us";
+
     if (!message || !String(message).trim()) {
       return res.status(400).json({ success: false, error: "Pesan WhatsApp tidak boleh kosong." });
     }
@@ -733,6 +895,91 @@ app.post("/api/send-wa-fonnte", async (req, res) => {
       error: "Terjadi kesalahan server saat menghubungi Fonnte: " + error.message,
       details: error.message 
     });
+  }
+});
+
+// 8. Manual on-demand WhatsApp alert dispatch for specific assessment record
+app.post("/api/send-wa-record", async (req, res) => {
+  try {
+    const { record, recordId } = req.body;
+    let targetRecord = record;
+
+    if (!targetRecord && recordId) {
+      const data = fs.readFileSync(HISTORY_FILE, "utf-8");
+      const history = JSON.parse(data);
+      targetRecord = history.find((r: any) => r.id === recordId);
+    }
+
+    if (!targetRecord) {
+      return res.status(404).json({ success: false, error: "Data laporan tidak ditemukan." });
+    }
+
+    let token = "iNfrBRnqQj4izhPo4PKL";
+    let target = "120363042234367353@g.us";
+
+    if (fs.existsSync(CONFIG_FILE)) {
+      try {
+        const cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+        if (cfg.fonnteToken && String(cfg.fonnteToken).trim()) token = String(cfg.fonnteToken).trim();
+        if (cfg.fonnteTarget && String(cfg.fonnteTarget).trim()) target = String(cfg.fonnteTarget).trim();
+      } catch (e) {}
+    }
+
+    let statusLabel = "FIT";
+    let statusIcon = "✅";
+    let tindakan = "Karyawan diizinkan bekerja normal sesuai standar keselamatan.";
+
+    if (targetRecord.finalDecision === "UNFIT") {
+      statusLabel = "UNFIT / TIDAK FIT BEKERJA";
+      statusIcon = "⛔";
+      tindakan = "Karyawan TIDAK DIIZINKAN bekerja/mengoperasikan unit. Pengawas/Supervisor wajib segera mengarahkan karyawan ke klinik/ruang istirahat dan menyiapkan operator pengganti.";
+    } else if (targetRecord.finalDecision === "REST_BEFORE_WORK") {
+      statusLabel = "BUTUH ISTIRAHAT SEBELUM BEKERJA";
+      statusIcon = "⚠️";
+      tindakan = "Karyawan WAJIB istirahat tambahan sebelum bekerja. Lakukan evaluasi ulang kondisi fisik sebelum diizinkan mengoperasikan unit/alat berat.";
+    } else if (targetRecord.finalDecision === "FIT_CONDITIONAL" || targetRecord.consumesObat || targetRecord.hasPersonalProblem) {
+      statusLabel = "BUTUH PENGAWASAN KHUSUS (FIT DENGAN CATATAN)";
+      statusIcon = "⚠️";
+      tindakan = "Karyawan diizinkan bekerja HANYA dengan PENGAWASAN KETAT oleh Pengawas/Supervisor shift berjalan terkait konsumsi obat/kondisi fisik.";
+    }
+
+    const message = `🚨 *NOTIFIKASI FIT TO WORK (WBS)* 🚨\n━━━━━━━━━━━━━━━━━━━━━\n${statusIcon} *STATUS: ${statusLabel}*\n\n👤 *Data Karyawan:*\n• *Nama:* ${targetRecord.nama || "-"}\n• *NIK:* ${targetRecord.nik || "-"}\n• *Departemen:* ${targetRecord.dept || "-"}\n• *Jabatan:* ${targetRecord.jabatan || "-"}\n• *Waktu Lapor:* ${targetRecord.tanggalPengisian || "-"} pukul ${targetRecord.jamPengisian || "-"}\n\n💤 *Parameter Tidur & Kelelahan:*\n• *Total Tidur 12 Jam:* ${targetRecord.totalSleep12 ?? "-"} Jam\n• *Total Tidur 36 Jam:* ${targetRecord.totalSleep36 ?? "-"} Jam\n• *Fatigue Score:* ${targetRecord.totalFatigueScore ?? "-"} (${targetRecord.fatigueCategory || "-"})\n• *Readiness Score:* ${targetRecord.readinessScore ?? "-"}%\n\n📋 *Catatan Khusus:*\n• *Konsumsi Obat:* ${targetRecord.consumesObat ? "⚠️ YA (Perlu Perhatian)" : "Tidak"}\n• *Masalah Pribadi:* ${targetRecord.hasPersonalProblem ? "⚠️ YA (Berpotensi Distraksi)" : "Tidak"}\n\n📢 *Rekomendasi Tindakan Pengawas:*\n${tindakan}\n━━━━━━━━━━━━━━━━━━━━━\n_Sistem Fit to Work Online PT. Wahana Bara Sentosa_`;
+
+    const params = new URLSearchParams();
+    params.append("target", target.trim());
+    params.append("message", message.trim());
+    params.append("countryCode", "62");
+
+    const fonnteRes = await fetch("https://api.fonnte.com/send", {
+      method: "POST",
+      headers: { "Authorization": token.trim() },
+      body: params,
+      signal: AbortSignal.timeout(15000)
+    });
+
+    const responseText = await fonnteRes.text();
+    let responseData: any = {};
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = { raw: responseText };
+    }
+
+    if (fonnteRes.ok && responseData.status === true) {
+      res.json({
+        success: true,
+        message: `Alert untuk ${targetRecord.nama} berhasil dikirim ke ${target}`,
+        data: responseData
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: responseData.reason || responseData.message || "Gagal mengirim ke Fonnte",
+        details: responseData
+      });
+    }
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

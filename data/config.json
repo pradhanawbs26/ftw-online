@@ -1,9 +1,9 @@
 {
   "spreadsheetId": "15xOHL87QqqYUkwZRyNe3tG1riYgea3-4B6jaXFnbEfI",
   "webhookUrl": "",
-  "fonnteToken": "",
-  "fonnteTarget": "",
-  "fonnteEnabled": false,
+  "fonnteToken": "iNfrBRnqQj4izhPo4PKL",
+  "fonnteTarget": "120363042234367353@g.us",
+  "fonnteEnabled": true,
   "fonnteAlertUnfit": true,
   "fonnteAlertRest": true,
   "fonnteAlertConditional": true
