@@ -412,6 +412,7 @@ export default function App() {
   const [fonnteTestStatus, setFonnteTestStatus] = useState<{ loading: boolean; success?: boolean; message?: string }>({ loading: false });
   const [waNotificationSent, setWaNotificationSent] = useState<boolean>(false);
   const [waNotificationStatus, setWaNotificationStatus] = useState<string>('');
+  const [isSendingModalWa, setIsSendingModalWa] = useState<boolean>(false);
 
   // Admin Authentication States
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
@@ -1002,7 +1003,115 @@ export default function App() {
     }
   };
 
-  // Test Fonnte WhatsApp Message Dispatch via Server Proxy
+  // Universal Dual-Path Fonnte WhatsApp Message Dispatcher (Server Proxy + Direct Client CORS Fallback)
+  const dispatchFonnteWAMessage = async (messageText: string, targetParam?: string, tokenParam?: string): Promise<{ success: boolean; message: string }> => {
+    const cleanToken = (tokenParam || fonnteToken || 'iNfrBRnqQj4izhPo4PKL').trim();
+    const cleanTarget = (targetParam || fonnteTarget || '120363042234367353@g.us').trim();
+
+    if (!cleanToken) {
+      return { success: false, message: 'Token API Fonnte belum diatur. Silakan atur di Tab Integrasi WA.' };
+    }
+    if (!cleanTarget) {
+      return { success: false, message: 'Target nomor atau ID Grup WA belum diatur.' };
+    }
+
+    // 1. Try server proxy first (Supported on Cloud Run / Node hosting)
+    try {
+      const resp = await fetch('/api/send-wa-fonnte', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: cleanToken,
+          target: cleanTarget,
+          message: messageText
+        })
+      });
+
+      const contentType = resp.headers.get('content-type') || '';
+      // Only attempt JSON parsing if the server responded with application/json
+      if (resp.ok && contentType.includes('application/json')) {
+        const data = await resp.json();
+        if (data.success) {
+          const qId = data.data?.id?.[0] ? ` (ID Antrian: ${data.data.id[0]})` : '';
+          return { success: true, message: `Pesan WhatsApp berhasil dikirim ke ${cleanTarget}!${qId}` };
+        } else if (data.error) {
+          console.warn("[Fonnte Server Proxy Response]:", data.error);
+        }
+      }
+    } catch (proxyErr) {
+      console.warn("[Fonnte Proxy Server unreachable, switching to direct client call]:", proxyErr);
+    }
+
+    // 2. Direct browser-to-Fonnte call via CORS (Guaranteed to work on Vercel, Netlify, and static deployments)
+    try {
+      const params = new URLSearchParams();
+      params.append('target', cleanTarget);
+      params.append('message', messageText.trim());
+      params.append('countryCode', '62');
+
+      const directRes = await fetch('https://api.fonnte.com/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': cleanToken
+        },
+        body: params
+      });
+
+      const responseText = await directRes.text();
+      let directData: any = {};
+      try {
+        directData = JSON.parse(responseText);
+      } catch {
+        directData = { raw: responseText };
+      }
+
+      if (directRes.ok && directData.status === true) {
+        const qId = directData.id?.[0] ? ` (ID Antrian: ${directData.id[0]})` : '';
+        return { 
+          success: true, 
+          message: `Pesan WhatsApp berhasil dikirim ke ${cleanTarget}!${qId}` 
+        };
+      } else {
+        const errorReason = directData.reason || directData.message || directData.error || responseText || 'Gagal mengirim pesan melalui Fonnte';
+        return { 
+          success: false, 
+          message: errorReason 
+        };
+      }
+    } catch (directErr: any) {
+      return { 
+        success: false, 
+        message: directErr.message || 'Gagal menghubungi gateway WhatsApp Fonnte.' 
+      };
+    }
+  };
+
+  // Helper to construct formatted alert message and dispatch for any assessment record
+  const handleDispatchRecordAlert = async (record: CustomAssessment): Promise<{ success: boolean; message: string }> => {
+    let statusLabel = 'FIT TO WORK';
+    let statusIcon = '✅';
+    let tindakan = 'Karyawan diizinkan bekerja normal sesuai standar keselamatan.';
+
+    if (record.finalDecision === 'UNFIT') {
+      statusLabel = 'UNFIT / TIDAK FIT BEKERJA';
+      statusIcon = '⛔';
+      tindakan = 'Karyawan TIDAK DIIZINKAN bekerja/mengoperasikan unit. Pengawas/Supervisor wajib segera mengarahkan karyawan ke klinik/ruang istirahat dan menyiapkan operator pengganti.';
+    } else if (record.finalDecision === 'REST_BEFORE_WORK') {
+      statusLabel = 'BUTUH ISTIRAHAT SEBELUM BEKERJA';
+      statusIcon = '⚠️';
+      tindakan = 'Karyawan WAJIB istirahat tambahan sebelum bekerja. Lakukan evaluasi ulang kondisi fisik sebelum diizinkan mengoperasikan unit/alat berat.';
+    } else if (record.finalDecision === 'FIT_CONDITIONAL' || record.consumesObat || record.hasPersonalProblem) {
+      statusLabel = 'BUTUH PENGAWASAN KHUSUS (FIT DENGAN CATATAN)';
+      statusIcon = '⚠️';
+      tindakan = 'Karyawan diizinkan bekerja HANYA dengan PENGAWASAN KETAT oleh Pengawas/Supervisor shift berjalan terkait konsumsi obat/kondisi fisik.';
+    }
+
+    const message = `🚨 *NOTIFIKASI FIT TO WORK (WBS)* 🚨\n━━━━━━━━━━━━━━━━━━━━━\n${statusIcon} *STATUS: ${statusLabel}*\n\n👤 *Data Karyawan:*\n• *Nama:* ${record.nama || '-'}\n• *NIK:* ${record.nik || '-'}\n• *Departemen:* ${record.dept || '-'}\n• *Jabatan:* ${record.jabatan || '-'}\n• *Waktu Lapor:* ${record.tanggalPengisian || '-'} pukul ${record.jamPengisian || '-'}\n\n💤 *Parameter Tidur & Kelelahan:*\n• *Total Tidur 12 Jam:* ${record.totalSleep12 ?? '-'} Jam\n• *Total Tidur 36 Jam:* ${record.totalSleep36 ?? '-'} Jam\n• *Fatigue Score:* ${record.totalFatigueScore ?? '-'} (${record.fatigueCategory || '-'})\n• *Readiness Score:* ${record.readinessScore ?? '-'}%\n\n📋 *Catatan Khusus:*\n• *Konsumsi Obat:* ${record.consumesObat ? '⚠️ YA (Perlu Perhatian)' : 'Tidak'}\n• *Masalah Pribadi:* ${record.hasPersonalProblem ? '⚠️ YA (Berpotensi Distraksi)' : 'Tidak'}\n\n📢 *Rekomendasi Tindakan Pengawas:*\n${tindakan}\n━━━━━━━━━━━━━━━━━━━━━\n_Sistem Fit to Work Online PT. Wahana Bara Sentosa_`;
+
+    return await dispatchFonnteWAMessage(message);
+  };
+
+  // Test Fonnte WhatsApp Message Dispatch
   const handleTestFonnteWA = async () => {
     const cleanToken = (fonnteToken || 'iNfrBRnqQj4izhPo4PKL').trim();
     const cleanTarget = (fonnteTarget || '120363042234367353@g.us').trim();
@@ -1017,100 +1126,36 @@ export default function App() {
     }
 
     setFonnteTestStatus({ loading: true, message: undefined });
-    try {
-      const sampleMsg = `🧪 *TES KONEKSI WHATSAPP (FONNTE)* 🧪\n━━━━━━━━━━━━━━━━━━━━━\nSistem *Fit to Work PT. Wahana Bara Sentosa* berhasil terhubung dengan Gateway Fonnte!\n\n📅 *Waktu Uji:* ${new Date().toLocaleString('id-ID')}\n📱 *Target Tujuan:* ${cleanTarget}\n✅ *Status Gateway:* TERHUBUNG & SIAP MENGIRIM ALERT OTOMATIS\n\nNotifikasi darurat akan otomatis dikirimkan ke grup ini saat ada karyawan yang melaporkan kondisi:\n1. ⛔ *UNFIT*\n2. ⚠️ *BUTUH ISTIRAHAT*\n3. ⚠️ *BUTUH PENGAWASAN KHUSUS*\n━━━━━━━━━━━━━━━━━━━━━\n_Pesan uji coba otomatis sistem FTW WBS_`;
+    const sampleMsg = `🧪 *TES KONEKSI WHATSAPP (FONNTE)* 🧪\n━━━━━━━━━━━━━━━━━━━━━\nSistem *Fit to Work PT. Wahana Bara Sentosa* berhasil terhubung dengan Gateway Fonnte!\n\n📅 *Waktu Uji:* ${new Date().toLocaleString('id-ID')}\n📱 *Target Tujuan:* ${cleanTarget}\n✅ *Status Gateway:* TERHUBUNG & SIAP MENGIRIM ALERT OTOMATIS\n\nNotifikasi darurat akan otomatis dikirimkan ke grup ini saat ada karyawan yang melaporkan kondisi:\n1. ⛔ *UNFIT*\n2. ⚠️ *BUTUH ISTIRAHAT*\n3. ⚠️ *BUTUH PENGAWASAN KHUSUS*\n━━━━━━━━━━━━━━━━━━━━━\n_Pesan uji coba otomatis sistem FTW WBS_`;
 
-      const resp = await fetch('/api/send-wa-fonnte', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: cleanToken,
-          target: cleanTarget,
-          message: sampleMsg
-        })
-      });
-
-      const text = await resp.text();
-      let data: any = {};
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = { error: text || `HTTP ${resp.status}` };
-      }
-
-      if (resp.ok && data.success) {
-        const queueId = data.data?.id?.[0] ? ` (ID Antrian: ${data.data.id[0]})` : '';
-        setFonnteTestStatus({ 
-          loading: false, 
-          success: true, 
-          message: `Berhasil terkirim ke ${cleanTarget}!${queueId}` 
-        });
-        addLog(`[Fonnte Test] Pesan uji coba berhasil dikirim ke ${cleanTarget}`);
-      } else {
-        const errMsg = data.error || data.details?.reason || data.details?.message || 'Gagal mengirim pesan melalui Fonnte';
-        setFonnteTestStatus({ 
-          loading: false, 
-          success: false, 
-          message: errMsg 
-        });
-        addLog(`[Fonnte Test Error] ${errMsg}`);
-      }
-    } catch (err: any) {
-      const errMsg = 'Koneksi ke server gagal: ' + (err.message || 'Terjadi kesalahan sistem');
-      setFonnteTestStatus({ 
-        loading: false, 
-        success: false, 
-        message: errMsg 
-      });
-      addLog(`[Fonnte Test Exception] ${err.message}`);
+    const result = await dispatchFonnteWAMessage(sampleMsg, cleanTarget, cleanToken);
+    setFonnteTestStatus({ 
+      loading: false, 
+      success: result.success, 
+      message: result.message 
+    });
+    if (result.success) {
+      addLog(`[Fonnte Test] ${result.message}`);
+    } else {
+      addLog(`[Fonnte Test Error] ${result.message}`);
     }
   };
 
   // Automatic Fonnte WhatsApp Notification Dispatcher for Unfit / Rest / Supervision
   const handleSendFonnteNotification = async (record: CustomAssessment) => {
     try {
-      const cleanToken = (fonnteToken || 'iNfrBRnqQj4izhPo4PKL').trim();
-      const cleanTarget = (fonnteTarget || '120363042234367353@g.us').trim();
-
-      if (!cleanToken || !cleanTarget) return;
-
-      let statusLabel = 'FIT';
-      if (record.finalDecision === 'UNFIT') {
-        statusLabel = 'UNFIT / TIDAK FIT BEKERJA';
-      } else if (record.finalDecision === 'REST_BEFORE_WORK') {
-        statusLabel = 'BUTUH ISTIRAHAT SEBELUM BEKERJA';
-      } else if (record.finalDecision === 'FIT_CONDITIONAL' || record.consumesObat || record.hasPersonalProblem) {
-        statusLabel = 'BUTUH PENGAWASAN KHUSUS (FIT DENGAN CATATAN)';
-      }
-
-      const resp = await fetch('/api/send-wa-record', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ record })
-      });
-
-      const text = await resp.text();
-      let resData: any = {};
-      try {
-        resData = JSON.parse(text);
-      } catch {
-        resData = { error: text || `HTTP ${resp.status}` };
-      }
-
-      if (resp.ok && resData.success) {
+      const result = await handleDispatchRecordAlert(record);
+      if (result.success) {
         setWaNotificationSent(true);
-        setWaNotificationStatus(`Notifikasi WhatsApp terkirim ke ${cleanTarget}`);
-        addLog(`[Fonnte WA] Berhasil mengirim alert ${statusLabel} untuk ${record.nama} (${record.nik})`);
+        setWaNotificationStatus(`Notifikasi WhatsApp terkirim ke ${fonnteTarget || 'Grup WA'}`);
+        addLog(`[Fonnte WA] Berhasil mengirim alert untuk ${record.nama} (${record.nik})`);
       } else {
-        const errorText = resData.error || 'Gagal mengirim pesan via Fonnte';
-        setWaNotificationStatus(`Gagal kirim WA: ${errorText}`);
-        addLog(`[Fonnte WA Error] ${errorText}`);
+        setWaNotificationStatus(`Gagal kirim WA: ${result.message}`);
+        addLog(`[Fonnte WA Error] ${result.message}`);
       }
     } catch (err: any) {
-      console.error('[Fonnte WA Error]:', err);
-      const errText = err.message || 'Kesalahan koneksi server';
-      setWaNotificationStatus(`Gagal kirim WA: ${errText}`);
-      addLog(`[Fonnte WA Exception] ${errText}`);
+      setWaNotificationStatus(`Gagal kirim WA: ${err.message}`);
+      addLog(`[Fonnte WA Exception] ${err.message}`);
     }
   };
 
@@ -4189,27 +4234,26 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                 <div className="mt-5 pt-3 border-t border-neutral-200 flex flex-wrap justify-between items-center gap-2 shrink-0">
                                   <button
                                     type="button"
+                                    disabled={isSendingModalWa}
                                     onClick={async () => {
+                                      setIsSendingModalWa(true);
                                       try {
-                                        const res = await fetch('/api/send-wa-record', {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ record: det })
-                                        });
-                                        const data = await res.json();
-                                        if (data.success) {
-                                          alert(`✅ ${data.message || 'Alert berhasil dikirim ke grup WhatsApp!'}`);
+                                        const result = await handleDispatchRecordAlert(det);
+                                        if (result.success) {
+                                          alert(`✅ ${result.message}`);
                                         } else {
-                                          alert(`❌ Gagal: ${data.error || 'Terjadi kesalahan saat kirim ke Fonnte'}`);
+                                          alert(`❌ Gagal: ${result.message}`);
                                         }
                                       } catch (err: any) {
-                                        alert(`❌ Koneksi gagal: ${err.message}`);
+                                        alert(`❌ Galat: ${err.message || 'Gagal mengirim alert'}`);
+                                      } finally {
+                                        setIsSendingModalWa(false);
                                       }
                                     }}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10.5px] py-1.5 px-3 rounded-lg uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                    className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-[10.5px] py-1.5 px-3 rounded-lg uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                                   >
-                                    <Send className="w-3.5 h-3.5" />
-                                    <span>{lang === 'ID' ? 'Kirim Alert ke Grup WA' : 'Send Alert to WA Group'}</span>
+                                    <Send className={`w-3.5 h-3.5 ${isSendingModalWa ? 'animate-pulse' : ''}`} />
+                                    <span>{isSendingModalWa ? (lang === 'ID' ? 'Mengirim...' : 'Sending...') : (lang === 'ID' ? 'Kirim Alert ke Grup WA' : 'Send Alert to WA Group')}</span>
                                   </button>
 
                                   <button
