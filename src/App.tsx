@@ -314,6 +314,21 @@ export const checkIsDayShift = (jamStr: string): boolean => {
   return false;
 };
 
+// Helper for date normalization
+export const normalizeDateStr = (d?: string): string => {
+  if (!d) return '';
+  const clean = d.trim().split(' ')[0].replace(/\//g, '-');
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    } else if (parts[2].length === 4) {
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+  return clean;
+};
+
 // Helper to ensure records are strictly unique without dropping records with colliding generated IDs
 export const deduplicateAssessments = (records: CustomAssessment[]): CustomAssessment[] => {
   const map = new Map<string, CustomAssessment>();
@@ -1702,10 +1717,14 @@ export default function App() {
     }
   };
 
-  const handleRestoreFromFirebase = async () => {
+  const handleRestoreFromFirebase = async (forcedDate?: string) => {
     try {
       setFirebaseSyncing(true);
-      setFirebaseStatusMsg(lang === 'ID' ? 'Mengambil data dari Firebase Firestore (Mode Hemat 1-Read)...' : 'Pulling data from Firebase Firestore (1-Read Saver Mode)...');
+      const queryDate = forcedDate || (adminFilterStartDate ? adminFilterStartDate : undefined);
+      const statusText = queryDate 
+        ? (lang === 'ID' ? `Mengambil data dari Firebase Firestore untuk tanggal ${queryDate}...` : `Pulling data from Firebase Firestore for date ${queryDate}...`)
+        : (lang === 'ID' ? 'Mengambil data dari Firebase Firestore...' : 'Pulling data from Firebase Firestore...');
+      setFirebaseStatusMsg(statusText);
 
       // 1. Restore employees via consolidated single-read roster (1 Read only!)
       const fsEmployees = await fetchRosterFromFirestore();
@@ -1716,34 +1735,69 @@ export default function App() {
         await saveEmployeeDb(mergedEmp);
       }
 
-      // 2. Restore assessments with bounded query (Limit 100 to protect read quota)
-      const fsAssessments = await fetchAssessmentsFromFirestore(100);
+      // 2. Restore assessments: target specific filter date if set, or get up to 500 records
+      const fsAssessments = await fetchAssessmentsFromFirestore(500, queryDate);
       let histCount = 0;
       if (fsAssessments && fsAssessments.length > 0) {
-        const existingIds = new Set(history.map(r => r.id));
-        const toAdd = fsAssessments.filter(r => r.id && !existingIds.has(r.id));
         histCount = fsAssessments.length;
-        if (toAdd.length > 0) {
-          const mergedHist = [...toAdd, ...history];
-          setHistory(mergedHist);
-          safeStorage.set('wbs_ftw_history', JSON.stringify(mergedHist));
-          for (const item of toAdd) {
-            try {
-              await fetch('/api/history', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(item)
-              });
-            } catch (e) {}
+
+        // Create updated history mapping
+        const histMap = new Map<string, CustomAssessment>();
+        // Add current history first
+        for (const item of history) {
+          if (item && item.nik) {
+            const key = `${item.nik}__${item.tanggalPengisian || ''}__${item.jamPengisian || ''}`;
+            histMap.set(key, item);
           }
+        }
+        // Overwrite or insert with authoritative Firebase records
+        for (const item of fsAssessments) {
+          if (item && item.nik) {
+            const key = `${item.nik}__${item.tanggalPengisian || ''}__${item.jamPengisian || ''}`;
+            histMap.set(key, item as CustomAssessment);
+          }
+        }
+
+        const mergedHist = Array.from(histMap.values());
+        // Sort strictly newest-first
+        mergedHist.sort((a, b) => {
+          const dateA = normalizeDateStr(a.tanggalPengisian || a.timestamp || '');
+          const dateB = normalizeDateStr(b.tanggalPengisian || b.timestamp || '');
+          if (dateA !== dateB) return dateB.localeCompare(dateA);
+          const timeA = (a.jamPengisian || '').padStart(5, '0');
+          const timeB = (b.jamPengisian || '').padStart(5, '0');
+          return timeB.localeCompare(timeA);
+        });
+
+        setHistory(mergedHist);
+        safeStorage.set('wbs_ftw_history', JSON.stringify(mergedHist.slice(0, 500)));
+
+        // Persist to Express server so reload keeps the updated records
+        try {
+          await fetch('/api/history-sync-firebase', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ records: fsAssessments })
+          });
+        } catch (srvErr) {
+          console.warn('Server sync error from Firebase restore:', srvErr);
         }
       }
 
+      // Calculate shift breakdown if date was specified
+      let shiftBreakdown = '';
+      if (queryDate && fsAssessments.length > 0) {
+        const s1 = fsAssessments.filter(r => checkIsDayShift(r.jamPengisian)).length;
+        const s2 = fsAssessments.filter(r => !checkIsDayShift(r.jamPengisian)).length;
+        shiftBreakdown = ` (Shift 1: ${s1}, Shift 2: ${s2})`;
+      }
+
       const msg = lang === 'ID'
-        ? `✅ Berhasil memulihkan ${empCount} data karyawan (1 Read) dan ${histCount} data assessment dari Firebase Firestore!`
-        : `✅ Successfully restored ${empCount} employees (1 Read) and ${histCount} assessment records from Firebase Firestore!`;
+        ? `✅ Berhasil memulihkan ${empCount} data karyawan dan ${histCount} data assessment dari Firebase Firestore${shiftBreakdown}!`
+        : `✅ Successfully restored ${empCount} employees and ${histCount} assessment records from Firebase Firestore${shiftBreakdown}!`;
 
       setFirebaseStatusMsg(msg);
+      alert(msg);
     } catch (err: any) {
       console.error("Firebase restore error:", err);
       const errMsg = `❌ Gagal restore dari Firebase: ${err.message || err}`;
@@ -3910,7 +3964,17 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                             <span className="text-[10px] text-neutral-500 font-semibold">
                               * {lang === 'ID' ? 'Kriteria Shift dinilai berdasarkan jam pengisian sertifikat laporan secara tepat.' : 'Shift determined based on the exact submission timestamp hour.'}
                             </span>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <button
+                                type="button"
+                                disabled={firebaseSyncing}
+                                onClick={() => handleRestoreFromFirebase(adminFilterStartDate || undefined)}
+                                className="bg-sky-600 hover:bg-sky-700 active:scale-[0.98] disabled:bg-neutral-400 text-white text-[10px] font-black uppercase py-1 px-2.5 rounded cursor-pointer transition shadow-xs flex items-center gap-1.5"
+                                title="Tarik dan sinkronkan data tanggal ini dari Firebase Firestore"
+                              >
+                                <RefreshCw className={`w-3 h-3 ${firebaseSyncing ? 'animate-spin' : ''}`} />
+                                <span>{firebaseSyncing ? (lang === 'ID' ? 'Sinkronisasi...' : 'Syncing...') : (lang === 'ID' ? '📥 Tarik dari Firebase' : '📥 Pull Firebase')}</span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -5382,7 +5446,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                           <button
                             type="button"
                             disabled={firebaseSyncing}
-                            onClick={handleRestoreFromFirebase}
+                            onClick={() => handleRestoreFromFirebase()}
                             className={`w-full py-3 px-4 rounded-xl font-black text-xs uppercase tracking-wider text-white shadow-sm flex items-center justify-center gap-2 cursor-pointer transition ${
                               firebaseSyncing
                                 ? 'bg-neutral-400 cursor-not-allowed'

@@ -12,7 +12,8 @@ import {
   writeBatch,
   query,
   orderBy,
-  limit
+  limit,
+  where
 } from 'firebase/firestore';
 export const firebaseConfig = {
   apiKey: "AIzaSyBMw_xLTuTK66i2TFn6Iotg43AFvFBtxZ8",
@@ -158,26 +159,76 @@ export async function deleteAssessmentFromFirestore(id: string): Promise<boolean
 }
 
 /**
- * Fetch assessments from Firestore with smart limit.
- * CRITICAL QUOTA SAVER: Prevents downloading thousands of historical records at once.
- * Default limit is 50 records to prevent hitting read quota limits (1.9M read surge prevention).
+ * Fetch assessments from Firestore with optional target date filtering and resilient fallback.
+ * CRITICAL FIX: Allows querying assessments directly by date (e.g. 2026-10-05) without hitting quota caps.
  */
-export async function fetchAssessmentsFromFirestore(limitCount: number = 50): Promise<any[]> {
-  const path = 'assessments';
+export async function fetchAssessmentsFromFirestore(limitCount: number = 300, targetDate?: string): Promise<any[]> {
   try {
     const colRef = collection(db, 'assessments');
-    // Apply order and limit to protect Firestore read quota
-    const q = query(colRef, orderBy('timestamp', 'desc'), limit(Math.max(1, limitCount)));
+    let q;
+    if (targetDate) {
+      q = query(colRef, where('tanggalPengisian', '==', targetDate), limit(Math.max(1, limitCount)));
+    } else {
+      q = query(colRef, orderBy('timestamp', 'desc'), limit(Math.max(1, limitCount)));
+    }
     const snapshot = await getDocs(q);
     const records: any[] = [];
     snapshot.forEach((d) => {
       records.push(d.data());
     });
-    return records;
+    if (records.length > 0) return records;
   } catch (error) {
-    console.warn('[Firestore] Gagal mengambil riwayat dari Firestore:', error);
-    return [];
+    console.warn('[Firestore SDK] Warning taking history, attempting REST fallback:', error);
   }
+
+  // Fallback to high-reliability Firestore REST API
+  try {
+    const structuredQuery: any = {
+      from: [{ collectionId: 'assessments' }],
+      limit: Math.max(1, limitCount)
+    };
+    if (targetDate) {
+      structuredQuery.where = {
+        fieldFilter: {
+          field: { fieldPath: 'tanggalPengisian' },
+          op: 'EQUAL',
+          value: { stringValue: targetDate }
+        }
+      };
+    } else {
+      structuredQuery.orderBy = [
+        { field: { fieldPath: 'timestamp' }, direction: 'DESCENDING' }
+      ];
+    }
+    const resp = await fetch('https://firestore.googleapis.com/v1/projects/ftw-wbs/databases/(default)/documents:runQuery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ structuredQuery })
+    });
+    if (resp.ok) {
+      const items = await resp.json();
+      const recordsRest: any[] = [];
+      for (const item of items) {
+        if (item && item.document && item.document.fields) {
+          const f = item.document.fields;
+          const obj: any = {};
+          for (const [k, v] of Object.entries(f) as [string, any][]) {
+            if (v.stringValue !== undefined) obj[k] = v.stringValue;
+            else if (v.integerValue !== undefined) obj[k] = parseInt(v.integerValue, 10);
+            else if (v.doubleValue !== undefined) obj[k] = parseFloat(v.doubleValue);
+            else if (v.booleanValue !== undefined) obj[k] = v.booleanValue;
+            else if (v.timestampValue !== undefined) obj[k] = v.timestampValue;
+          }
+          recordsRest.push(obj);
+        }
+      }
+      return recordsRest;
+    }
+  } catch (restErr) {
+    console.warn('[Firestore REST fallback error]', restErr);
+  }
+
+  return [];
 }
 
 /**

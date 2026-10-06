@@ -350,6 +350,65 @@ app.get("/api/history", (req, res) => {
   }
 });
 
+// Endpoint to persist assessments pulled from Firebase Firestore directly into server history.json
+app.post("/api/history-sync-firebase", async (req, res) => {
+  try {
+    const incomingRecords: any[] = Array.isArray(req.body?.records) ? req.body.records : (Array.isArray(req.body) ? req.body : []);
+    if (incomingRecords.length === 0) {
+      return res.status(400).json({ error: "No records provided" });
+    }
+
+    let existing: any[] = [];
+    if (fs.existsSync(HISTORY_FILE)) {
+      try {
+        existing = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
+      } catch (e) {
+        existing = [];
+      }
+    }
+
+    const map = new Map<string, any>();
+    for (const r of existing) {
+      if (r && r.nik) {
+        const key = `${r.nik}__${r.tanggalPengisian || ""}__${r.jamPengisian || ""}`;
+        map.set(key, r);
+      }
+    }
+
+    // Overwrite / add records with Firestore authoritative documents
+    let addedCount = 0;
+    for (const r of incomingRecords) {
+      if (r && r.nik) {
+        const key = `${r.nik}__${r.tanggalPengisian || ""}__${r.jamPengisian || ""}`;
+        map.set(key, r);
+        addedCount++;
+      }
+    }
+
+    const merged = Array.from(map.values());
+    merged.sort((a, b) => {
+      const dateA = normalizeDateStr(a.tanggalPengisian || a.timestamp || "");
+      const dateB = normalizeDateStr(b.tanggalPengisian || b.timestamp || "");
+      if (dateA !== dateB) return dateB.localeCompare(dateA);
+      const timeA = (a.jamPengisian || "").padStart(5, "0");
+      const timeB = (b.jamPengisian || "").padStart(5, "0");
+      return timeB.localeCompare(timeA);
+    });
+
+    await fs.promises.writeFile(HISTORY_FILE, JSON.stringify(merged, null, 2));
+    console.log(`[Firebase Sync Endpoint] Synced and merged ${addedCount} records from Firebase into history.json (total now ${merged.length})`);
+
+    res.json({
+      success: true,
+      totalCount: merged.length,
+      syncedCount: addedCount
+    });
+  } catch (err: any) {
+    console.error("[Firebase Sync Error]", err);
+    res.status(500).json({ error: "Failed to merge Firebase records", details: err.message });
+  }
+});
+
 // Helper for date normalization
 function normalizeDateStr(dateStr?: string): string {
   if (!dateStr) return "";
