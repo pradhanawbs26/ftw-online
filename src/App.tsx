@@ -130,6 +130,7 @@ const safeStorage = {
 
 interface CustomAssessment {
   id: string;
+  originalId?: string;
   timestamp: string;
   nik: string;
   nama: string;
@@ -172,6 +173,7 @@ interface InlineEditRowProps {
   onCancelEdit: () => void;
   onSaveEdit: (namaVal: string, jabatanVal: string, deptVal: string) => void;
   onDelete: () => void;
+  onViewHistory?: () => void;
   lang: 'ID' | 'EN';
 }
 
@@ -183,6 +185,7 @@ const InlineEditRow: React.FC<InlineEditRowProps> = ({
   onCancelEdit,
   onSaveEdit,
   onDelete,
+  onViewHistory,
   lang
 }) => {
   const [namaVal, setNamaVal] = useState<string>(item.nama);
@@ -263,6 +266,16 @@ const InlineEditRow: React.FC<InlineEditRowProps> = ({
       </td>
       <td className="px-4 py-2.5 text-center align-middle whitespace-nowrap">
         <div className="flex justify-center gap-1.5 font-sans">
+          {onViewHistory && (
+            <button
+              type="button"
+              onClick={onViewHistory}
+              className="bg-sky-50 hover:bg-sky-100 text-sky-700 text-[10.5px] border border-sky-200 font-bold py-1 px-2.5 rounded transition cursor-pointer flex items-center gap-1"
+              title="Lihat riwayat FTW & ID tiket karyawan ini di Dashboard"
+            >
+              📊 FTW
+            </button>
+          )}
           <button
             type="button"
             onClick={onStartEdit}
@@ -3746,7 +3759,11 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                       return clean;
                     };
 
+                    const searchQueryClean = adminSearchQuery.trim().toLowerCase();
+                    const isSearching = searchQueryClean.length > 0;
+
                     // 1. Gather records in the selected Period (Date range & Shift) for overall KPI Summary
+                    // Note: When actively searching for a specific employee, NIK, or Ticket ID, do not let shift dropdown hide the result!
                     const periodRecords = deduplicateAssessments(history).filter(record => {
                       const recDate = normalizeDateStr(record.tanggalPengisian || record.timestamp);
                       if (adminFilterStartDate && recDate && recDate < adminFilterStartDate) {
@@ -3756,8 +3773,8 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                         return false;
                       }
                       
-                      // Shift filters
-                      if (adminFilterShift !== 'ALL') {
+                      // Shift filters: only enforce if user is NOT actively typing a search query
+                      if (!isSearching && adminFilterShift !== 'ALL') {
                         const isDayShift = checkIsDayShift(record.jamPengisian || (record.timestamp ? record.timestamp.split(' ')[1] : ''));
                         if (adminFilterShift === 'DAY' && !isDayShift) return false;
                         if (adminFilterShift === 'NIGHT' && isDayShift) return false;
@@ -3774,7 +3791,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     const unfitCount = periodRecords.filter(r => r.finalDecision === 'UNFIT').length;
                     const problematicCount = periodTotalCount - fitCount;
 
-                    // 2. Gather records filtered for table view (applying Status & Name/NIK Search filter)
+                    // 2. Gather records filtered for table view (applying Status & Name/NIK/ID Search filter)
                     let filteredRecords = deduplicateAssessments(periodRecords.filter(record => {
                       if (adminFilterStatus === 'PROBLEMATIC') {
                         return record.finalDecision !== 'FIT';
@@ -3784,14 +3801,14 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                       return true;
                     }));
 
-                    if (adminSearchQuery.trim()) {
-                      const q = adminSearchQuery.trim().toLowerCase();
+                    if (isSearching) {
                       filteredRecords = filteredRecords.filter(record => 
-                        (record.nama && record.nama.toLowerCase().includes(q)) ||
-                        (record.nik && record.nik.toLowerCase().includes(q)) ||
-                        (record.dept && record.dept.toLowerCase().includes(q)) ||
-                        (record.jabatan && record.jabatan.toLowerCase().includes(q)) ||
-                        (record.id && record.id.toLowerCase().includes(q))
+                        (record.nama && record.nama.toLowerCase().includes(searchQueryClean)) ||
+                        (record.nik && record.nik.toLowerCase().includes(searchQueryClean)) ||
+                        (record.dept && record.dept.toLowerCase().includes(searchQueryClean)) ||
+                        (record.jabatan && record.jabatan.toLowerCase().includes(searchQueryClean)) ||
+                        (record.id && record.id.toLowerCase().includes(searchQueryClean)) ||
+                        (record.originalId && record.originalId.toLowerCase().includes(searchQueryClean))
                       );
                     }
 
@@ -3997,11 +4014,31 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                             </div>
                           </div>
 
+                          {/* Active Search Result Banner */}
+                          {isSearching && (
+                            <div className="bg-sky-50 border border-sky-200 text-sky-900 px-3.5 py-2.5 rounded-xl text-xs font-bold flex flex-wrap items-center justify-between gap-2 shadow-xs">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">🔍</span>
+                                <span>
+                                  {lang === 'ID' ? 'Hasil pencarian untuk:' : 'Search results for:'} <span className="bg-sky-200/80 px-1.5 py-0.5 rounded font-mono text-sky-950 font-black">"{adminSearchQuery}"</span>
+                                  <span className="ml-2 font-normal text-sky-700">({filteredRecords.length} {lang === 'ID' ? 'laporan ditemukan di seluruh shift' : 'records matched across all shifts'})</span>
+                                </span>
+                              </div>
+                              <button 
+                                type="button" 
+                                onClick={() => setAdminSearchQuery('')} 
+                                className="text-rose-600 hover:text-rose-800 text-[11px] font-black uppercase underline cursor-pointer"
+                              >
+                                ✕ {lang === 'ID' ? 'Hapus Pencarian' : 'Clear Search'}
+                              </button>
+                            </div>
+                          )}
+
                           <div className="overflow-x-auto">
                             <table className="w-full text-left text-xs border-collapse font-sans">
                               <thead>
                                 <tr className="bg-neutral-50 border-b border-neutral-200 text-neutral-500 font-black uppercase text-[9.5px]">
-                                  <th className="px-4 py-3 text-center">{lang === 'ID' ? 'WAKTU LAPOR' : 'DATE & TIME'}</th>
+                                  <th className="px-4 py-3 text-center">{lang === 'ID' ? 'WAKTU LAPOR & ID TIKET' : 'DATE, TIME & TICKET ID'}</th>
                                   <th className="px-4 py-3">{lang === 'ID' ? 'IDENTITAS KARYAWAN' : 'EMPLOYEE IDENTITY'}</th>
                                   <th className="px-3 py-3 text-center">SHIFT</th>
                                   <th className="px-4 py-3">{lang === 'ID' ? 'DETAIL JADWAL TIDUR' : '12H / 36H SLEEP'}</th>
@@ -4026,6 +4063,9 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                         </div>
                                         <div className="text-[9.5px] text-neutral-400 font-semibold mt-0.5">
                                           ⏱️ {rec.jamPengisian}
+                                        </div>
+                                        <div className="text-[9px] font-mono text-neutral-600 font-black bg-neutral-100 border border-neutral-250 px-1.5 py-0.5 rounded mt-1 inline-block tracking-tight" title={`ID Tiket: ${rec.id}`}>
+                                          ID: {rec.id}
                                         </div>
                                       </td>
                                       
@@ -4613,6 +4653,10 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                       onCancelEdit={() => setEditingEmpNik(null)}
                                       onSaveEdit={(namaVal, jabatanVal, deptVal) => handleSaveInlineEdit(keyNik, namaVal, jabatanVal, deptVal)}
                                       onDelete={() => handleDeleteEmployee(keyNik)}
+                                      onViewHistory={() => {
+                                        setAdminActiveTab('dashboard');
+                                        setAdminSearchQuery(keyNik);
+                                      }}
                                       lang={lang}
                                     />
                                   );
