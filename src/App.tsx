@@ -301,12 +301,17 @@ export const checkIsDayShift = (jamStr: string): boolean => {
   return false;
 };
 
-// Helper to ensure records are strictly unique by ID
+// Helper to ensure records are strictly unique without dropping records with colliding generated IDs
 export const deduplicateAssessments = (records: CustomAssessment[]): CustomAssessment[] => {
   const map = new Map<string, CustomAssessment>();
   for (const r of records) {
-    if (r && r.id && !map.has(r.id)) {
-      map.set(r.id, r);
+    if (!r) continue;
+    // Composite key guarantees that distinct employees or timestamps are never falsely dropped
+    const compositeKey = r.id 
+      ? `${r.id}__${r.nik || ''}__${r.tanggalPengisian || ''}__${r.jamPengisian || ''}` 
+      : `${r.nik || 'unknown'}__${r.timestamp || Math.random()}`;
+    if (!map.has(compositeKey)) {
+      map.set(compositeKey, r);
     }
   }
   return Array.from(map.values());
@@ -428,6 +433,7 @@ export default function App() {
   const [adminFilterShift, setAdminFilterShift] = useState<'ALL' | 'DAY' | 'NIGHT'>('ALL');
   const [adminFilterStatus, setAdminFilterStatus] = useState<'ALL' | 'PROBLEMATIC' | 'FIT' | 'FIT_CONDITIONAL' | 'REST_BEFORE_WORK' | 'UNFIT'>('ALL');
   const [selectedDashboardRecordId, setSelectedDashboardRecordId] = useState<string | null>(null);
+  const [adminSearchQuery, setAdminSearchQuery] = useState<string>('');
 
   // Google Sheets Management States
   const [showSheetsModal, setShowSheetsModal] = useState<boolean>(false);
@@ -2058,7 +2064,8 @@ export default function App() {
   const handleConfirmAndSubmitAssessment = () => {
     setShowConfirmSubmitModal(false);
     
-    const recordId = `WBS-FTW-${Math.floor(10000 + Math.random() * 90000)}`;
+    // Collision-free unique record ID combining timestamp and entropy
+    const recordId = `WBS-FTW-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const newRecord: CustomAssessment = {
       id: recordId,
       timestamp: new Date().toISOString(),
@@ -3741,7 +3748,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
 
                     // 1. Gather records in the selected Period (Date range & Shift) for overall KPI Summary
                     const periodRecords = deduplicateAssessments(history).filter(record => {
-                      const recDate = normalizeDateStr(record.tanggalPengisian);
+                      const recDate = normalizeDateStr(record.tanggalPengisian || record.timestamp);
                       if (adminFilterStartDate && recDate && recDate < adminFilterStartDate) {
                         return false;
                       }
@@ -3751,7 +3758,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                       
                       // Shift filters
                       if (adminFilterShift !== 'ALL') {
-                        const isDayShift = checkIsDayShift(record.jamPengisian);
+                        const isDayShift = checkIsDayShift(record.jamPengisian || (record.timestamp ? record.timestamp.split(' ')[1] : ''));
                         if (adminFilterShift === 'DAY' && !isDayShift) return false;
                         if (adminFilterShift === 'NIGHT' && isDayShift) return false;
                       }
@@ -3767,8 +3774,8 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     const unfitCount = periodRecords.filter(r => r.finalDecision === 'UNFIT').length;
                     const problematicCount = periodTotalCount - fitCount;
 
-                    // 2. Gather records filtered for table view (applying Status filter)
-                    const filteredRecords = deduplicateAssessments(periodRecords.filter(record => {
+                    // 2. Gather records filtered for table view (applying Status & Name/NIK Search filter)
+                    let filteredRecords = deduplicateAssessments(periodRecords.filter(record => {
                       if (adminFilterStatus === 'PROBLEMATIC') {
                         return record.finalDecision !== 'FIT';
                       } else if (adminFilterStatus !== 'ALL') {
@@ -3777,16 +3784,37 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                       return true;
                     }));
 
+                    if (adminSearchQuery.trim()) {
+                      const q = adminSearchQuery.trim().toLowerCase();
+                      filteredRecords = filteredRecords.filter(record => 
+                        (record.nama && record.nama.toLowerCase().includes(q)) ||
+                        (record.nik && record.nik.toLowerCase().includes(q)) ||
+                        (record.dept && record.dept.toLowerCase().includes(q)) ||
+                        (record.jabatan && record.jabatan.toLowerCase().includes(q)) ||
+                        (record.id && record.id.toLowerCase().includes(q))
+                      );
+                    }
+
+                    // Strict chronological newest-first sort so recent shift entries always appear on top
+                    filteredRecords.sort((a, b) => {
+                      const dateA = normalizeDateStr(a.tanggalPengisian || a.timestamp || '');
+                      const dateB = normalizeDateStr(b.tanggalPengisian || b.timestamp || '');
+                      if (dateA !== dateB) return dateB.localeCompare(dateA);
+                      const timeA = (a.jamPengisian || '').padStart(5, '0');
+                      const timeB = (b.jamPengisian || '').padStart(5, '0');
+                      return timeB.localeCompare(timeA);
+                    });
+
                     return (
                       <div className="flex flex-col gap-6">
                         {/* Interactive Toolbar Filter */}
                         <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
                           <h4 className="text-xs font-black text-rose-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                             <span>🔍</span>
-                            <span>{lang === 'ID' ? 'Penyaringan Periode, Status & Shift Karyawan' : 'Filter Period, Status & Employee Shift'}</span>
+                            <span>{lang === 'ID' ? 'Penyaringan Periode, Status, Shift & Karyawan' : 'Filter Period, Status, Shift & Employee'}</span>
                           </h4>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                          <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
                             <div>
                               <label className="block text-[9px] font-black text-neutral-600 uppercase mb-1 tracking-wide">
                                 {lang === 'ID' ? 'Tanggal Mulai:' : 'Start Date:'}
@@ -3843,6 +3871,22 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                 <option value="UNFIT">🔴 TIDAK BOLEH BEKERJA</option>
                               </select>
                             </div>
+
+                            <div>
+                              <label className="block text-[9px] font-black text-neutral-600 uppercase mb-1 tracking-wide">
+                                {lang === 'ID' ? 'Cari Nama / NIK:' : 'Search Name / NIK:'}
+                              </label>
+                              <div className="relative">
+                                <input 
+                                  type="text"
+                                  placeholder={lang === 'ID' ? 'Ketik nama / NIK...' : 'Search name / NIK...'}
+                                  className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-1.5 pl-6 pr-2 text-xs font-bold text-neutral-900 placeholder:text-neutral-400 placeholder:font-normal"
+                                  value={adminSearchQuery}
+                                  onChange={(e) => setAdminSearchQuery(e.target.value)}
+                                />
+                                <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-neutral-400 pointer-events-none">🔍</span>
+                              </div>
+                            </div>
                           </div>
 
                           <div className="mt-3.5 flex flex-wrap justify-between items-center bg-neutral-50 border border-neutral-200/60 p-2 rounded-lg gap-2">
@@ -3873,6 +3917,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                   setAdminFilterEndDate('');
                                   setAdminFilterShift('ALL');
                                   setAdminFilterStatus('ALL');
+                                  setAdminSearchQuery('');
                                 }}
                                 className="bg-neutral-200 hover:bg-neutral-300 text-neutral-700 text-[10px] font-black uppercase py-1 px-3 border border-neutral-300 rounded cursor-pointer transition shadow-sm"
                               >

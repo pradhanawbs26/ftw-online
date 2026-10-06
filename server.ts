@@ -200,67 +200,115 @@ async function syncFromGoogleSheet() {
           if (firstHeader !== "ID" && firstHeader !== "ID LAPORAN" && firstHeader !== "ID_LAPORAN" && !firstHeader.includes("LAPORAN") && !firstHeader.includes("ID")) {
             console.log(`[Sync] Skipping 'Laporan_Fit' sheet sync. Header '${firstHeader}' does not match expected assessment headers.`);
           } else {
-            const historyMap = new Map<string, any>();
+            // Load any existing local history records to avoid losing freshly submitted records
+            let existingLocalHistory: any[] = [];
+            if (fs.existsSync(HISTORY_FILE)) {
+              try {
+                existingLocalHistory = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
+              } catch (e) {}
+            }
+
+            const idSeenCounts = new Map<string, number>();
+            const sheetRecords: any[] = [];
+
             for (let i = 1; i < rows.length; i++) {
               const row = rows[i];
-              const id = row[0] ? row[0].trim() : "";
-              if (id && id !== "ID" && id !== "ID LAPORAN" && id !== "ID_LAPORAN" && !historyMap.has(id)) {
-                const totalFatigueScore = parseInt(row[11]) || 0;
-                const readinessScore = Math.max(0, 100 - (totalFatigueScore * 7.5));
-                const consumesObat = row[9] === 'Ya / Yes' || row[9] === 'Ya' || row[9] === 'Yes' || row[9] === 'true';
-                const hasPersonalProblem = row[10] === 'Ya / Yes' || row[10] === 'Ya' || row[10] === 'Yes' || row[10] === 'true';
+              if (!row || row.length < 5) continue;
+              let rawId = row[0] ? row[0].trim() : "";
+              if (!rawId || rawId === "ID" || rawId === "ID LAPORAN" || rawId === "ID_LAPORAN") {
+                rawId = `WBS-FTW-ROW-${i}`;
+              }
 
-                let fatigueCategory = "NORMAL";
-                let finalDecision = "FIT";
+              // Handle collision: never drop rows with colliding IDs, assign deterministic unique suffix
+              const seenCount = (idSeenCounts.get(rawId) || 0) + 1;
+              idSeenCounts.set(rawId, seenCount);
+              const uniqueId = seenCount > 1 ? `${rawId}-dup${seenCount}` : rawId;
 
-                if (totalFatigueScore >= 12) {
-                  fatigueCategory = "REJECT";
-                  finalDecision = "UNFIT";
-                } else if (totalFatigueScore >= 9) {
-                  fatigueCategory = "REST";
-                  finalDecision = "REST_BEFORE_WORK";
-                } else if (totalFatigueScore >= 7) {
+              const tanggal = row[1] ? row[1].trim() : "";
+              const jam = row[2] ? row[2].trim() : "";
+              const nik = row[3] ? row[3].trim().toUpperCase() : "";
+              const nama = row[4] ? row[4].trim() : "";
+              const jabatan = row[5] ? row[5].trim() : "";
+              const dept = row[6] ? row[6].trim() : "";
+              const totalSleep12 = parseFloat(row[7] ? row[7].replace(",", ".") : "0") || 0;
+              const totalSleep36 = parseFloat(row[8] ? row[8].replace(",", ".") : "0") || 0;
+              const consumesObat = row[9] === 'Ya / Yes' || row[9] === 'Ya' || row[9] === 'Yes' || row[9] === 'true';
+              const hasPersonalProblem = row[10] === 'Ya / Yes' || row[10] === 'Ya' || row[10] === 'Yes' || row[10] === 'true';
+
+              const totalFatigueScore = parseInt(row[11]) || 0;
+              const readinessScore = Math.max(0, 100 - (totalFatigueScore * 7.5));
+
+              let fatigueCategory = "NORMAL";
+              let finalDecision = row[12] ? row[12].trim() : "";
+
+              if (totalFatigueScore >= 12) {
+                fatigueCategory = "REJECT";
+                if (!finalDecision) finalDecision = "UNFIT";
+              } else if (totalFatigueScore >= 9) {
+                fatigueCategory = "REST";
+                if (!finalDecision) finalDecision = "REST_BEFORE_WORK";
+              } else if (totalFatigueScore >= 7) {
+                fatigueCategory = "LAPOR";
+                if (!finalDecision) finalDecision = "FIT_CONDITIONAL";
+              } else {
+                fatigueCategory = "NORMAL";
+                if (!finalDecision) finalDecision = "FIT";
+              }
+
+              if (consumesObat || hasPersonalProblem) {
+                if (finalDecision === 'FIT') {
+                  finalDecision = 'FIT_CONDITIONAL';
                   fatigueCategory = "LAPOR";
-                  finalDecision = "FIT_CONDITIONAL";
-                } else {
-                  fatigueCategory = "NORMAL";
-                  finalDecision = "FIT";
                 }
+              }
 
-                if (consumesObat || hasPersonalProblem) {
-                  if (finalDecision === 'FIT') {
-                    finalDecision = 'FIT_CONDITIONAL';
-                    fatigueCategory = "LAPOR";
-                  }
-                }
+              const record = {
+                id: uniqueId,
+                originalId: rawId,
+                timestamp: tanggal ? `${tanggal} ${jam}`.trim() : (row[2] || ""),
+                nik,
+                nama,
+                jabatan,
+                dept,
+                tanggalPengisian: tanggal,
+                jamPengisian: jam,
+                totalSleep12,
+                totalSleep36,
+                consumesObat,
+                hasPersonalProblem,
+                totalFatigueScore,
+                readinessScore,
+                fatigueCategory,
+                finalDecision: finalDecision || "FIT"
+              };
+              sheetRecords.push(record);
+            }
 
-                const record = {
-                  id,
-                  timestamp: row[1] ? `${row[1].trim()} ${row[2] ? row[2].trim() : ""}`.trim() : "",
-                  nik: row[3] ? row[3].trim().toUpperCase() : "",
-                  nama: row[4] ? row[4].trim() : "",
-                  jabatan: row[5] ? row[5].trim() : "",
-                  dept: row[6] ? row[6].trim() : "",
-                  tanggalPengisian: row[1] ? row[1].trim() : "",
-                  jamPengisian: row[2] ? row[2].trim() : "",
-                  totalSleep12: parseFloat(row[7] ? row[7].replace(",", ".") : "0") || 0,
-                  totalSleep36: parseFloat(row[8] ? row[8].replace(",", ".") : "0") || 0,
-                  consumesObat,
-                  hasPersonalProblem,
-                  totalFatigueScore,
-                  readinessScore,
-                  fatigueCategory,
-                  finalDecision: row[12] ? row[12].trim() : ""
-                };
-                historyMap.set(id, record);
+            // Merge local submissions that might not have landed in Google Sheets yet
+            const sheetKeySet = new Set(sheetRecords.map(r => `${r.nik}__${r.tanggalPengisian}__${r.jamPengisian}`));
+            const mergedHistory = [...sheetRecords];
+            for (const localRec of existingLocalHistory) {
+              if (!localRec || !localRec.nik) continue;
+              const localKey = `${localRec.nik}__${localRec.tanggalPengisian}__${localRec.jamPengisian}`;
+              if (!sheetKeySet.has(localKey)) {
+                mergedHistory.push(localRec);
+                sheetKeySet.add(localKey);
               }
             }
-            const history = Array.from(historyMap.values());
-            if (history.length > 0) {
-              // Convert to newest-first order
-              const reversedHistory = history.reverse();
-              await fs.promises.writeFile(HISTORY_FILE, JSON.stringify(reversedHistory));
-              console.log(`[Sync] Successfully loaded & cached ${history.length} assessment entries from Sheet 'Laporan_Fit'`);
+
+            if (mergedHistory.length > 0) {
+              // Sort strictly newest-first by normalized date and time
+              mergedHistory.sort((a, b) => {
+                const dateA = normalizeDateStr(a.tanggalPengisian || a.timestamp || "");
+                const dateB = normalizeDateStr(b.tanggalPengisian || b.timestamp || "");
+                if (dateA !== dateB) return dateB.localeCompare(dateA);
+                const timeA = (a.jamPengisian || "").padStart(5, "0");
+                const timeB = (b.jamPengisian || "").padStart(5, "0");
+                return timeB.localeCompare(timeA);
+              });
+
+              await fs.promises.writeFile(HISTORY_FILE, JSON.stringify(mergedHistory, null, 2));
+              console.log(`[Sync] Successfully loaded, merged & cached ${mergedHistory.length} assessment entries (${sheetRecords.length} from Sheet 'Laporan_Fit')`);
             }
           }
         }
@@ -294,13 +342,7 @@ app.get("/api/history", (req, res) => {
     const data = fs.readFileSync(HISTORY_FILE, "utf-8");
     const parsed = JSON.parse(data);
     if (Array.isArray(parsed)) {
-      const map = new Map<string, any>();
-      for (const item of parsed) {
-        if (item && item.id && !map.has(item.id)) {
-          map.set(item.id, item);
-        }
-      }
-      return res.json(Array.from(map.values()));
+      return res.json(parsed);
     }
     res.json([]);
   } catch (error: any) {
@@ -544,10 +586,20 @@ app.post("/api/history", async (req, res) => {
     const data = fs.readFileSync(HISTORY_FILE, "utf-8");
     const history = JSON.parse(data);
     
-    // Check if duplicate ID exists, if so prevent adding duplicate
-    const index = history.findIndex((r: any) => r.id === newRecord.id);
-    if (index === -1) {
+    // Check if duplicate submission exists for the same NIK, date and time
+    const existingIdx = history.findIndex((r: any) => 
+      (r.id === newRecord.id) || 
+      (r.nik === newRecord.nik && r.tanggalPengisian === newRecord.tanggalPengisian && r.jamPengisian === newRecord.jamPengisian)
+    );
+    if (existingIdx === -1) {
+      // If ID happens to collide with a different employee, generate unique suffix
+      if (history.some((r: any) => r.id === newRecord.id)) {
+        newRecord.id = `${newRecord.id}-${Date.now().toString(36)}`;
+      }
       history.unshift(newRecord); // Add to the top
+      fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+    } else {
+      history[existingIdx] = { ...history[existingIdx], ...newRecord };
       fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
     }
 
