@@ -334,10 +334,16 @@ export const deduplicateAssessments = (records: CustomAssessment[]): CustomAsses
   const map = new Map<string, CustomAssessment>();
   for (const r of records) {
     if (!r) continue;
-    // Composite key guarantees that distinct employees or timestamps are never falsely dropped
-    const compositeKey = r.id 
-      ? `${r.id}__${r.nik || ''}__${r.tanggalPengisian || ''}__${r.jamPengisian || ''}` 
-      : `${r.nik || 'unknown'}__${r.timestamp || Math.random()}`;
+    // Normalize NIK to avoid double-counting when leading zeros vary (e.g. 0266900063 vs 266900063)
+    const cleanNik = (r.nik || '').trim().replace(/^0+/, '') || (r.nik || '').trim();
+    const dateStr = r.tanggalPengisian || (r.timestamp ? r.timestamp.slice(0, 10) : '');
+    const timeStr = r.jamPengisian || (r.timestamp && r.timestamp.includes(' ') ? r.timestamp.split(' ')[1] : '');
+    
+    // An assessment is unique per employee per date per submission time
+    const compositeKey = cleanNik && dateStr && timeStr
+      ? `${cleanNik}__${dateStr}__${timeStr}`
+      : (r.id || `${cleanNik}__${r.timestamp || Math.random()}`);
+
     if (!map.has(compositeKey)) {
       map.set(compositeKey, r);
     }
