@@ -32,11 +32,18 @@ import {
   MessageSquare,
   Send,
   Bell,
-  ExternalLink
+  ExternalLink,
+  TrendingUp,
+  BarChart3,
+  Layers,
+  Eye,
+  Settings,
+  Sliders
 } from 'lucide-react';
 import { calculateHoursFromTimeStrings } from './utils';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
+import AdminTrendsAnalysis from './AdminTrendsAnalysis';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { 
   app as firebaseApp,
@@ -415,7 +422,18 @@ export default function App() {
   const [isAdminPage, setIsAdminPage] = useState<boolean>(() => {
     return typeof window !== 'undefined' && window.location.hash === '#admin';
   });
-  const [adminActiveTab, setAdminActiveTab] = useState<'dashboard' | 'employees' | 'fonnte_wa' | 'sheets_sync' | 'firebase_backup'>('dashboard');
+  const [adminActiveTab, setAdminActiveTab] = useState<'dashboard' | 'employees' | 'trends' | 'integrations'>('dashboard');
+  const [integrationSubTab, setIntegrationSubTab] = useState<'all' | 'fonnte_wa' | 'sheets_sync' | 'firebase_backup'>('all');
+
+  // Trend & Frequency Analysis States
+  const [trendPeriodPreset, setTrendPeriodPreset] = useState<'this_month' | 'last_month' | 'last_30_days' | 'custom'>('this_month');
+  const [trendStartDate, setTrendStartDate] = useState<string>('2026-10-01');
+  const [trendEndDate, setTrendEndDate] = useState<string>('2026-10-31');
+  const [trendStatusFilter, setTrendStatusFilter] = useState<'ALL_ISSUES' | 'UNFIT_ONLY' | 'CONDITIONAL_ONLY' | 'REST_ONLY' | 'ALL_EMPLOYEES'>('ALL_ISSUES');
+  const [trendSearchQuery, setTrendSearchQuery] = useState<string>('');
+  const [trendSortBy, setTrendSortBy] = useState<'total_desc' | 'unfit_desc' | 'conditional_desc' | 'rest_desc' | 'name_asc'>('total_desc');
+  const [selectedTrendEmployee, setSelectedTrendEmployee] = useState<any | null>(null);
+
   const [firebaseSyncing, setFirebaseSyncing] = useState<boolean>(false);
   const [firebaseStatusMsg, setFirebaseStatusMsg] = useState<string>('');
   const [pruneDays, setPruneDays] = useState<number>(30);
@@ -2222,23 +2240,24 @@ export default function App() {
     setFormError('');
   };
 
-  const handleExportCSV = (records: CustomAssessment[]) => {
+  const handleExportExcel = (records: CustomAssessment[]) => {
     if (records.length === 0) {
       alert(lang === 'ID' ? 'Tidak ada data untuk diekspor.' : 'No data to export.');
       return;
     }
 
     const headers = [
+      "No",
       "ID Laporan",
       "Timestamp",
       "NIK",
-      "Nama",
+      "Nama Karyawan",
       "Jabatan",
       "Departemen",
       "Tanggal Pengisian",
       "Jam Pengisian",
-      "Total Tidur (Jam)",
-      "Total Tidur 36 Jam (Jam)",
+      "Total Tidur 12j (Jam)",
+      "Total Tidur 36j (Jam)",
       "Konsumsi Obat",
       "Masalah Pribadi",
       "Fatigue Score",
@@ -2247,35 +2266,52 @@ export default function App() {
       "Keputusan Akhir"
     ];
 
-    const rows = records.map(rec => [
-      `"${rec.id}"`,
-      `"${rec.timestamp}"`,
-      `"${rec.nik}"`,
-      `"${rec.nama.replace(/"/g, '""')}"`,
-      `"${rec.jabatan.replace(/"/g, '""')}"`,
-      `"${rec.dept.replace(/"/g, '""')}"`,
-      `"${rec.tanggalPengisian}"`,
-      `"${rec.jamPengisian}"`,
+    const rows = records.map((rec, idx) => [
+      idx + 1,
+      rec.id,
+      rec.timestamp,
+      rec.nik,
+      rec.nama,
+      rec.jabatan,
+      rec.dept,
+      rec.tanggalPengisian,
+      rec.jamPengisian,
       rec.totalSleep12,
       rec.totalSleep36,
       rec.consumesObat ? (lang === 'ID' ? 'Ya' : 'Yes') : (lang === 'ID' ? 'Tidak' : 'No'),
       rec.hasPersonalProblem ? (lang === 'ID' ? 'Ya' : 'Yes') : (lang === 'ID' ? 'Tidak' : 'No'),
       rec.totalFatigueScore,
-      `"${rec.readinessScore}%"`,
-      `"${rec.fatigueCategory}"`,
-      `"${rec.finalDecision}"`
+      `${rec.readinessScore}%`,
+      rec.fatigueCategory,
+      rec.finalDecision
     ]);
 
-    // UTF-8 BOM representation for correct Excel character loading
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `FTW_Dashboard_Export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws['!cols'] = [
+      { wch: 6 },
+      { wch: 22 },
+      { wch: 24 },
+      { wch: 14 },
+      { wch: 25 },
+      { wch: 20 },
+      { wch: 22 },
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 18 },
+      { wch: 16 },
+      { wch: 20 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Rekap Laporan FTW");
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `FTW_Laporan_Rekap_${dateStr}.xlsx`);
   };
 
   const handleDeleteRecord = async (id: string) => {
@@ -3760,42 +3796,31 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                         : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-250'
                     }`}
                   >
-                    👥 {lang === 'ID' ? 'Karyawan Aktif' : 'Employee Database'} ({Object.keys(employeeDb).length})
+                    👥 {lang === 'ID' ? 'Karyawan Aktif' : 'Employee Database'}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setAdminActiveTab('fonnte_wa')}
+                    onClick={() => setAdminActiveTab('trends')}
                     className={`py-2 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition shrink-0 flex items-center gap-1.5 ${
-                      adminActiveTab === 'fonnte_wa' 
+                      adminActiveTab === 'trends' 
                         ? 'bg-rose-600 text-white shadow-sm' 
                         : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-250'
                     }`}
                   >
-                    <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>📱 WhatsApp Alert (Fonnte)</span>
+                    <TrendingUp className="w-3.5 h-3.5 text-rose-500" />
+                    <span>📈 {lang === 'ID' ? 'Analisis Trend & Frekuensi' : 'Trend & Frequency Analysis'}</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setAdminActiveTab('sheets_sync')}
-                    className={`py-2 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition shrink-0 ${
-                      adminActiveTab === 'sheets_sync' 
-                        ? 'bg-rose-600 text-white shadow-sm' 
-                        : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-250'
-                    }`}
-                  >
-                    🟢 Google Sheets Integration
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAdminActiveTab('firebase_backup')}
+                    onClick={() => setAdminActiveTab('integrations')}
                     className={`py-2 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition shrink-0 flex items-center gap-1.5 ${
-                      adminActiveTab === 'firebase_backup' 
+                      adminActiveTab === 'integrations' 
                         ? 'bg-rose-600 text-white shadow-sm' 
                         : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-250'
                     }`}
                   >
-                    <Flame className="w-3.5 h-3.5 text-amber-500" />
-                    <span>🔥 Firebase Cloud Backup</span>
+                    <Settings className="w-3.5 h-3.5 text-neutral-600" />
+                    <span>⚙️ {lang === 'ID' ? 'Integrasi & Cloud Backup' : 'Integrations & Cloud'}</span>
                   </button>
                 </div>
 
@@ -3973,16 +3998,6 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                             <div className="flex items-center gap-2 flex-wrap">
                               <button
                                 type="button"
-                                disabled={firebaseSyncing}
-                                onClick={() => handleRestoreFromFirebase(adminFilterStartDate || undefined)}
-                                className="bg-sky-600 hover:bg-sky-700 active:scale-[0.98] disabled:bg-neutral-400 text-white text-[10px] font-black uppercase py-1 px-2.5 rounded cursor-pointer transition shadow-xs flex items-center gap-1.5"
-                                title="Tarik dan sinkronkan data tanggal ini dari Firebase Firestore"
-                              >
-                                <RefreshCw className={`w-3 h-3 ${firebaseSyncing ? 'animate-spin' : ''}`} />
-                                <span>{firebaseSyncing ? (lang === 'ID' ? 'Sinkronisasi...' : 'Syncing...') : (lang === 'ID' ? '📥 Tarik dari Firebase' : '📥 Pull Firebase')}</span>
-                              </button>
-                              <button
-                                type="button"
                                 onClick={() => {
                                   const niks = Array.from(new Set(periodRecords.map(r => r.nik))).filter(Boolean);
                                   if (niks.length === 0) {
@@ -4072,11 +4087,12 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleExportCSV(filteredRecords)}
+                                onClick={() => handleExportExcel(filteredRecords)}
                                 className="bg-emerald-600 hover:bg-emerald-700 font-bold text-white text-[10.5px] px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm tracking-wide"
+                                title="Unduh data tabel ke format Excel (.xlsx)"
                               >
-                                <span>💚</span>
-                                <span>{lang === 'ID' ? 'Unduh Spreadsheet (Excel/CSV)' : 'Download Spreadsheet'}</span>
+                                <span>📊</span>
+                                <span>{lang === 'ID' ? 'Unduh Rekap (Excel)' : 'Download Excel (.xlsx)'}</span>
                               </button>
                               <span className="bg-neutral-800 text-white text-[9px] px-2 py-1 font-mono font-bold rounded-full h-fit shrink-0">
                                 {filteredRecords.length} Logs Match
@@ -4746,9 +4762,81 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     </div>
                   )}
 
-                  {/* TAB: WHATSAPP ALERT (FONNTE API) INTEGRATION */}
-                  {adminActiveTab === 'fonnte_wa' && (
-                    <div className="flex flex-col gap-6 animate-fadeIn text-neutral-800">
+                  {/* TAB 3: TREND & FREQUENCY ANALYSIS (UNFIT & PENGAWASAN KHUSUS) */}
+                  {adminActiveTab === 'trends' && (
+                    <AdminTrendsAnalysis
+                      history={history as any}
+                      employeeDb={employeeDb}
+                      lang={lang}
+                      normalizeDateStr={normalizeDateStr}
+                      deduplicateAssessments={deduplicateAssessments}
+                    />
+                  )}
+
+                  {/* TAB 4: UNIFIED INTEGRATIONS & CLOUD BACKUP (FIREBASE, GOOGLE SHEETS, WHATSAPP) */}
+                  {adminActiveTab === 'integrations' && (
+                    <div className="flex flex-col gap-6 animate-fadeIn text-neutral-800 max-w-6xl mx-auto">
+                      
+                      {/* Sub-Navigation Tabs Bar */}
+                      <div className="bg-white border border-neutral-200 rounded-xl p-2.5 shadow-xs flex flex-wrap items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-1.5 overflow-x-auto">
+                          <button
+                            type="button"
+                            onClick={() => setIntegrationSubTab('firebase_backup')}
+                            className={`py-1.5 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition flex items-center gap-1.5 ${
+                              integrationSubTab === 'firebase_backup'
+                                ? 'bg-amber-600 text-white shadow-xs'
+                                : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200'
+                            }`}
+                          >
+                            <Flame className="w-3.5 h-3.5 text-amber-500" />
+                            <span>🔥 {lang === 'ID' ? 'Firebase Cloud Backup' : 'Firebase Cloud Backup'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIntegrationSubTab('sheets_sync')}
+                            className={`py-1.5 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition flex items-center gap-1.5 ${
+                              integrationSubTab === 'sheets_sync'
+                                ? 'bg-emerald-700 text-white shadow-xs'
+                                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200'
+                            }`}
+                          >
+                            <Database className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>📊 {lang === 'ID' ? 'Google Sheet Integration' : 'Google Sheets'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIntegrationSubTab('fonnte_wa')}
+                            className={`py-1.5 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition flex items-center gap-1.5 ${
+                              integrationSubTab === 'fonnte_wa'
+                                ? 'bg-teal-700 text-white shadow-xs'
+                                : 'bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200'
+                            }`}
+                          >
+                            <MessageSquare className="w-3.5 h-3.5 text-teal-600" />
+                            <span>💬 {lang === 'ID' ? 'WhatsApp Alert (Fonnte)' : 'WhatsApp Alerts'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIntegrationSubTab('all')}
+                            className={`py-1.5 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition ${
+                              integrationSubTab === 'all'
+                                ? 'bg-neutral-900 text-white shadow-xs'
+                                : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'
+                            }`}
+                          >
+                            🌐 {lang === 'ID' ? 'Tampilkan Semua (1 Halaman)' : 'Show All (1 Page)'}
+                          </button>
+                        </div>
+
+                        <span className="text-[11px] text-neutral-500 font-bold px-2 hidden sm:inline">
+                          ⚙️ {lang === 'ID' ? 'Pusat Cloud Backup, Spreadsheet, & Gateway' : 'Central Integration Hub'}
+                        </span>
+                      </div>
+
+                      {/* SECTION: WHATSAPP ALERT (FONNTE API) INTEGRATION */}
+                      {(integrationSubTab === 'all' || integrationSubTab === 'fonnte_wa') && (
+                        <div className="flex flex-col gap-6 animate-fadeIn text-neutral-800">
                       
                       {/* Top Header Card */}
                       <div className="bg-gradient-to-r from-emerald-800 to-teal-900 text-white rounded-xl p-5 shadow-sm border border-emerald-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -4971,8 +5059,8 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     </div>
                   )}
 
-                  {/* TAB 3: GOOGLE SHEETS INTEGRATION & SYNCHRONIZATION SUMMARY */}
-                  {adminActiveTab === 'sheets_sync' && (
+                  {/* SECTION: GOOGLE SHEETS INTEGRATION & SYNCHRONIZATION SUMMARY */}
+                  {(integrationSubTab === 'all' || integrationSubTab === 'sheets_sync') && (
                     <div className="flex flex-col gap-6 animate-fadeIn text-neutral-800">
                       
                       {/* Top Header Card */}
@@ -5274,9 +5362,9 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     </div>
                   )}
 
-                  {/* TAB 4: FIREBASE CLOUD BACKUP & RESTORE */}
-                  {adminActiveTab === 'firebase_backup' && (
-                    <div className="max-w-5xl mx-auto space-y-5">
+                  {/* SECTION: FIREBASE CLOUD BACKUP & RESTORE */}
+                  {(integrationSubTab === 'all' || integrationSubTab === 'firebase_backup') && (
+                    <div className="max-w-5xl mx-auto space-y-5 w-full">
                       {/* Banner / Notification */}
                       {firebaseStatusMsg && (
                         <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4 text-xs font-bold flex items-center justify-between shadow-xs">
@@ -5542,6 +5630,9 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                       </div>
                     </div>
                   )}
+
+                </div>
+              )}
 
                 </div>
 
