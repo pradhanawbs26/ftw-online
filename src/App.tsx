@@ -40,7 +40,7 @@ import {
   Settings,
   Sliders
 } from 'lucide-react';
-import { calculateHoursFromTimeStrings } from './utils';
+import { calculateHoursFromTimeStrings, validateNik, checkAssessmentAnomalies } from './utils';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
 import AdminTrendsAnalysis from './AdminTrendsAnalysis';
@@ -483,7 +483,7 @@ export default function App() {
   const [adminFilterStartDate, setAdminFilterStartDate] = useState<string>('');
   const [adminFilterEndDate, setAdminFilterEndDate] = useState<string>('');
   const [adminFilterShift, setAdminFilterShift] = useState<'ALL' | 'DAY' | 'NIGHT'>('ALL');
-  const [adminFilterStatus, setAdminFilterStatus] = useState<'ALL' | 'PROBLEMATIC' | 'FIT' | 'FIT_CONDITIONAL' | 'REST_BEFORE_WORK' | 'UNFIT'>('ALL');
+  const [adminFilterStatus, setAdminFilterStatus] = useState<'ALL' | 'PROBLEMATIC' | 'FIT' | 'FIT_CONDITIONAL' | 'REST_BEFORE_WORK' | 'UNFIT' | 'ANOMALY'>('ALL');
   const [selectedDashboardRecordId, setSelectedDashboardRecordId] = useState<string | null>(null);
   const [adminSearchQuery, setAdminSearchQuery] = useState<string>('');
 
@@ -2071,10 +2071,14 @@ export default function App() {
 
   const goToStep2 = () => {
     setFormError('');
-    if (!nik.trim()) {
-      setFormError(lang === 'ID' ? 'NIK Karyawan wajib diisi!' : 'Employee ID is required!');
+    
+    // Strict NIK Validation (must be 9 digits without leading zero)
+    const nikCheck = validateNik(nik, lang);
+    if (!nikCheck.isValid) {
+      setFormError(nikCheck.message);
       return;
     }
+    
     if (!nama.trim()) {
       setFormError(lang === 'ID' ? 'Nama Karyawan wajib diisi!' : 'Employee name is required!');
       return;
@@ -2256,35 +2260,48 @@ export default function App() {
       "Departemen",
       "Tanggal Pengisian",
       "Jam Pengisian",
+      "Jam Mulai Tidur 12j",
+      "Jam Bangun 12j",
       "Total Tidur 12j (Jam)",
+      "Jam Mulai Tidur 36j",
+      "Jam Bangun 36j",
       "Total Tidur 36j (Jam)",
       "Konsumsi Obat",
       "Masalah Pribadi",
       "Fatigue Score",
       "Readiness Ratio (%)",
       "Kategori Fatigue",
-      "Keputusan Akhir"
+      "Keputusan Akhir",
+      "Deteksi Data Aneh / Anomali"
     ];
 
-    const rows = records.map((rec, idx) => [
-      idx + 1,
-      rec.id,
-      rec.timestamp,
-      rec.nik,
-      rec.nama,
-      rec.jabatan,
-      rec.dept,
-      rec.tanggalPengisian,
-      rec.jamPengisian,
-      rec.totalSleep12,
-      rec.totalSleep36,
-      rec.consumesObat ? (lang === 'ID' ? 'Ya' : 'Yes') : (lang === 'ID' ? 'Tidak' : 'No'),
-      rec.hasPersonalProblem ? (lang === 'ID' ? 'Ya' : 'Yes') : (lang === 'ID' ? 'Tidak' : 'No'),
-      rec.totalFatigueScore,
-      `${rec.readinessScore}%`,
-      rec.fatigueCategory,
-      rec.finalDecision
-    ]);
+    const rows = records.map((rec, idx) => {
+      const anom = checkAssessmentAnomalies(rec);
+      return [
+        idx + 1,
+        rec.id,
+        rec.timestamp,
+        rec.nik,
+        rec.nama,
+        rec.jabatan,
+        rec.dept,
+        rec.tanggalPengisian,
+        rec.jamPengisian,
+        rec.sleep12Session1Bed || '-',
+        rec.sleep12Session1Wake || '-',
+        rec.totalSleep12,
+        rec.sleep36Session1Bed || '-',
+        rec.sleep36Session1Wake || '-',
+        rec.totalSleep36,
+        rec.consumesObat ? (lang === 'ID' ? 'Ya' : 'Yes') : (lang === 'ID' ? 'Tidak' : 'No'),
+        rec.hasPersonalProblem ? (lang === 'ID' ? 'Ya' : 'Yes') : (lang === 'ID' ? 'Tidak' : 'No'),
+        rec.totalFatigueScore,
+        `${rec.readinessScore}%`,
+        rec.fatigueCategory,
+        rec.finalDecision,
+        anom.hasAnomaly ? `🚨 ANOMALI: ${anom.reasons.join(' | ')}` : 'Normal'
+      ];
+    });
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     ws['!cols'] = [
@@ -2297,14 +2314,19 @@ export default function App() {
       { wch: 22 },
       { wch: 16 },
       { wch: 14 },
+      { wch: 18 },
+      { wch: 18 },
       { wch: 20 },
+      { wch: 18 },
+      { wch: 18 },
       { wch: 20 },
       { wch: 14 },
       { wch: 16 },
       { wch: 14 },
       { wch: 18 },
       { wch: 16 },
-      { wch: 20 }
+      { wch: 22 },
+      { wch: 40 }
     ];
 
     const wb = XLSX.utils.book_new();
@@ -2350,6 +2372,10 @@ export default function App() {
 • *NIK:* ${nik}
 • *Jabatan:* ${jabatan} [${dept}]
 • *Waktu Pengisian:* ${tanggalPengisian} pukul ${jamPengisian}
+
+🛌 *Detail Jadwal Tidur & Jam Bangun:*
+• *Sesi Utama (12 Jam):* Jam Tidur ${sleep12Session1Bed} s/d Jam Bangun ${sleep12Session1Wake} (Total: ${calculations.totalSleep12} Jam)
+${hasSleep12Session2 ? `• *Sesi Tambahan (12 Jam):* Jam Tidur ${sleep12Session2Bed} s/d Jam Bangun ${sleep12Session2Wake}\n` : ''}• *Evaluasi 36 Jam:* Jam Tidur ${sleep36Session1Bed} s/d Jam Bangun ${sleep36Session1Wake} (Total: ${calculations.totalSleep36} Jam)
 
 🛡️ *Hasil Analisa Kelayakan:*
 • *Kondisi:* *${formatVerdict()}*
@@ -2615,21 +2641,117 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                   </div>
                 )}
 
-                {/* Input NIK */}
+                {/* Input NIK with strict format guidelines & instant notification */}
                 <div className="flex flex-col gap-1.5 font-sans">
-                  <label className="text-[9.5px] font-extrabold text-neutral-500 uppercase tracking-widest block">
-                    {lang === 'ID' ? 'Nomor Induk Karyawan (NIK)' : 'Employee ID Number (NIK)'}
-                  </label>
+                  <div className="flex justify-between items-center">
+                    <label className="text-[9.5px] font-extrabold text-neutral-500 uppercase tracking-widest block">
+                      {lang === 'ID' ? 'Nomor Induk Karyawan (NIK)' : 'Employee ID Number (NIK)'}
+                    </label>
+                    <span className="text-[8.5px] font-mono font-bold text-neutral-400">
+                      Wajib 9 Digit (Tanpa 0)
+                    </span>
+                  </div>
                   <div className="relative">
                     <input 
                       type="text"
-                      className="w-full bg-neutral-50 border border-neutral-300 rounded-lg py-2.5 px-3.5 pl-10 text-sm tracking-wider font-mono uppercase text-neutral-900 outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white transition-all font-semibold shadow-xs"
-                      placeholder={lang === 'ID' ? "INPUT NOMOR NIK ANDA DISINI" : "INPUT YOUR NIK HERE"}
+                      maxLength={12}
+                      className={`w-full bg-neutral-50 border rounded-lg py-2.5 px-3.5 pl-10 text-sm tracking-wider font-mono uppercase text-neutral-900 outline-none transition-all font-semibold shadow-xs ${
+                        nik.trim().startsWith('0') 
+                          ? 'border-rose-500 bg-rose-50/30 focus:ring-2 focus:ring-rose-500' 
+                          : nik.trim().length > 0 && nik.trim().length !== 9 
+                            ? 'border-amber-400 bg-amber-50/20 focus:ring-2 focus:ring-amber-500' 
+                            : nik.trim().length === 9 && !nik.trim().startsWith('0') && /^\d+$/.test(nik.trim())
+                              ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
+                              : 'border-neutral-300 focus:ring-2 focus:ring-rose-500 focus:bg-white'
+                      }`}
+                      placeholder={lang === 'ID' ? "Contoh: 123456789 (9 digit)" : "e.g. 123456789 (9 digits)"}
                       value={nik}
-                      onChange={(e) => setNik(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\s+/g, '');
+                        setNik(val);
+                      }}
                     />
                     <span className="absolute left-3.5 top-3.5 text-neutral-400 font-mono text-xs">#</span>
+                    {nik.trim().length > 0 && (
+                      <span className="absolute right-3 top-3 text-[10px] font-mono font-bold text-neutral-500">
+                        {nik.trim().length}/9
+                      </span>
+                    )}
                   </div>
+
+                  {/* Real-time NIK Validation Alerts */}
+                  {(() => {
+                    const trimmed = nik.trim();
+                    if (!trimmed) return null;
+
+                    // Condition 1: Starts with zero
+                    if (trimmed.startsWith('0')) {
+                      return (
+                        <div className="bg-rose-50 border border-rose-300 text-rose-800 p-2.5 rounded-lg text-xs flex items-start gap-2 shadow-xs animate-fadeIn">
+                          <span className="text-base shrink-0">⚠️</span>
+                          <div>
+                            <p className="font-black uppercase tracking-wider text-[10px]">
+                              {lang === 'ID' ? 'Pemberitahuan: NIK Tidak Boleh Diawali Nol' : 'Warning: NIK Cannot Start With Zero'}
+                            </p>
+                            <p className="font-bold text-[11px] mt-0.5 leading-snug">
+                              {lang === 'ID' 
+                                ? 'NIK tidak boleh diawali dengan angka nol (0)! Harap masukkan NIK yang benar di input tanpa angka nol di depan.' 
+                                : 'NIK cannot start with zero (0)! Please enter your correct NIK without leading zero.'}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Condition 2: Contains non-digits
+                    if (!/^\d+$/.test(trimmed)) {
+                      return (
+                        <div className="bg-rose-50 border border-rose-300 text-rose-800 p-2.5 rounded-lg text-xs flex items-start gap-2 shadow-xs animate-fadeIn">
+                          <span className="text-base shrink-0">⚠️</span>
+                          <div>
+                            <p className="font-black uppercase tracking-wider text-[10px]">
+                              {lang === 'ID' ? 'Peringatan: Karakter Tidak Valid' : 'Warning: Invalid Characters'}
+                            </p>
+                            <p className="font-bold text-[11px] mt-0.5 leading-snug">
+                              {lang === 'ID' 
+                                ? 'NIK hanya boleh berupa angka! Tidak boleh mengandung huruf atau simbol.' 
+                                : 'NIK must only consist of numbers! No letters or symbols allowed.'}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Condition 3: Abnormal length (not 9 digits)
+                    if (trimmed.length !== 9) {
+                      return (
+                        <div className="bg-amber-50 border border-amber-300 text-amber-900 p-2.5 rounded-lg text-xs flex items-start gap-2 shadow-xs animate-fadeIn">
+                          <span className="text-base shrink-0">⚠️</span>
+                          <div>
+                            <p className="font-black uppercase tracking-wider text-[10px]">
+                              {lang === 'ID' ? 'Peringatan: Jumlah Digit NIK Abnormal' : 'Warning: Abnormal NIK Length'}
+                            </p>
+                            <p className="font-bold text-[11px] mt-0.5 leading-snug">
+                              {lang === 'ID' 
+                                ? `Jumlah digit NIK abnormal (${trimmed.length} digit). Format NIK wajib tepat 9 digit angka tanpa angka nol di depan. Anda tidak boleh mengisi FTW sebelum mengisi NIK dengan benar.` 
+                                : `Abnormal NIK length (${trimmed.length} digits). Format must be exactly 9 digits without leading zero. You cannot proceed to fill FTW until NIK is entered correctly.`}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Condition 4: Perfectly Valid 9-digit NIK
+                    return (
+                      <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 py-1.5 px-3 rounded-lg text-[10px] flex items-center justify-between font-bold shadow-2xs animate-fadeIn">
+                        <span className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                          <span>{lang === 'ID' ? 'Format NIK valid (9 digit angka tanpa angka nol di depan)' : 'Valid NIK format (9 digits, no leading zero)'}</span>
+                        </span>
+                        <span className="font-mono text-emerald-700 font-black">9 / 9 DIGIT OK</span>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Database Search Ticker popup info block */}
@@ -2786,14 +2908,31 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
 
                 {/* Navigation Button Block step 1 */}
                 <div className="mt-auto pt-5 flex flex-col gap-2">
-                  <button 
-                    type="button"
-                    onClick={goToStep2}
-                    className="w-full bg-rose-600 hover:bg-rose-500 text-white font-black py-4 rounded-xl hover:scale-[1.01] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-rose-200 text-xs uppercase"
-                  >
-                    <span>{lang === 'ID' ? 'PILIH JAM TIDUR' : 'ENTER SLEEP TIMES'}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                  {(() => {
+                    const nikVal = validateNik(nik, lang);
+                    const isNikInvalid = nik.trim().length > 0 && !nikVal.isValid;
+                    return (
+                      <>
+                        <button 
+                          type="button"
+                          onClick={goToStep2}
+                          className={`w-full text-white font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md text-xs uppercase ${
+                            isNikInvalid 
+                              ? 'bg-neutral-500 hover:bg-neutral-600 shadow-neutral-200' 
+                              : 'bg-rose-600 hover:bg-rose-500 hover:scale-[1.01] shadow-rose-200'
+                          }`}
+                        >
+                          <span>{lang === 'ID' ? 'PILIH JAM TIDUR' : 'ENTER SLEEP TIMES'}</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                        {isNikInvalid && (
+                          <p className="text-[10px] text-rose-600 font-bold text-center leading-tight mt-1">
+                            ⚠️ {nikVal.message}
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -3130,6 +3269,36 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                           <span className="text-neutral-400 text-[8.5px] uppercase tracking-wider block font-bold">NIK / POSITION</span>
                           <span className="font-bold text-neutral-700 text-[11px] font-mono">{nik} / {jabatan}</span>
                         </div>
+                      </div>
+
+                      {/* Jam Mulai Tidur & Jam Bangun (Capture Card) */}
+                      <div className="bg-neutral-50 border border-neutral-200/90 rounded-lg p-2.5 text-[9.5px]">
+                        <div className="flex justify-between items-center text-neutral-500 font-bold mb-1">
+                          <span className="uppercase text-[8px] tracking-wider">JADWAL TIDUR (12 JAM TERAKHIR)</span>
+                          <span className="font-mono font-black text-neutral-850">{calculations.totalSleep12} Jam</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 font-mono">
+                          <div>
+                            <span className="text-[7.5px] text-neutral-400 uppercase block font-bold">Jam Mulai Tidur:</span>
+                            <span className="font-black text-neutral-800 text-[11px]">{sleep12Session1Bed}</span>
+                          </div>
+                          <div>
+                            <span className="text-[7.5px] text-neutral-400 uppercase block font-bold">Jam Bangun Tidur:</span>
+                            <span className="font-black text-neutral-800 text-[11px]">{sleep12Session1Wake}</span>
+                          </div>
+                        </div>
+                        {hasSleep12Session2 && (
+                          <div className="mt-1 pt-1 border-t border-dashed border-neutral-200 grid grid-cols-2 gap-2 font-mono text-[8.5px]">
+                            <div>
+                              <span className="text-[7px] text-neutral-400 uppercase block font-semibold">Sesi 2 Mulai:</span>
+                              <span className="font-bold text-neutral-700">{sleep12Session2Bed}</span>
+                            </div>
+                            <div>
+                              <span className="text-[7px] text-neutral-400 uppercase block font-semibold">Sesi 2 Bangun:</span>
+                              <span className="font-bold text-neutral-700">{sleep12Session2Wake}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* SCORE GAUGE AREA IN CAPTURED IMAGE */}
@@ -3490,10 +3659,10 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                       </span>
                     </div>
 
-                    {/* Sleep analytics breakdown */}
-                    <div className="grid grid-cols-3 gap-2 py-2.5 border-t border-b border-neutral-100 text-[10px] font-mono">
+                    {/* Sleep analytics breakdown with Jam Tidur & Jam Bangun */}
+                    <div className="grid grid-cols-3 gap-2 py-2 border-t border-b border-neutral-100 text-[10px] font-mono">
                       <div>
-                        <span className="text-neutral-400 block uppercase text-[8px] font-bold">{lang === 'ID' ? 'Total Tidur' : 'TOTAL SLEEP'}</span>
+                        <span className="text-neutral-400 block uppercase text-[8px] font-bold">{lang === 'ID' ? 'Total Tidur 12J' : 'TOTAL SLEEP'}</span>
                         <span className="font-extrabold text-neutral-700 mt-0.5 block">{record.totalSleep12} Jam</span>
                       </div>
                       <div>
@@ -3503,6 +3672,28 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                       <div>
                         <span className="text-neutral-400 block uppercase text-[8px] font-bold">{lang === 'ID' ? 'Fatigue Skor' : 'FATIGUE SCORE'}</span>
                         <span className="font-bold text-rose-600 mt-0.5 block">{record.totalFatigueScore}</span>
+                      </div>
+                    </div>
+
+                    {/* Detail Jam Tidur & Bangun */}
+                    <div className="bg-neutral-50 p-2 rounded-lg border border-neutral-200/70 text-[9.5px] font-mono flex flex-col gap-1">
+                      <div className="flex items-center justify-between text-neutral-700">
+                        <span className="text-neutral-400 font-bold uppercase text-[8px]">🌙 Tidur 12 Jam:</span>
+                        <span className="font-bold">
+                          Tidur: <b>{record.sleep12Session1Bed || '-'}</b> ➔ Bangun: <b>{record.sleep12Session1Wake || '-'}</b>
+                        </span>
+                      </div>
+                      {record.hasSleep12Session2 && (
+                        <div className="flex items-center justify-between text-neutral-500 text-[8.5px]">
+                          <span className="text-neutral-400 font-bold uppercase text-[7.5px]">🌙 Sesi 2:</span>
+                          <span>Tidur: {record.sleep12Session2Bed || '-'} ➔ Bangun: {record.sleep12Session2Wake || '-'}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between text-neutral-600 text-[9px]">
+                        <span className="text-neutral-400 font-bold uppercase text-[8px]">⏱️ Tidur 36 Jam:</span>
+                        <span className="font-semibold">
+                          Tidur: <b>{record.sleep36Session1Bed || '-'}</b> ➔ Bangun: <b>{record.sleep36Session1Wake || '-'}</b>
+                        </span>
                       </div>
                     </div>
 
@@ -3536,7 +3727,27 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                         <button 
                           type="button"
                           onClick={() => {
-                            const details = `--- LAPORAN FIT TO WORK WBS ---\nID: ${record.id}\nTanggal: ${record.tanggalPengisian} ${record.jamPengisian}\nNama: ${record.nama} (${record.nik})\nDept: ${record.dept}\n\nTotal Tidur: ${record.totalSleep12} Jam\nTidur 36 Jam: ${record.totalSleep36} Jam\nFatigue Score: ${record.totalFatigueScore}\nReadiness Score: ${record.readinessScore}%\nStatus: ${record.finalDecision === 'FIT' ? 'FIT TO WORK' : 'REPORT / UNFIT'}\n\nPT. WAHANA BARA SENTOSA`;
+                            const details = `--- LAPORAN INDIVIDU FIT TO WORK WBS ---
+ID: ${record.id}
+Tanggal: ${record.tanggalPengisian} pukul ${record.jamPengisian}
+Nama: ${record.nama} (${record.nik})
+Jabatan: ${record.jabatan}
+Dept: ${record.dept}
+
+[JADWAL JAM TIDUR & BANGUN]
+• Jam Mulai Tidur (12 Jam): ${record.sleep12Session1Bed || '-'}
+• Jam Bangun Tidur (12 Jam): ${record.sleep12Session1Wake || '-'}
+• Durasi Tidur 12 Jam: ${record.totalSleep12} Jam
+${record.hasSleep12Session2 ? `• Sesi 2: Mulai ${record.sleep12Session2Bed || '-'} s/d Bangun ${record.sleep12Session2Wake || '-'}\n` : ''}• Jam Mulai Tidur (36 Jam): ${record.sleep36Session1Bed || '-'}
+• Jam Bangun Tidur (36 Jam): ${record.sleep36Session1Wake || '-'}
+• Total Jam Tidur 36 Jam: ${record.totalSleep36} Jam
+
+[HASIL PENILAIAN]
+• Skor Fatigue: ${record.totalFatigueScore}
+• Kesiapan Kerja: ${record.readinessScore}%
+• Keputusan: ${record.finalDecision === 'FIT' ? 'FIT TO WORK' : record.finalDecision === 'FIT_CONDITIONAL' ? 'BEKERJA DALAM PENGAWASAN KHUSUS' : record.finalDecision === 'REST_BEFORE_WORK' ? 'WAJIB ISTIRAHAT SEBELUM BEKERJA' : 'TIDAK BOLEH BEKERJA'}
+
+PT. WAHANA BARA SENTOSA`;
                             alert(details);
                           }}
                           className="text-[10px] font-bold text-neutral-600 hover:text-neutral-900 border border-neutral-200 rounded px-1.5 py-0.5 hover:bg-neutral-50 transition cursor-pointer"
@@ -3875,10 +4086,14 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     const restCount = periodRecords.filter(r => r.finalDecision === 'REST_BEFORE_WORK').length;
                     const unfitCount = periodRecords.filter(r => r.finalDecision === 'UNFIT').length;
                     const problematicCount = periodTotalCount - fitCount;
+                    const anomalyRecords = periodRecords.filter(r => checkAssessmentAnomalies(r).hasAnomaly);
+                    const anomalyCount = anomalyRecords.length;
 
                     // 2. Gather records filtered for table view (applying Status & Name/NIK/ID Search filter)
                     let filteredRecords = deduplicateAssessments(periodRecords.filter(record => {
-                      if (adminFilterStatus === 'PROBLEMATIC') {
+                      if (adminFilterStatus === 'ANOMALY') {
+                        return checkAssessmentAnomalies(record).hasAnomaly;
+                      } else if (adminFilterStatus === 'PROBLEMATIC') {
                         return record.finalDecision !== 'FIT';
                       } else if (adminFilterStatus !== 'ALL') {
                         return record.finalDecision === adminFilterStatus;
@@ -3966,6 +4181,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                 onChange={(e) => setAdminFilterStatus(e.target.value as any)}
                               >
                                 <option value="ALL">📋 {lang === 'ID' ? 'Semua Status (Seluruh Laporan)' : 'All Status (Show All)'}</option>
+                                <option value="ANOMALY">🚨 {lang === 'ID' ? 'Hanya Data Aneh / Manipulasi Jam (Rahasia Pengawas)' : 'Suspicious / Anomaly Data Only'}</option>
                                 <option value="PROBLEMATIC">⚠️ {lang === 'ID' ? 'Hanya Bermasalah (Kurang/Tidak Fit)' : 'Problematic / Kurang Fit Only'}</option>
                                 <option value="FIT">🟢 FIT TO WORK</option>
                                 <option value="FIT_CONDITIONAL">🟡 BEKERJA DALAM PENGAWASAN KHUSUS</option>
@@ -4030,36 +4246,73 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                         </div>
 
                         {/* Summary Widget Badge Cards */}
-                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                          <div className="bg-white border border-neutral-200 rounded-xl p-3 text-center shadow-xs">
-                            <span className="block text-[9px] font-black text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'TOTAL PENILAIAN' : 'TOTAL PERIOD'}</span>
-                            <span className="block text-xl font-mono font-black text-neutral-900 mt-1">{periodTotalCount}</span>
-                            <span className="text-[8.5px] text-neutral-400 font-bold block mt-0.5 uppercase">Laporan</span>
+                        <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5">
+                          <div 
+                            onClick={() => setAdminFilterStatus('ALL')}
+                            className={`border rounded-xl p-3 text-center shadow-xs cursor-pointer transition ${adminFilterStatus === 'ALL' ? 'bg-neutral-900 text-white border-neutral-950 ring-2 ring-neutral-400' : 'bg-white hover:bg-neutral-50 border-neutral-200'}`}
+                          >
+                            <span className={`block text-[9px] font-black uppercase tracking-wider ${adminFilterStatus === 'ALL' ? 'text-neutral-300' : 'text-neutral-500'}`}>{lang === 'ID' ? 'TOTAL PENILAIAN' : 'TOTAL PERIOD'}</span>
+                            <span className={`block text-xl font-mono font-black mt-1 ${adminFilterStatus === 'ALL' ? 'text-white' : 'text-neutral-900'}`}>{periodTotalCount}</span>
+                            <span className={`text-[8.5px] font-bold block mt-0.5 uppercase ${adminFilterStatus === 'ALL' ? 'text-neutral-300' : 'text-neutral-400'}`}>Laporan</span>
                           </div>
 
-                          <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-center shadow-xs">
-                            <span className="block text-[9px] font-black text-rose-700 uppercase tracking-wider">⚠️ {lang === 'ID' ? 'BERMASALAH' : 'CURBED ISSUES'}</span>
-                            <span className="block text-xl font-mono font-black text-rose-800 mt-1">{problematicCount}</span>
-                            <span className="text-[8.5px] text-rose-500 font-bold block mt-0.5 uppercase">({periodTotalCount > 0 ? Math.round((problematicCount/periodTotalCount)*100) : 0}%) Kurang Fit</span>
+                          <div 
+                            onClick={() => setAdminFilterStatus('PROBLEMATIC')}
+                            className={`border rounded-xl p-3 text-center shadow-xs cursor-pointer transition ${adminFilterStatus === 'PROBLEMATIC' ? 'bg-rose-700 text-white border-rose-800 ring-2 ring-rose-400' : 'bg-rose-50 hover:bg-rose-100 border-rose-200'}`}
+                          >
+                            <span className={`block text-[9px] font-black uppercase tracking-wider ${adminFilterStatus === 'PROBLEMATIC' ? 'text-white' : 'text-rose-700'}`}>⚠️ {lang === 'ID' ? 'BERMASALAH' : 'CURBED ISSUES'}</span>
+                            <span className={`block text-xl font-mono font-black mt-1 ${adminFilterStatus === 'PROBLEMATIC' ? 'text-white' : 'text-rose-800'}`}>{problematicCount}</span>
+                            <span className={`text-[8.5px] font-bold block mt-0.5 uppercase ${adminFilterStatus === 'PROBLEMATIC' ? 'text-rose-100' : 'text-rose-500'}`}>({periodTotalCount > 0 ? Math.round((problematicCount/periodTotalCount)*100) : 0}%) Kurang Fit</span>
                           </div>
 
-                           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center shadow-sm">
-                             <span className="block text-[9px] font-black text-amber-700 uppercase tracking-wide">🟡 PENGAWASAN KHUSUS</span>
-                             <span className="block text-base font-black text-amber-800 mt-1.5">{fitCondCount}</span>
-                             <span className="text-[8px] text-amber-500 font-bold block mt-1 uppercase">Bekerja dalam Pengawasan Khusus</span>
-                           </div>
- 
-                           <div className="bg-orange-50 border border-orange-200/80 rounded-xl p-3 text-center shadow-sm">
-                             <span className="block text-[9px] font-black text-orange-700 uppercase tracking-wide">🟠 WAJIB ISTIRAHAT</span>
-                             <span className="block text-base font-black text-orange-850 mt-1.5">{restCount}</span>
-                             <span className="text-[8px] text-orange-500 font-bold block mt-1 uppercase">Wajib Istirahat Sebelum Bekerja</span>
-                           </div>
- 
-                           <div className="bg-rose-100 border border-rose-200 rounded-xl p-3 text-center shadow-sm col-span-2 sm:col-span-1">
-                             <span className="block text-[9px] font-black text-rose-800 uppercase tracking-wide">🔴 TIDAK BOLEH BEKERJA</span>
-                             <span className="block text-base font-black text-rose-900 mt-1.5">{unfitCount}</span>
-                             <span className="text-[8px] text-rose-600 font-bold block mt-1 uppercase">Dilarang Keras Bekerja harian</span>
-                           </div>
+                          <div 
+                            onClick={() => setAdminFilterStatus(adminFilterStatus === 'ANOMALY' ? 'ALL' : 'ANOMALY')}
+                            className={`border rounded-xl p-3 text-center shadow-xs cursor-pointer transition ${
+                              adminFilterStatus === 'ANOMALY'
+                                ? 'bg-red-600 text-white border-red-700 ring-2 ring-red-400 shadow-md' 
+                                : anomalyCount > 0 
+                                  ? 'bg-red-50 hover:bg-red-100 border-red-300 animate-pulse' 
+                                  : 'bg-neutral-50 border-neutral-200'
+                            }`}
+                            title="Filter karyawan yang mengisi data aneh / manipulasi jam (rahasia pengawas)"
+                          >
+                            <span className={`block text-[9px] font-black uppercase tracking-wider ${adminFilterStatus === 'ANOMALY' ? 'text-white' : 'text-red-700'}`}>
+                              🚨 {lang === 'ID' ? 'DATA ANEH' : 'ANOMALIES'}
+                            </span>
+                            <span className={`block text-xl font-mono font-black mt-1 ${adminFilterStatus === 'ANOMALY' ? 'text-white' : 'text-red-850'}`}>
+                              {anomalyCount}
+                            </span>
+                            <span className={`text-[8px] font-bold block mt-0.5 uppercase ${adminFilterStatus === 'ANOMALY' ? 'text-red-100' : 'text-red-600'}`}>
+                              {lang === 'ID' ? 'Rahasia Pengawas' : 'Supervisor Secret'}
+                            </span>
+                          </div>
+
+                          <div 
+                            onClick={() => setAdminFilterStatus('FIT_CONDITIONAL')}
+                            className={`border rounded-xl p-3 text-center shadow-sm cursor-pointer transition ${adminFilterStatus === 'FIT_CONDITIONAL' ? 'bg-amber-600 text-white border-amber-700 ring-2 ring-amber-400' : 'bg-amber-50 hover:bg-amber-100 border-amber-200'}`}
+                          >
+                            <span className={`block text-[9px] font-black uppercase tracking-wide ${adminFilterStatus === 'FIT_CONDITIONAL' ? 'text-white' : 'text-amber-700'}`}>🟡 PENGAWASAN</span>
+                            <span className={`block text-base font-black mt-1.5 ${adminFilterStatus === 'FIT_CONDITIONAL' ? 'text-white' : 'text-amber-800'}`}>{fitCondCount}</span>
+                            <span className={`text-[8px] font-bold block mt-1 uppercase ${adminFilterStatus === 'FIT_CONDITIONAL' ? 'text-amber-100' : 'text-amber-500'}`}>Pengawasan Khusus</span>
+                          </div>
+
+                          <div 
+                            onClick={() => setAdminFilterStatus('REST_BEFORE_WORK')}
+                            className={`border rounded-xl p-3 text-center shadow-sm cursor-pointer transition ${adminFilterStatus === 'REST_BEFORE_WORK' ? 'bg-orange-600 text-white border-orange-700 ring-2 ring-orange-400' : 'bg-orange-50 hover:bg-orange-100 border-orange-200/80'}`}
+                          >
+                            <span className={`block text-[9px] font-black uppercase tracking-wide ${adminFilterStatus === 'REST_BEFORE_WORK' ? 'text-white' : 'text-orange-700'}`}>🟠 ISTIRAHAT</span>
+                            <span className={`block text-base font-black mt-1.5 ${adminFilterStatus === 'REST_BEFORE_WORK' ? 'text-white' : 'text-orange-850'}`}>{restCount}</span>
+                            <span className={`text-[8px] font-bold block mt-1 uppercase ${adminFilterStatus === 'REST_BEFORE_WORK' ? 'text-orange-100' : 'text-orange-500'}`}>Wajib Istirahat</span>
+                          </div>
+
+                          <div 
+                            onClick={() => setAdminFilterStatus('UNFIT')}
+                            className={`border rounded-xl p-3 text-center shadow-sm cursor-pointer transition ${adminFilterStatus === 'UNFIT' ? 'bg-rose-700 text-white border-rose-800 ring-2 ring-rose-400' : 'bg-rose-100 hover:bg-rose-200 border-rose-200'}`}
+                          >
+                            <span className={`block text-[9px] font-black uppercase tracking-wide ${adminFilterStatus === 'UNFIT' ? 'text-white' : 'text-rose-800'}`}>🔴 TIDAK BOLEH KERJA</span>
+                            <span className={`block text-base font-black mt-1.5 ${adminFilterStatus === 'UNFIT' ? 'text-white' : 'text-rose-900'}`}>{unfitCount}</span>
+                            <span className={`text-[8px] font-bold block mt-1 uppercase ${adminFilterStatus === 'UNFIT' ? 'text-rose-100' : 'text-rose-600'}`}>Dilarang Bekerja</span>
+                          </div>
                         </div>
 
                         {/* Table list */}
@@ -4140,9 +4393,16 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                   
                                   // Sleep violation flags
                                   const sleepheroLow = rec.totalSleep12 < 6;
+                                  
+                                  // Anomaly detection check (Confidential supervisor detection)
+                                  const anom = checkAssessmentAnomalies(rec);
 
                                   return (
-                                    <tr key={rec.id ? `${rec.id}-${index}` : index} className={`hover:bg-neutral-50/70 transition-colors ${rec.finalDecision === 'UNFIT' ? 'bg-rose-50/20' : rec.finalDecision === 'REST_BEFORE_WORK' ? 'bg-orange-50/10' : ''}`}>
+                                    <tr key={rec.id ? `${rec.id}-${index}` : index} className={`hover:bg-neutral-50/70 transition-colors ${
+                                      rec.finalDecision === 'UNFIT' ? 'bg-rose-50/20' : 
+                                      anom.hasAnomaly ? 'bg-red-50/30' : 
+                                      rec.finalDecision === 'REST_BEFORE_WORK' ? 'bg-orange-50/10' : ''
+                                    }`}>
                                       <td className="px-4 py-3 text-center whitespace-nowrap align-middle">
                                         <div className="font-bold text-neutral-900 font-mono text-[11px]">
                                           {rec.tanggalPengisian}
@@ -4153,6 +4413,16 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                         <div className="text-[9px] font-mono text-neutral-600 font-black bg-neutral-100 border border-neutral-250 px-1.5 py-0.5 rounded mt-1 inline-block tracking-tight" title={`ID Tiket: ${rec.id}`}>
                                           ID: {rec.id}
                                         </div>
+                                        {anom.hasAnomaly && (
+                                          <div className="mt-1">
+                                            <span 
+                                              className="text-[8.5px] font-black text-rose-700 bg-rose-100 border border-rose-300 px-1.5 py-0.5 rounded uppercase tracking-tight inline-block"
+                                              title={anom.reasons.join('\n')}
+                                            >
+                                              🚨 DATA ANEH
+                                            </span>
+                                          </div>
+                                        )}
                                       </td>
                                       
                                       <td className="px-4 py-3 align-middle">
@@ -4184,16 +4454,32 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                             {rec.totalSleep12} Jam
                                           </span>
                                         </div>
-                                        <div className="text-[10.5px] mt-0.5">
+                                        <div className="text-[9.5px] font-mono text-neutral-700 font-semibold mt-0.5">
+                                          Tidur: <span className="font-bold text-neutral-900">{rec.sleep12Session1Bed || '-'}</span> ➔ Bangun: <span className="font-bold text-neutral-900">{rec.sleep12Session1Wake || '-'}</span>
+                                        </div>
+                                        {rec.hasSleep12Session2 && (
+                                          <div className="text-[8.5px] font-mono text-neutral-500 mt-0.5">
+                                            S2: {rec.sleep12Session2Bed || '-'} ➔ {rec.sleep12Session2Wake || '-'}
+                                          </div>
+                                        )}
+                                        <div className="text-[10px] mt-1 pt-1 border-t border-neutral-150">
                                           <span className="font-bold text-neutral-400">36 Jm:</span>{' '}
-                                          <span className="font-mono font-bold text-neutral-600">
-                                            {rec.totalSleep36} Jam
+                                          <span className="font-mono font-bold text-neutral-700">
+                                            {rec.totalSleep36} Jam ({rec.sleep36Session1Bed || '-'} - {rec.sleep36Session1Wake || '-'})
                                           </span>
                                         </div>
                                       </td>
 
                                       <td className="px-4 py-3 align-middle">
-                                        <div className="flex flex-col gap-1 max-w-[150px]">
+                                        <div className="flex flex-col gap-1 max-w-[160px]">
+                                          {anom.hasAnomaly && (
+                                            <span 
+                                              className="text-[9px] font-black text-rose-800 bg-rose-100 border border-rose-300 rounded px-1.5 py-0.5 w-fit leading-tight" 
+                                              title={anom.reasons.join('\n')}
+                                            >
+                                              🚨 {anom.reasons[0].length > 40 ? anom.reasons[0].substring(0, 40) + '...' : anom.reasons[0]}
+                                            </span>
+                                          )}
                                           {rec.consumesObat && (
                                             <span className="text-[9.5px] font-bold text-yellow-700 bg-yellow-50 border border-yellow-200 rounded px-1.5 py-0.2 w-fit">
                                               💊 Obat / Meds
@@ -4208,9 +4494,9 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                             <span className="text-[9.5px] font-bold text-orange-700 bg-orange-50 border border-orange-200 rounded px-1.5 py-0.2 w-fit">
                                               💤 Fatigue Score: {rec.totalFatigueScore}
                                             </span>
-                                          ) : (
+                                          ) : !anom.hasAnomaly && !rec.consumesObat && !rec.hasPersonalProblem ? (
                                             <span className="text-[9px] font-medium text-neutral-400">✓ No risk drugs</span>
-                                          )}
+                                          ) : null}
                                         </div>
                                       </td>
 
@@ -4289,6 +4575,31 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                 </div>
 
                                 <div className="space-y-4 text-xs font-sans">
+                                  {/* Confidential Anomaly Detection Alert Box for Supervisors */}
+                                  {(() => {
+                                    const anom = checkAssessmentAnomalies(det);
+                                    if (!anom.hasAnomaly) return null;
+                                    return (
+                                      <div className="bg-rose-50 border-2 border-rose-500 rounded-xl p-4 shadow-sm animate-fadeIn">
+                                        <div className="flex items-center gap-2 text-rose-800 font-black text-xs uppercase">
+                                          <span className="text-lg">🚨</span>
+                                          <span>TEMUAN ANOMALI PENGISIAN (RAHASIA PENGAWAS)</span>
+                                        </div>
+                                        <p className="text-[10.5px] text-rose-700 font-semibold mt-1 leading-snug">
+                                          Sistem mendeteksi indikasi ketidakwajaran / manipulasi waktu tidur. Catatan ini hanya terlihat oleh pengawas/admin di fitur admin dan dirahasiakan sepenuhnya dari karyawan.
+                                        </p>
+                                        <div className="mt-2.5 space-y-1.5">
+                                          {anom.reasons.map((r, i) => (
+                                            <div key={i} className="text-xs font-bold text-rose-950 bg-white border border-rose-300 p-2.5 rounded-lg flex items-start gap-2 shadow-2xs">
+                                              <span className="text-rose-600 font-mono text-sm leading-none shrink-0">•</span>
+                                              <span className="leading-snug">{r}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
+
                                   {/* Identity Card */}
                                   <div className="bg-neutral-50 border border-neutral-200 p-3.5 rounded-xl">
                                     <span className="block text-[8.5px] font-black text-neutral-500 uppercase tracking-wider mb-1.5">KARYAWAN TERKAIT:</span>
@@ -4300,13 +4611,13 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                     </div>
                                   </div>
 
-                                  {/* Sleep Metrics breakdown */}
+                                  {/* Sleep Metrics breakdown with explicit Bedtime and Wake-up time */}
                                   <div className="border border-neutral-200 rounded-xl p-3.5">
-                                    <span className="block text-[8.5px] font-black text-neutral-500 uppercase tracking-wider mb-2">DETAIL ANALISIS REKAP TIDUR:</span>
+                                    <span className="block text-[8.5px] font-black text-neutral-500 uppercase tracking-wider mb-2">DETAIL ANALISIS REKAP TIDUR & WAKTU:</span>
                                     
                                     <div className="space-y-2 mt-1">
                                       <div className="flex justify-between items-center text-[11px] border-b border-neutral-100 pb-1.5">
-                                        <span className="font-bold text-neutral-600">Total Jam Tidur:</span>
+                                        <span className="font-bold text-neutral-600">Total Jam Tidur (12 Jam):</span>
                                         <span className={`font-mono font-black ${det.totalSleep12 < 6 ? 'text-rose-600' : 'text-emerald-700'}`}>
                                           {det.totalSleep12} Jam {det.totalSleep12 < 6 ? '(🚨 KURANG)' : ' (Kategori Baik)'}
                                         </span>
@@ -4331,6 +4642,45 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                                         <span className="font-mono font-black text-emerald-700 font-extrabold text-xs">
                                           {det.readinessScore}% Kesiapan
                                         </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Jam Mulai Tidur & Jam Bangun Section */}
+                                    <div className="mt-3 pt-3 border-t border-neutral-200">
+                                      <span className="block text-[8.5px] font-black text-neutral-500 uppercase tracking-wider mb-2">
+                                        🕒 DETAIL JADWAL JAM TIDUR & JAM BANGUN:
+                                      </span>
+                                      <div className="bg-neutral-50 p-3 rounded-lg border border-neutral-200 space-y-2 text-[11px] font-mono">
+                                        <div>
+                                          <div className="text-[9px] font-sans font-bold text-neutral-500 uppercase">Sesi Utama (12 Jam Terakhir):</div>
+                                          <div className="flex justify-between items-center mt-1">
+                                            <span>Mulai Tidur: <b className="text-neutral-900">{det.sleep12Session1Bed || '-'}</b></span>
+                                            <span>Bangun: <b className="text-neutral-900">{det.sleep12Session1Wake || '-'}</b></span>
+                                          </div>
+                                        </div>
+
+                                        {det.hasSleep12Session2 && (
+                                          <div className="pt-1.5 border-t border-dashed border-neutral-200">
+                                            <div className="text-[9px] font-sans font-bold text-neutral-500 uppercase">Sesi Tambahan 2 (12 Jam):</div>
+                                            <div className="flex justify-between items-center mt-1">
+                                              <span>Mulai: <b className="text-neutral-900">{det.sleep12Session2Bed || '-'}</b></span>
+                                              <span>Bangun: <b className="text-neutral-900">{det.sleep12Session2Wake || '-'}</b></span>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        <div className="pt-1.5 border-t border-neutral-200">
+                                          <div className="text-[9px] font-sans font-bold text-neutral-500 uppercase">Evaluasi Tidur 36 Jam:</div>
+                                          <div className="flex justify-between items-center mt-1">
+                                            <span>Mulai Tidur: <b className="text-neutral-900">{det.sleep36Session1Bed || '-'}</b></span>
+                                            <span>Bangun: <b className="text-neutral-900">{det.sleep36Session1Wake || '-'}</b></span>
+                                          </div>
+                                        </div>
+
+                                        <div className="pt-1.5 border-t border-neutral-200 text-neutral-600 text-[10px] flex justify-between">
+                                          <span className="font-sans font-semibold">Waktu Pengisian Aktual:</span>
+                                          <span>{det.tanggalPengisian} pukul <b>{det.jamPengisian}</b></span>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>

@@ -20,6 +20,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { checkAssessmentAnomalies } from './utils';
 
 export interface TrendCustomAssessment {
   id: string;
@@ -31,7 +32,17 @@ export interface TrendCustomAssessment {
   dept: string;
   tanggalPengisian: string;
   jamPengisian: string;
+  sleep12Session1Bed?: string;
+  sleep12Session1Wake?: string;
+  sleep12Session2Bed?: string;
+  sleep12Session2Wake?: string;
+  hasSleep12Session2?: boolean;
   totalSleep12?: number;
+  sleep36Session1Bed?: string;
+  sleep36Session1Wake?: string;
+  sleep36Session2Bed?: string;
+  sleep36Session2Wake?: string;
+  hasSleep36Session2?: boolean;
   totalSleep36?: number;
   consumesObat?: boolean;
   hasPersonalProblem?: boolean;
@@ -61,7 +72,7 @@ export default function AdminTrendsAnalysis({
   const [endDate, setEndDate] = useState<string>('2026-10-31');
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<'ALL_ISSUES' | 'UNFIT_ONLY' | 'CONDITIONAL_ONLY' | 'REST_ONLY' | 'ALL_EMPLOYEES'>('ALL_ISSUES');
+  const [statusFilter, setStatusFilter] = useState<'ALL_ISSUES' | 'UNFIT_ONLY' | 'CONDITIONAL_ONLY' | 'REST_ONLY' | 'ANOMALY_ONLY' | 'ALL_EMPLOYEES'>('ALL_ISSUES');
   const [riskFilter, setRiskFilter] = useState<'ALL' | 'HIGH' | 'MEDIUM' | 'LOW'>('ALL');
   const [deptFilter, setDeptFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -94,6 +105,7 @@ export default function AdminTrendsAnalysis({
       conditionalCount: number;
       restCount: number;
       totalIssues: number;
+      anomalyCount: number;
       sleep12Sum: number;
       avgSleep12: number;
       lastIssueDate: string;
@@ -102,6 +114,7 @@ export default function AdminTrendsAnalysis({
       riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' | 'NORMAL';
       records: TrendCustomAssessment[];
       issueRecords: TrendCustomAssessment[];
+      anomalyRecords: TrendCustomAssessment[];
     }>();
 
     for (const r of periodRecords) {
@@ -121,6 +134,7 @@ export default function AdminTrendsAnalysis({
           conditionalCount: 0,
           restCount: 0,
           totalIssues: 0,
+          anomalyCount: 0,
           sleep12Sum: 0,
           avgSleep12: 0,
           lastIssueDate: '',
@@ -128,7 +142,8 @@ export default function AdminTrendsAnalysis({
           lastIssueDecision: '',
           riskLevel: 'NORMAL',
           records: [],
-          issueRecords: []
+          issueRecords: [],
+          anomalyRecords: []
         });
       }
 
@@ -159,6 +174,12 @@ export default function AdminTrendsAnalysis({
           item.lastIssueTime = r.jamPengisian || '';
           item.lastIssueDecision = decision;
         }
+      }
+
+      const anomaly = checkAssessmentAnomalies(r);
+      if (anomaly.hasAnomaly) {
+        item.anomalyCount++;
+        item.anomalyRecords.push(r);
       }
     }
 
@@ -196,15 +217,19 @@ export default function AdminTrendsAnalysis({
     let conditionalEmployees = 0;
     let restEmployees = 0;
     let totalEmployeesWithIssues = 0;
+    let totalAnomalies = 0;
+    let employeesWithAnomalies = 0;
 
     employeeStats.forEach(e => {
       unfitTotal += e.unfitCount;
       conditionalTotal += e.conditionalCount;
       restTotal += e.restCount;
+      totalAnomalies += e.anomalyCount;
       if (e.unfitCount > 0) unfitEmployees++;
       if (e.conditionalCount > 0) conditionalEmployees++;
       if (e.restCount > 0) restEmployees++;
       if (e.totalIssues > 0) totalEmployeesWithIssues++;
+      if (e.anomalyCount > 0) employeesWithAnomalies++;
     });
 
     const totalIssues = unfitTotal + conditionalTotal + restTotal;
@@ -221,7 +246,9 @@ export default function AdminTrendsAnalysis({
       conditionalEmployees,
       restTotal,
       restEmployees,
-      totalEmployeesWithIssues
+      totalEmployeesWithIssues,
+      totalAnomalies,
+      employeesWithAnomalies
     };
   }, [employeeStats, periodRecords]);
 
@@ -247,6 +274,8 @@ export default function AdminTrendsAnalysis({
       rows = rows.filter(e => e.conditionalCount > 0);
     } else if (statusFilter === 'REST_ONLY') {
       rows = rows.filter(e => e.restCount > 0);
+    } else if (statusFilter === 'ANOMALY_ONLY') {
+      rows = rows.filter(e => e.anomalyCount > 0);
     }
 
     // Risk level filter
@@ -1085,6 +1114,43 @@ export default function AdminTrendsAnalysis({
                           </span>
                         </div>
                       </div>
+
+                      {/* Bed & Wake times */}
+                      <div className="bg-neutral-50 p-2.5 rounded-lg border border-neutral-200 text-xs font-mono space-y-1">
+                        <div className="flex justify-between items-center text-neutral-800">
+                          <span className="font-sans text-[10px] text-neutral-500 font-bold uppercase">Jadwal Tidur 12 Jam:</span>
+                          <span>Mulai: <b>{rec.sleep12Session1Bed || '-'}</b> ➔ Bangun: <b>{rec.sleep12Session1Wake || '-'}</b></span>
+                        </div>
+                        {rec.hasSleep12Session2 && (
+                          <div className="flex justify-between items-center text-neutral-600 text-[11px] pt-1 mt-1 border-t border-dashed border-neutral-200">
+                            <span className="font-sans text-[9.5px] text-neutral-400 font-bold uppercase">Sesi Tambahan:</span>
+                            <span>Mulai: {rec.sleep12Session2Bed || '-'} ➔ Bangun: {rec.sleep12Session2Wake || '-'}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center text-neutral-700 pt-1 mt-1 border-t border-neutral-200 text-[11px]">
+                          <span className="font-sans text-[10px] text-neutral-500 font-bold uppercase">Jadwal Tidur 36 Jam:</span>
+                          <span>Mulai: <b>{rec.sleep36Session1Bed || '-'}</b> ➔ Bangun: <b>{rec.sleep36Session1Wake || '-'}</b></span>
+                        </div>
+                      </div>
+
+                      {/* Anomaly check for supervisor */}
+                      {(() => {
+                        const anom = checkAssessmentAnomalies(rec);
+                        if (!anom.hasAnomaly) return null;
+                        return (
+                          <div className="bg-rose-50 border border-rose-300 p-2.5 rounded-lg text-xs text-rose-900 space-y-1">
+                            <div className="font-black text-[10px] uppercase text-rose-800 flex items-center gap-1">
+                              <span>🚨</span>
+                              <span>Temuan Anomali Waktu (Rahasia Pengawas):</span>
+                            </div>
+                            {anom.reasons.map((r, i) => (
+                              <p key={i} className="text-[11px] font-bold leading-tight pl-3 relative">
+                                <span className="absolute left-0">•</span> {r}
+                              </p>
+                            ))}
+                          </div>
+                        );
+                      })()}
 
                       {/* Fatigue score & readiness */}
                       <div className="flex items-center justify-between text-[11px] pt-1 text-neutral-600">
