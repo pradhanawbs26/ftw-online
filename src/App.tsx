@@ -4380,7 +4380,7 @@ PT. WAHANA BARA SENTOSA`;
                                   <th className="px-4 py-3 text-center">{lang === 'ID' ? 'WAKTU LAPOR & ID TIKET' : 'DATE, TIME & TICKET ID'}</th>
                                   <th className="px-4 py-3">{lang === 'ID' ? 'IDENTITAS KARYAWAN' : 'EMPLOYEE IDENTITY'}</th>
                                   <th className="px-3 py-3 text-center">SHIFT</th>
-                                  <th className="px-4 py-3">{lang === 'ID' ? 'DETAIL JADWAL TIDUR' : '12H / 36H SLEEP'}</th>
+                                  <th className="px-4 py-3">{lang === 'ID' ? 'DETAIL JAM TIDUR' : 'SLEEP DURATION'}</th>
                                   <th className="px-4 py-3">{lang === 'ID' ? 'ASPEK RISIKO' : 'RISKY METRIC'}</th>
                                   <th className="px-4 py-3 text-center">{lang === 'ID' ? 'REKOMENDASI FIT' : 'FIT DECISION'}</th>
                                   <th className="px-4 py-3 text-center">AKSI</th>
@@ -4447,25 +4447,17 @@ PT. WAHANA BARA SENTOSA`;
                                         )}
                                       </td>
 
-                                      <td className="px-4 py-3 align-middle">
-                                        <div className="text-[10.5px]">
-                                          <span className="font-bold text-neutral-500">12 Jm:</span>{' '}
+                                      <td className="px-4 py-3 align-middle whitespace-nowrap">
+                                        <div className="text-[11px]">
+                                          <span className="font-bold text-neutral-500 uppercase text-[9px]">12 Jam:</span>{' '}
                                           <span className={`font-mono font-black ${sleepheroLow ? 'text-rose-600' : 'text-neutral-800'}`}>
                                             {rec.totalSleep12} Jam
                                           </span>
                                         </div>
-                                        <div className="text-[9.5px] font-mono text-neutral-700 font-semibold mt-0.5">
-                                          Tidur: <span className="font-bold text-neutral-900">{rec.sleep12Session1Bed || '-'}</span> ➔ Bangun: <span className="font-bold text-neutral-900">{rec.sleep12Session1Wake || '-'}</span>
-                                        </div>
-                                        {rec.hasSleep12Session2 && (
-                                          <div className="text-[8.5px] font-mono text-neutral-500 mt-0.5">
-                                            S2: {rec.sleep12Session2Bed || '-'} ➔ {rec.sleep12Session2Wake || '-'}
-                                          </div>
-                                        )}
-                                        <div className="text-[10px] mt-1 pt-1 border-t border-neutral-150">
-                                          <span className="font-bold text-neutral-400">36 Jm:</span>{' '}
+                                        <div className="text-[11px] mt-1 pt-1 border-t border-neutral-150">
+                                          <span className="font-bold text-neutral-400 uppercase text-[9px]">36 Jam:</span>{' '}
                                           <span className="font-mono font-bold text-neutral-700">
-                                            {rec.totalSleep36} Jam ({rec.sleep36Session1Bed || '-'} - {rec.sleep36Session1Wake || '-'})
+                                            {rec.totalSleep36} Jam
                                           </span>
                                         </div>
                                       </td>
