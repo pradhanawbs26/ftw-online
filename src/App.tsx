@@ -76,8 +76,10 @@ export const DUMMY_NIKS_PURGE_SET = new Set([
   "88556677"  // Sandi Wijaya
 ]);
 
-// Clean fallback (empty in production so no dummy demo data is ever injected)
 const DEFAULT_EMPLOYEE_DB: Record<string, { nama: string; jabatan: string; dept: string }> = {};
+const DEFAULT_FONNTE_TOKEN = (import.meta as any).env?.VITE_FONNTE_TOKEN || 'iNfrBRnqQj4izhPo4PKL';
+const DEFAULT_WA_GROUP_ID = (import.meta as any).env?.VITE_WA_GROUP_ID || '120363042234367353@g.us';
+const DEFAULT_ADMIN_PASSWORD = (import.meta as any).env?.VITE_ADMIN_PASSWORD || 'wbsadmin123';
 
 // In-memory fallback map if iframe sandbox blocks access to localStorage / sessionStorage
 const memoryStorage = new Map<string, string>();
@@ -207,8 +209,8 @@ const InlineEditRow: React.FC<InlineEditRowProps> = ({
 
   if (isEditing) {
     return (
-      <tr className="bg-rose-50/50">
-        <td className="px-4 py-2 font-mono font-black text-rose-950 align-middle">
+      <tr className="bg-danger-50/50">
+        <td className="px-4 py-2 tabular-nums font-black text-danger-950 align-middle">
           {nik}
         </td>
         <td className="px-4 py-2 align-middle">
@@ -216,7 +218,7 @@ const InlineEditRow: React.FC<InlineEditRowProps> = ({
             type="text" 
             value={namaVal}
             onChange={(e) => setNamaVal(e.target.value)}
-            className="w-full bg-white border border-neutral-300 rounded px-2 py-1 text-xs font-bold text-neutral-900"
+            className="w-full bg-white border border-ink-300 rounded px-2 py-1 text-xs font-bold text-ink-900"
           />
         </td>
         <td className="px-4 py-2 align-middle">
@@ -224,7 +226,7 @@ const InlineEditRow: React.FC<InlineEditRowProps> = ({
             type="text" 
             value={jabatanVal}
             onChange={(e) => setJabatanVal(e.target.value)}
-            className="w-full bg-white border border-neutral-300 rounded px-2 py-1 text-xs font-bold text-neutral-900"
+            className="w-full bg-white border border-ink-300 rounded px-2 py-1 text-xs font-bold text-ink-900"
           />
         </td>
         <td className="px-4 py-2 align-middle">
@@ -232,7 +234,7 @@ const InlineEditRow: React.FC<InlineEditRowProps> = ({
             type="text" 
             value={deptVal}
             onChange={(e) => setDeptVal(e.target.value)}
-            className="w-full bg-white border border-neutral-300 rounded px-2 py-1 text-xs font-bold text-neutral-900"
+            className="w-full bg-white border border-ink-300 rounded px-2 py-1 text-xs font-bold text-ink-900"
           />
         </td>
         <td className="px-4 py-2 text-center align-middle whitespace-nowrap">
@@ -240,14 +242,14 @@ const InlineEditRow: React.FC<InlineEditRowProps> = ({
             <button
               type="button"
               onClick={() => onSaveEdit(namaVal, jabatanVal, deptVal)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black py-1 px-2.5 rounded cursor-pointer"
+              className="bg-safe-600 hover:bg-safe-700 text-white text-xs font-black py-1 px-2.5 rounded cursor-pointer"
             >
               SIMPAN
             </button>
             <button
               type="button"
               onClick={onCancelEdit}
-              className="bg-neutral-200 hover:bg-neutral-300 text-neutral-700 text-[10px] font-black py-1 px-2.5 rounded cursor-pointer border border-neutral-300"
+              className="bg-ink-200 hover:bg-ink-300 text-ink-700 text-xs font-black py-1 px-2.5 rounded cursor-pointer border border-ink-300"
             >
               BATAL
             </button>
@@ -258,17 +260,17 @@ const InlineEditRow: React.FC<InlineEditRowProps> = ({
   }
 
   return (
-    <tr className="hover:bg-neutral-50/70 transition">
-      <td className="px-4 py-2.5 font-mono font-black text-neutral-900 align-middle">
+    <tr className="hover:bg-ink-50/70 transition">
+      <td className="px-4 py-2.5 tabular-nums font-black text-ink-900 align-middle">
         {nik}
       </td>
-      <td className="px-4 py-2.5 font-bold text-neutral-800 align-middle">
+      <td className="px-4 py-2.5 font-bold text-ink-800 align-middle">
         {item.nama}
       </td>
-      <td className="px-4 py-2.5 text-neutral-600 font-medium align-middle">
+      <td className="px-4 py-2.5 text-ink-600 font-medium align-middle">
         {item.jabatan}
       </td>
-      <td className="px-4 py-2.5 text-neutral-500 font-semibold align-middle">
+      <td className="px-4 py-2.5 text-ink-500 font-semibold align-middle">
         {item.dept}
       </td>
       <td className="px-4 py-2.5 text-center align-middle whitespace-nowrap">
@@ -277,25 +279,25 @@ const InlineEditRow: React.FC<InlineEditRowProps> = ({
             <button
               type="button"
               onClick={onViewHistory}
-              className="bg-sky-50 hover:bg-sky-100 text-sky-700 text-[10.5px] border border-sky-200 font-bold py-1 px-2.5 rounded transition cursor-pointer flex items-center gap-1"
+              className="bg-info-50 hover:bg-info-100 text-info-700 text-xs border border-info-200 font-bold py-1 px-2.5 rounded transition cursor-pointer flex items-center gap-1"
               title="Lihat riwayat FTW & ID tiket karyawan ini di Dashboard"
             >
-              📊 FTW
+               FTW
             </button>
           )}
           <button
             type="button"
             onClick={onStartEdit}
-            className="bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-[10.5px] border border-neutral-300 font-bold py-1 px-2.5 rounded transition cursor-pointer"
+            className="bg-ink-100 hover:bg-ink-200 text-ink-700 text-xs border border-ink-300 font-bold py-1 px-2.5 rounded transition cursor-pointer"
           >
-            ✏️ Edit
+             Edit
           </button>
           <button
             type="button"
             onClick={onDelete}
-            className="bg-rose-50 hover:bg-rose-100 text-rose-600 text-[10.5px] border border-rose-200 font-bold py-1 px-2.5 rounded transition cursor-pointer"
+            className="bg-danger-50 hover:bg-danger-100 text-danger-600 text-xs border border-danger-200 font-bold py-1 px-2.5 rounded transition cursor-pointer"
           >
-            🗑️ Hapus
+             Hapus
           </button>
         </div>
       </td>
@@ -328,9 +330,9 @@ export const normalizeDateStr = (d?: string): string => {
   const parts = clean.split('-');
   if (parts.length === 3) {
     if (parts[0].length === 4) {
-      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`; // taste-skill-ignore
     } else if (parts[2].length === 4) {
-      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`; // taste-skill-ignore
     }
   }
   return clean;
@@ -382,7 +384,7 @@ export default function App() {
   });
   const [jamPengisian, setJamPengisian] = useState<string>(() => {
     const d = new Date();
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; // taste-skill-ignore
   });
 
   // Bedtimes & Wakeups
@@ -417,6 +419,11 @@ export default function App() {
   const [formError, setFormError] = useState<string>('');
   const [showConfirmSubmitModal, setShowConfirmSubmitModal] = useState<boolean>(false);
   const [hasJustSubmitted, setHasJustSubmitted] = useState<boolean>(false);
+  const [uiBanner, setUiBanner] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
+  const notifyUser = (text: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setUiBanner({ type, text });
+  };
 
   // Admin Dedicated Page & Navigation States
   const [isAdminPage, setIsAdminPage] = useState<boolean>(() => {
@@ -449,10 +456,10 @@ export default function App() {
 
   // Fonnte WhatsApp Gateway Integration States
   const [fonnteToken, setFonnteToken] = useState<string>(() => {
-    return safeStorage.get('wbs_fonnte_token', 'iNfrBRnqQj4izhPo4PKL');
+    return safeStorage.get('wbs_fonnte_token', DEFAULT_FONNTE_TOKEN);
   });
   const [fonnteTarget, setFonnteTarget] = useState<string>(() => {
-    return safeStorage.get('wbs_fonnte_target', '120363042234367353@g.us');
+    return safeStorage.get('wbs_fonnte_target', DEFAULT_WA_GROUP_ID);
   });
   const [fonnteEnabled, setFonnteEnabled] = useState<boolean>(() => {
     return safeStorage.get('wbs_fonnte_enabled', 'true') === 'true';
@@ -596,8 +603,8 @@ export default function App() {
             body: JSON.stringify({ 
               spreadsheetId: resolvedId, 
               webhookUrl: resolvedWebhook,
-              fonnteToken: safeStorage.get('wbs_fonnte_token', 'iNfrBRnqQj4izhPo4PKL'),
-              fonnteTarget: safeStorage.get('wbs_fonnte_target', '120363042234367353@g.us'),
+              fonnteToken: safeStorage.get('wbs_fonnte_token', DEFAULT_FONNTE_TOKEN),
+              fonnteTarget: safeStorage.get('wbs_fonnte_target', DEFAULT_WA_GROUP_ID),
               fonnteEnabled: safeStorage.get('wbs_fonnte_enabled', 'true') === 'true'
             })
           });
@@ -936,7 +943,7 @@ export default function App() {
   // Google Sheets integration API Calls
   const handleSheetsLogin = async () => {
     if (!firebaseAuth || !googleProvider) {
-      alert(lang === 'ID' 
+      notifyUser(lang === 'ID' 
         ? 'Silakan tunggu, modul sinkronisasi Google sedang dipersiapkan. Mohon klik card persetujuan di bawah jika masih diminta.'
         : 'Google API client modules are initializing. Ensure you have authorized the API in the card control section.');
       return;
@@ -1054,7 +1061,7 @@ export default function App() {
         })
       });
       addLog("[Fonnte WA] Konfigurasi berhasil disinkronkan ke server pusat.");
-      alert(lang === 'ID' ? '✅ Konfigurasi WhatsApp (Fonnte) berhasil disimpan!' : '✅ WhatsApp (Fonnte) configuration saved successfully!');
+      notifyUser(lang === 'ID' ? ' Konfigurasi WhatsApp (Fonnte) berhasil disimpan!' : ' WhatsApp (Fonnte) configuration saved successfully!');
     } catch (e: any) {
       console.error("Failed to sync Fonnte config to server", e);
       addLog("[Fonnte Error] Gagal simpan ke server: " + e.message);
@@ -1063,8 +1070,8 @@ export default function App() {
 
   // Universal Dual-Path Fonnte WhatsApp Message Dispatcher (Server Proxy + Direct Client CORS Fallback)
   const dispatchFonnteWAMessage = async (messageText: string, targetParam?: string, tokenParam?: string): Promise<{ success: boolean; message: string }> => {
-    const cleanToken = (tokenParam || fonnteToken || 'iNfrBRnqQj4izhPo4PKL').trim();
-    const cleanTarget = (targetParam || fonnteTarget || '120363042234367353@g.us').trim();
+    const cleanToken = (tokenParam || fonnteToken || DEFAULT_FONNTE_TOKEN).trim();
+    const cleanTarget = (targetParam || fonnteTarget || DEFAULT_WA_GROUP_ID).trim();
 
     if (!cleanToken) {
       return { success: false, message: 'Token API Fonnte belum diatur. Silakan atur di Tab Integrasi WA.' };
@@ -1146,45 +1153,45 @@ export default function App() {
 
   // Helper to construct formatted alert message and dispatch for any assessment record
   const handleDispatchRecordAlert = async (record: CustomAssessment): Promise<{ success: boolean; message: string }> => {
-    let statusLabel = 'FIT TO WORK';
-    let statusIcon = '✅';
+    let statusLabel = 'Fit to Work';
+    let statusIcon = '';
     let tindakan = 'Karyawan diizinkan bekerja normal sesuai standar keselamatan.';
 
     if (record.finalDecision === 'UNFIT') {
       statusLabel = 'UNFIT / TIDAK FIT BEKERJA';
-      statusIcon = '⛔';
+      statusIcon = '';
       tindakan = 'Karyawan TIDAK DIIZINKAN bekerja/mengoperasikan unit. Pengawas/Supervisor wajib segera mengarahkan karyawan ke klinik/ruang istirahat dan menyiapkan operator pengganti.';
     } else if (record.finalDecision === 'REST_BEFORE_WORK') {
       statusLabel = 'BUTUH ISTIRAHAT SEBELUM BEKERJA';
-      statusIcon = '⚠️';
+      statusIcon = '';
       tindakan = 'Karyawan WAJIB istirahat tambahan sebelum bekerja. Lakukan evaluasi ulang kondisi fisik sebelum diizinkan mengoperasikan unit/alat berat.';
     } else if (record.finalDecision === 'FIT_CONDITIONAL' || record.consumesObat || record.hasPersonalProblem) {
-      statusLabel = 'BUTUH PENGAWASAN KHUSUS (FIT DENGAN CATATAN)';
-      statusIcon = '⚠️';
+      statusLabel = 'BUTUH Pengawasan Khusus (FIT DENGAN CATATAN)';
+      statusIcon = '';
       tindakan = 'Karyawan diizinkan bekerja HANYA dengan PENGAWASAN KETAT oleh Pengawas/Supervisor shift berjalan terkait konsumsi obat/kondisi fisik.';
     }
 
-    const message = `🚨 *NOTIFIKASI FIT TO WORK (WBS)* 🚨\n━━━━━━━━━━━━━━━━━━━━━\n${statusIcon} *STATUS: ${statusLabel}*\n\n👤 *Data Karyawan:*\n• *Nama:* ${record.nama || '-'}\n• *NIK:* ${record.nik || '-'}\n• *Departemen:* ${record.dept || '-'}\n• *Jabatan:* ${record.jabatan || '-'}\n• *Waktu Lapor:* ${record.tanggalPengisian || '-'} pukul ${record.jamPengisian || '-'}\n\n💤 *Parameter Tidur & Kelelahan:*\n• *Total Tidur 12 Jam:* ${record.totalSleep12 ?? '-'} Jam\n• *Total Tidur 36 Jam:* ${record.totalSleep36 ?? '-'} Jam\n• *Fatigue Score:* ${record.totalFatigueScore ?? '-'} (${record.fatigueCategory || '-'})\n• *Readiness Score:* ${record.readinessScore ?? '-'}%\n\n📋 *Catatan Khusus:*\n• *Konsumsi Obat:* ${record.consumesObat ? '⚠️ YA (Perlu Perhatian)' : 'Tidak'}\n• *Masalah Pribadi:* ${record.hasPersonalProblem ? '⚠️ YA (Berpotensi Distraksi)' : 'Tidak'}\n\n📢 *Rekomendasi Tindakan Pengawas:*\n${tindakan}\n━━━━━━━━━━━━━━━━━━━━━\n_Sistem Fit to Work Online PT. Wahana Bara Sentosa_`;
+    const message = ` *NOTIFIKASI Fit to Work (WBS)* \n━━━━━━━━━━━━━━━━━━━━━\n${statusIcon} *STATUS: ${statusLabel}*\n\n *Data Karyawan:*\n• *Nama:* ${record.nama || '-'}\n• *NIK:* ${record.nik || '-'}\n• *Departemen:* ${record.dept || '-'}\n• *Jabatan:* ${record.jabatan || '-'}\n• *Waktu Lapor:* ${record.tanggalPengisian || '-'} pukul ${record.jamPengisian || '-'}\n\n *Parameter Tidur & Kelelahan:*\n• *Total Tidur 12 Jam:* ${record.totalSleep12 ?? '-'} Jam\n• *Total Tidur 36 Jam:* ${record.totalSleep36 ?? '-'} Jam\n• *Fatigue Score:* ${record.totalFatigueScore ?? '-'} (${record.fatigueCategory || '-'})\n• *Readiness Score:* ${record.readinessScore ?? '-'}%\n\n *Catatan Khusus:*\n• *Konsumsi Obat:* ${record.consumesObat ? ' YA (Perlu Perhatian)' : 'Tidak'}\n• *Masalah Pribadi:* ${record.hasPersonalProblem ? ' YA (Berpotensi Distraksi)' : 'Tidak'}\n\n *Rekomendasi Tindakan Pengawas:*\n${tindakan}\n━━━━━━━━━━━━━━━━━━━━━\n_Sistem Fit to Work Online PT. Wahana Bara Sentosa_`;
 
     return await dispatchFonnteWAMessage(message);
   };
 
   // Test Fonnte WhatsApp Message Dispatch
   const handleTestFonnteWA = async () => {
-    const cleanToken = (fonnteToken || 'iNfrBRnqQj4izhPo4PKL').trim();
-    const cleanTarget = (fonnteTarget || '120363042234367353@g.us').trim();
+    const cleanToken = (fonnteToken || DEFAULT_FONNTE_TOKEN).trim();
+    const cleanTarget = (fonnteTarget || DEFAULT_WA_GROUP_ID).trim();
 
     if (!cleanToken) {
-      alert(lang === 'ID' ? 'Harap masukkan Token API Fonnte terlebih dahulu!' : 'Please enter Fonnte API Token first!');
+      notifyUser(lang === 'ID' ? 'Harap masukkan Token API Fonnte terlebih dahulu!' : 'Please enter Fonnte API Token first!');
       return;
     }
     if (!cleanTarget) {
-      alert(lang === 'ID' ? 'Harap masukkan nomor WhatsApp atau ID Grup tujuan!' : 'Please enter target phone number or WhatsApp Group ID!');
+      notifyUser(lang === 'ID' ? 'Harap masukkan nomor WhatsApp atau ID Grup tujuan!' : 'Please enter target phone number or WhatsApp Group ID!');
       return;
     }
 
     setFonnteTestStatus({ loading: true, message: undefined });
-    const sampleMsg = `🧪 *TES KONEKSI WHATSAPP (FONNTE)* 🧪\n━━━━━━━━━━━━━━━━━━━━━\nSistem *Fit to Work PT. Wahana Bara Sentosa* berhasil terhubung dengan Gateway Fonnte!\n\n📅 *Waktu Uji:* ${new Date().toLocaleString('id-ID')}\n📱 *Target Tujuan:* ${cleanTarget}\n✅ *Status Gateway:* TERHUBUNG & SIAP MENGIRIM ALERT OTOMATIS\n\nNotifikasi darurat akan otomatis dikirimkan ke grup ini saat ada karyawan yang melaporkan kondisi:\n1. ⛔ *UNFIT*\n2. ⚠️ *BUTUH ISTIRAHAT*\n3. ⚠️ *BUTUH PENGAWASAN KHUSUS*\n━━━━━━━━━━━━━━━━━━━━━\n_Pesan uji coba otomatis sistem FTW WBS_`;
+    const sampleMsg = ` *TES KONEKSI WHATSAPP (FONNTE)* \n━━━━━━━━━━━━━━━━━━━━━\nSistem *Fit to Work PT. Wahana Bara Sentosa* berhasil terhubung dengan Gateway Fonnte!\n\n *Waktu Uji:* ${new Date().toLocaleString('id-ID')}\n *Target Tujuan:* ${cleanTarget}\n *Status Gateway:* TERHUBUNG & SIAP MENGIRIM ALERT OTOMATIS\n\nNotifikasi darurat akan otomatis dikirimkan ke grup ini saat ada karyawan yang melaporkan kondisi:\n1.  *UNFIT*\n2.  *BUTUH ISTIRAHAT*\n3.  *BUTUH Pengawasan Khusus*\n━━━━━━━━━━━━━━━━━━━━━\n_Pesan uji coba otomatis sistem FTW WBS_`;
 
     const result = await dispatchFonnteWAMessage(sampleMsg, cleanTarget, cleanToken);
     setFonnteTestStatus({ 
@@ -1280,14 +1287,14 @@ export default function App() {
       ];
 
       const dashboardTemplate = [
-        ["REKAPITULASI DAN DASHBOARD ANALISA HARIAN - FIT TO WORK"],
-        ["PT. WAHANA BARA SENTOSA - SAFETY DIVISION"],
+        ["REKAPITULASI DAN DASHBOARD ANALISA HARIAN - Fit to Work"],
+        ["PT. Wahana Bara Sentosa - SAFETY DIVISION"],
         [],
         ["TANGGAL MONITORING", "=TODAY()", "Ter-update secara real-time"],
         [],
         ["METRIK KESELAMATAN (SAFETY METRICS)", "JUMLAH", "PERSENTASE (%)"],
         ["Total Assessment Hari Ini", "=COUNTIF('Laporan_Fit'!B2:B5000, TODAY())", "100%"],
-        ["Pekerja FIT TO WORK (Hijau)", "=COUNTIFS('Laporan_Fit'!B2:B5000, TODAY(), 'Laporan_Fit'!M2:M5000, \"FIT\")", "=IF(B7>0, B8/B7, 0)"],
+        ["Pekerja Fit to Work (Hijau)", "=COUNTIFS('Laporan_Fit'!B2:B5000, TODAY(), 'Laporan_Fit'!M2:M5000, \"FIT\")", "=IF(B7>0, B8/B7, 0)"],
         ["Pekerja FIT CONDITIONAL (Kuning)", "=COUNTIFS('Laporan_Fit'!B2:B5000, TODAY(), 'Laporan_Fit'!M2:M5000, \"FIT_CONDITIONAL\")", "=IF(B7>0, B9/B7, 0)"],
         ["Pekerja POWER NAP / REST (Oranye)", "=COUNTIFS('Laporan_Fit'!B2:B5000, TODAY(), 'Laporan_Fit'!M2:M5000, \"REST_BEFORE_WORK\")", "=IF(B7>0, B10/B7, 0)"],
         ["Pekerja UNFIT WORKERS (Merah)", "=COUNTIFS('Laporan_Fit'!B2:B5000, TODAY(), 'Laporan_Fit'!M2:M5000, \"UNFIT\")", "=IF(B7>0, B11/B7, 0)"],
@@ -1335,11 +1342,11 @@ export default function App() {
   const handleSyncKaryawan = async (customId?: string) => {
     const targetId = customId || spreadsheetId;
     if (!targetId) {
-      alert(lang === 'ID' ? "Harap tentukan Spreadsheet ID telebih dahulu!" : "Please provide Google Spreadsheet ID first!");
+      notifyUser(lang === 'ID' ? "Harap tentukan Spreadsheet ID telebih dahulu!" : "Please provide Google Spreadsheet ID first!");
       return;
     }
     if (!sheetsToken) {
-      alert(lang === 'ID' ? "Harap login akun Google/izin terlebih dahulu!" : "Please authorize Google Sign-In first!");
+      notifyUser(lang === 'ID' ? "Harap login akun Google/izin terlebih dahulu!" : "Please authorize Google Sign-In first!");
       return;
     }
     try {
@@ -1380,7 +1387,7 @@ export default function App() {
   // Sync / Fetch Karyawan employees registry from sheet via Webhook (no Google login required)
   const handleSyncKaryawanViaWebhook = async () => {
     if (!webhookUrl) {
-      alert(lang === 'ID' 
+      notifyUser(lang === 'ID' 
         ? "Harap masukkan Deployment URL Web App (Webhook) terlebih dahulu di Langkah 2!" 
         : "Please configure the Web App Deployment URL in Step 2 first!"
       );
@@ -1404,7 +1411,7 @@ export default function App() {
         await saveEmployeeDb(result.employees);
         const numCount = Object.keys(result.employees).length;
         addLog(`Sinkronisasi Webhook sukses! ${numCount} Karyawan berhasil diimpor.`);
-        alert(lang === 'ID' 
+        notifyUser(lang === 'ID' 
           ? `Sukses! Berhasil mengunduh & sinkronisasi ${numCount} data karyawan dari Google Sheets utama.`
           : `Success! Successfully pulled & synchronized ${numCount} employees from your central Google Sheet.`
         );
@@ -1415,7 +1422,7 @@ export default function App() {
     } catch (e: any) {
       console.error(e);
       addLog("Gagal Sinkronisasi Webhook: " + e.message);
-      alert(lang === 'ID'
+      notifyUser(lang === 'ID'
         ? `Gagal Sinkronisasi: ${e.message}\n\nPastikan Apps Script Anda sudah di-deploy dengan akses 'Anyone (Siapa Saja)' dan kode doGet/doPost sudah sesuai.`
         : `Sync Failed: ${e.message}\n\nVerify that the Web App has been deployed with access of 'Anyone' and the doGet method is correctly configured.`
       );
@@ -1542,7 +1549,7 @@ export default function App() {
 
   const handleBulkImportSave = async (mode: 'MERGE' | 'OVERWRITE') => {
     if (bulkPreviewData.length === 0) {
-      alert(lang === 'ID' ? 'Tidak ada data karyawan yang valid untuk diimpor.' : 'No valid employee data to import.');
+      notifyUser(lang === 'ID' ? 'Tidak ada data karyawan yang valid untuk diimpor.' : 'No valid employee data to import.');
       return;
     }
 
@@ -1554,37 +1561,41 @@ export default function App() {
           ? `Anda akan menggabungkan/menambahkan ${bulkPreviewData.length} data karyawan ke dalam daftar aktif. Lanjutkan?`
           : `You are about to merge/add ${bulkPreviewData.length} employees to the active list. Proceed?`);
 
-    if (!confirm(confirmMsg)) return;
-
-    let targetDb: Record<string, { nama: string; jabatan: string; dept: string }> = {};
-    if (mode === 'MERGE') {
-      targetDb = { ...employeeDb };
-    }
-
-    bulkPreviewData.forEach(item => {
-      targetDb[item.nik] = {
-        nama: item.nama,
-        jabatan: item.jabatan,
-        dept: item.dept
-      };
+    setConfirmDialog({
+      title: lang === 'ID' ? 'Konfirmasi Impor Data Karyawan' : 'Confirm Employee Import',
+      message: confirmMsg,
+      onConfirm: async () => {
+        let targetDb: Record<string, { nama: string; jabatan: string; dept: string }> = {};
+        if (mode === 'MERGE') {
+          targetDb = { ...employeeDb };
+        }
+        bulkPreviewData.forEach(item => {
+          targetDb[item.nik] = {
+            nama: item.nama,
+            jabatan: item.jabatan,
+            dept: item.dept
+          };
+        });
+        const success = await saveEmployeeDb(targetDb);
+        if (success) {
+          notifyUser(
+            lang === 'ID'
+              ? `Berhasil mengimpor ${bulkPreviewData.length} karyawan menggunakan mode ${mode}.`
+              : `Imported ${bulkPreviewData.length} employees using mode ${mode}.`,
+            'success'
+          );
+          setBulkInputText('');
+          setBulkPreviewData([]);
+        } else {
+          notifyUser(lang === 'ID' ? 'Gagal menyimpan database karyawan ke server.' : 'Failed saving employee database.', 'error');
+        }
+      }
     });
-
-    const success = await saveEmployeeDb(targetDb);
-    if (success) {
-      alert(lang === 'ID' 
-        ? `Sukses! Berhasil mengimpor ${bulkPreviewData.length} karyawan menggunakan mode ${mode}.` 
-        : `Success! Imported ${bulkPreviewData.length} employees using mode ${mode}.`
-      );
-      setBulkInputText('');
-      setBulkPreviewData([]);
-    } else {
-      alert(lang === 'ID' ? 'Gagal menyimpan database karyawan ke server.' : 'Failed saving employee database.');
-    }
   };
 
   const handleAddEmployee = async () => {
     if (!newEmpNik.trim() || !newEmpNama.trim() || !newEmpJabatan.trim() || !newEmpDept.trim()) {
-      alert(lang === 'ID' ? 'Harap lengkapi semua kolom NIK, Nama, Jabatan, dan Departemen!' : 'Please fill in all fields (NIK, Name, Position, and Department)!');
+      notifyUser(lang === 'ID' ? 'Harap lengkapi semua kolom NIK, Nama, Jabatan, dan Departemen!' : 'Please fill in all fields (NIK, Name, Position, and Department)!');
       return;
     }
     const cleanNik = newEmpNik.trim().toUpperCase();
@@ -1628,7 +1639,7 @@ export default function App() {
     }
 
     if (success) {
-      alert(lang === 'ID' 
+      notifyUser(lang === 'ID' 
         ? `Sukses! Karyawan dengan NIK ${cleanNik} (${newEmpData.nama}) berhasil ditambahkan dan disimpan ke database & cloud backup Firebase.` 
         : `Success! Employee with NIK ${cleanNik} (${newEmpData.nama}) has been added and saved to database & Firebase backup.`
       );
@@ -1638,48 +1649,46 @@ export default function App() {
       setNewEmpJabatan('');
       setNewEmpDept('');
     } else {
-      alert(lang === 'ID' ? 'Gagal menyimpan perubahan ke server pusat.' : 'Failed to save changes to the central server.');
+      notifyUser(lang === 'ID' ? 'Gagal menyimpan perubahan ke server pusat.' : 'Failed to save changes to the central server.');
     }
   };
 
-  const handleDeleteEmployee = async (nikToDelete: string) => {
-    const isConfirmed = confirm(lang === 'ID' 
-      ? `Apakah Anda yakin ingin menghapus karyawan dengan NIK: ${nikToDelete}?` 
-      : `Are you sure you want to delete employee with NIK: ${nikToDelete}?`
-    );
-    if (!isConfirmed) return;
-
-    const cleanNik = nikToDelete.trim().toUpperCase();
-    const nextDb = { ...employeeDb };
-    delete nextDb[cleanNik];
-    
-    // Delete from Firestore
-    try {
-      await deleteEmployeeFromFirestore(cleanNik);
-    } catch (e) {
-      console.warn("Firestore delete employee warning:", e);
-    }
-
-    // Delete from server
-    try {
-      await fetch(`/api/employees/${cleanNik}`, { method: 'DELETE' });
-    } catch (e) {
-      console.warn("Server delete employee warning:", e);
-    }
-
-    const success = await saveEmployeeDb(nextDb);
-    if (success) {
-      if (editingEmpNik === cleanNik) {
-        setEditingEmpNik(null);
+  const handleDeleteEmployee = (nikToDelete: string) => {
+    setConfirmDialog({
+      title: lang === 'ID' ? 'Hapus Data Karyawan' : 'Delete Employee Record',
+      message: lang === 'ID'
+        ? `Apakah Anda yakin ingin menghapus karyawan dengan NIK: ${nikToDelete}?`
+        : `Are you sure you want to delete employee with NIK: ${nikToDelete}?`,
+      onConfirm: async () => {
+        const cleanNik = nikToDelete.trim().toUpperCase();
+        const nextDb = { ...employeeDb };
+        delete nextDb[cleanNik];
+        try {
+          await deleteEmployeeFromFirestore(cleanNik);
+        } catch (e) {
+          console.warn("Firestore delete employee warning:", e);
+        }
+        try {
+          await fetch(`/api/employees/${cleanNik}`, { method: 'DELETE' });
+        } catch (e) {
+          console.warn("Server delete employee warning:", e);
+        }
+        const success = await saveEmployeeDb(nextDb);
+        if (success) {
+          if (editingEmpNik === cleanNik) {
+            setEditingEmpNik(null);
+          }
+          notifyUser(lang === 'ID' ? `Karyawan NIK ${cleanNik} telah dihapus.` : `Employee ${cleanNik} deleted.`, 'info');
+        } else {
+          notifyUser(lang === 'ID' ? 'Gagal menghapus karyawan dari database server.' : 'Failed to delete employee from database server.', 'error');
+        }
       }
-    } else {
-      alert(lang === 'ID' ? 'Gagal menghapus karyawan dari database server.' : 'Failed to delete employee from database server.');
-    }
+    });
   };
 
   const handleSaveInlineEdit = async (nikToUpdate: string, namaVal: string, jabatanVal: string, deptVal: string) => {
     if (!namaVal.trim() || !jabatanVal.trim() || !deptVal.trim()) {
-      alert(lang === 'ID' ? 'Kolom tidak boleh kosong!' : 'Fields cannot be empty!');
+      notifyUser(lang === 'ID' ? 'Kolom tidak boleh kosong!' : 'Fields cannot be empty!');
       return;
     }
     const cleanNik = nikToUpdate.trim().toUpperCase();
@@ -1704,7 +1713,7 @@ export default function App() {
     if (success) {
       setEditingEmpNik(null);
     } else {
-      alert(lang === 'ID' ? 'Gagal menyimpan pembaruan ke server.' : 'Failed to save updates to the server.');
+      notifyUser(lang === 'ID' ? 'Gagal menyimpan pembaruan ke server.' : 'Failed to save updates to the server.');
     }
   };
 
@@ -1726,16 +1735,16 @@ export default function App() {
       }
 
       const msg = lang === 'ID'
-        ? `✅ Berhasil membackup ${empCount} data karyawan (1 Dokumen Roster Hemat) dan ${histCount} data assessment ringkas ke Firebase Firestore!`
-        : `✅ Successfully backed up ${empCount} employees (1-Doc Consolidated Roster) and ${histCount} lightweight assessment records to Firebase Firestore!`;
+        ? ` Berhasil membackup ${empCount} data karyawan (1 Dokumen Roster Hemat) dan ${histCount} data assessment ringkas ke Firebase Firestore!`
+        : ` Successfully backed up ${empCount} employees (1-Doc Consolidated Roster) and ${histCount} lightweight assessment records to Firebase Firestore!`;
       
       setFirebaseStatusMsg(msg);
-      alert(msg);
+      notifyUser(msg);
     } catch (err: any) {
       console.error("Firebase sync error:", err);
-      const errMsg = `❌ Gagal backup ke Firebase: ${err.message || err}`;
+      const errMsg = ` Gagal backup ke Firebase: ${err.message || err}`;
       setFirebaseStatusMsg(errMsg);
-      alert(errMsg);
+      notifyUser(errMsg);
     } finally {
       setFirebaseSyncing(false);
     }
@@ -1817,42 +1826,43 @@ export default function App() {
       }
 
       const msg = lang === 'ID'
-        ? `✅ Berhasil memulihkan ${empCount} data karyawan dan ${histCount} data assessment dari Firebase Firestore${shiftBreakdown}!`
-        : `✅ Successfully restored ${empCount} employees and ${histCount} assessment records from Firebase Firestore${shiftBreakdown}!`;
+        ? ` Berhasil memulihkan ${empCount} data karyawan dan ${histCount} data assessment dari Firebase Firestore${shiftBreakdown}!`
+        : ` Successfully restored ${empCount} employees and ${histCount} assessment records from Firebase Firestore${shiftBreakdown}!`;
 
       setFirebaseStatusMsg(msg);
-      alert(msg);
+      notifyUser(msg);
     } catch (err: any) {
       console.error("Firebase restore error:", err);
-      const errMsg = `❌ Gagal restore dari Firebase: ${err.message || err}`;
+      const errMsg = ` Gagal restore dari Firebase: ${err.message || err}`;
       setFirebaseStatusMsg(errMsg);
-      alert(errMsg);
+      notifyUser(errMsg);
     } finally {
       setFirebaseSyncing(false);
     }
   };
 
   // Handler to prune old assessments to free up Firebase storage space
-  const handlePruneOldAssessments = async () => {
-    const confirmPrune = window.confirm(
-      lang === 'ID'
-        ? `Apakah Anda yakin ingin memangkas & menghapus data laporan di Firebase Firestore yang berumur lebih dari ${pruneDays} hari? Tindakan ini akan mengosongkan kapasitas storage Firebase dan menjaga performa tetap cepat.`
-        : `Are you sure you want to prune assessment records in Firebase Firestore older than ${pruneDays} days? This will free up storage space.`
-    );
-    if (!confirmPrune) return;
-
-    try {
-      setIsPruning(true);
-      setFirebaseStatusMsg(lang === 'ID' ? `Sedang memangkas data lama (> ${pruneDays} hari)...` : `Pruning data older than ${pruneDays} days...`);
-      const result = await pruneOldAssessmentsFromFirestore(pruneDays);
-      setFirebaseStatusMsg(result.message);
-      alert(result.message);
-    } catch (err: any) {
-      console.error("Prune error:", err);
-      alert(`Gagal memangkas: ${err.message || err}`);
-    } finally {
-      setIsPruning(false);
-    }
+  const handlePruneOldAssessments = () => {
+    setConfirmDialog({
+      title: lang === 'ID' ? 'Pangkas Riwayat Lama' : 'Prune Old Assessments',
+      message: lang === 'ID'
+        ? `Apakah Anda yakin ingin memangkas dan menghapus data laporan di Firebase Firestore yang berumur lebih dari ${pruneDays} hari?`
+        : `Are you sure you want to prune assessment records in Firebase Firestore older than ${pruneDays} days?`,
+      onConfirm: async () => {
+        try {
+          setIsPruning(true);
+          setFirebaseStatusMsg(lang === 'ID' ? `Sedang memangkas data lama (> ${pruneDays} hari)...` : `Pruning data older than ${pruneDays} days...`);
+          const result = await pruneOldAssessmentsFromFirestore(pruneDays);
+          setFirebaseStatusMsg(result.message);
+          notifyUser(result.message, 'success');
+        } catch (err: any) {
+          console.error("Prune error:", err);
+          notifyUser(`Gagal memangkas: ${err.message || err}`, 'error');
+        } finally {
+          setIsPruning(false);
+        }
+      }
+    });
   };
 
   // Push individual assessment online sync backup
@@ -1900,11 +1910,11 @@ export default function App() {
   // Bulk push any accumulated offline/cloud results to Google sheets without duplicating
   const handleBulkUploadHistory = async () => {
     if (!sheetsToken || !spreadsheetId) {
-      alert(lang === 'ID' ? "Harap login Google dan cantumkan Spreadsheet ID!" : "Please login and provide Spreadsheet ID!");
+      notifyUser(lang === 'ID' ? "Harap login Google dan cantumkan Spreadsheet ID!" : "Please login and provide Spreadsheet ID!");
       return;
     }
     if (history.length === 0) {
-      alert(lang === 'ID' ? "Tidak ada data riwayat penilaian untuk disinkronkan." : "No assessment records to sync.");
+      notifyUser(lang === 'ID' ? "Tidak ada data riwayat penilaian untuk disinkronkan." : "No assessment records to sync.");
       return;
     }
     try {
@@ -1931,7 +1941,7 @@ export default function App() {
 
       if (unsyncedHistory.length === 0) {
         addLog("Semua data laporan sudah terekap sempurna di Google Sheets!");
-        alert(lang === 'ID' 
+        notifyUser(lang === 'ID' 
           ? "Seluruh data laporan di server sudah tersinkronisasi sempurna di Google Sheets Anda!" 
           : "All records are already fully synchronized with Google Sheets!"
         );
@@ -1970,7 +1980,7 @@ export default function App() {
 
       if (!resp.ok) throw new Error(await resp.text());
       addLog(`Sukses menyinkronkan ${unsyncedHistory.length} data baru!`);
-      alert(lang === 'ID' 
+      notifyUser(lang === 'ID' 
         ? `Sukses! ${unsyncedHistory.length} laporan baru berhasil disinkronkan ke Google Sheets.` 
         : `Success! ${unsyncedHistory.length} new reports successfully synchronized to Google Sheets.`
       );
@@ -2120,7 +2130,7 @@ export default function App() {
       setHasJustSubmitted(true);
       setStep(3);
 
-      alert(
+      notifyUser(
         lang === 'ID'
           ? `Sistem mendeteksi NIK ${nik} sudah mengisi penilaian Fit to Work hari ini pada jam ${existingRecord.jamPengisian}. Menampilkan langsung hasil pengembalian hasil penilaian Anda (Terkunci).`
           : `System detected that NIK ${nik} has already completed the Fit to Work assessment today at ${existingRecord.jamPengisian}. Redirecting to your current locked results card.`
@@ -2246,7 +2256,7 @@ export default function App() {
 
   const handleExportExcel = (records: CustomAssessment[]) => {
     if (records.length === 0) {
-      alert(lang === 'ID' ? 'Tidak ada data untuk diekspor.' : 'No data to export.');
+      notifyUser(lang === 'ID' ? 'Tidak ada data untuk diekspor.' : 'No data to export.');
       return;
     }
 
@@ -2299,7 +2309,7 @@ export default function App() {
         `${rec.readinessScore}%`,
         rec.fatigueCategory,
         rec.finalDecision,
-        anom.hasAnomaly ? `🚨 ANOMALI: ${anom.reasons.join(' | ')}` : 'Normal'
+        anom.hasAnomaly ? ` ANOMALI: ${anom.reasons.join(' | ')}` : 'Normal'
       ];
     });
 
@@ -2336,57 +2346,64 @@ export default function App() {
     XLSX.writeFile(wb, `FTW_Laporan_Rekap_${dateStr}.xlsx`);
   };
 
-  const handleDeleteRecord = async (id: string) => {
-    if (confirm(lang === 'ID' ? 'Hapus catatan ini dari database online pusat & backup Firebase?' : 'Delete this assessment record from the central database & Firebase backup?')) {
-      try {
-        await fetch(`/api/history/${id}`, {
-          method: 'DELETE'
-        });
-      } catch (e) {
-        console.error("Failed to delete record from central server:", e);
+  const handleDeleteRecord = (id: string) => {
+    setConfirmDialog({
+      title: lang === 'ID' ? 'Hapus Catatan Penilaian' : 'Delete Assessment Record',
+      message: lang === 'ID'
+        ? 'Hapus catatan ini dari database online pusat dan backup Firebase?'
+        : 'Delete this assessment record from the central database and Firebase backup?',
+      onConfirm: async () => {
+        try {
+          await fetch(`/api/history/${id}`, {
+            method: 'DELETE'
+          });
+        } catch (e) {
+          console.error("Failed to delete record from central server:", e);
+        }
+        try {
+          await deleteAssessmentFromFirestore(id);
+        } catch (fbErr) {
+          console.warn("Firestore delete assessment warning:", fbErr);
+        }
+        const updated = history.filter(item => item.id !== id);
+        saveToHistory(updated);
+        notifyUser(lang === 'ID' ? 'Catatan penilaian telah dihapus.' : 'Assessment record deleted.', 'info');
       }
-      try {
-        await deleteAssessmentFromFirestore(id);
-      } catch (fbErr) {
-        console.warn("Firestore delete assessment warning:", fbErr);
-      }
-      const updated = history.filter(item => item.id !== id);
-      saveToHistory(updated);
-    }
+    });
   };
 
   // Features Added: Sharing Report to WhatsApp
   const handleShareWhatsApp = () => {
     const formatVerdict = () => {
-      if (calculations.finalDecision === 'FIT') return "🟢 Karyawan diizinkan bekerja normal";
-      if (calculations.finalDecision === 'FIT_CONDITIONAL') return "🟡 Karyawan diizinkan bekerja normal (Dengan Pengawasan)";
-      if (calculations.finalDecision === 'REST_BEFORE_WORK') return "🟠 istirahat dahulu sebelum bekerja";
-      return "🔴 tidak boleh bekerja";
+      if (calculations.finalDecision === 'FIT') return " Karyawan diizinkan bekerja normal";
+      if (calculations.finalDecision === 'FIT_CONDITIONAL') return " Karyawan diizinkan bekerja normal (Dengan Pengawasan)";
+      if (calculations.finalDecision === 'REST_BEFORE_WORK') return " istirahat dahulu sebelum bekerja";
+      return " tidak boleh bekerja";
     };
 
-    const text = `*LAPORAN FIT TO WORK ASSESSMENT*
-*PT. WAHANA BARA SENTOSA FTW Online*
+    const text = `*LAPORAN Fit to Work ASSESSMENT*
+*PT. Wahana Bara Sentosa FTW Online*
 ---------------------------------------
-📋 *Data Karyawan:*
+ *Data Karyawan:*
 • *Nama:* ${nama}
 • *NIK:* ${nik}
 • *Jabatan:* ${jabatan} [${dept}]
 • *Waktu Pengisian:* ${tanggalPengisian} pukul ${jamPengisian}
 
-🛌 *Detail Jadwal Tidur & Jam Bangun:*
+ *Detail Jadwal Tidur & Jam Bangun:*
 • *Sesi Utama (12 Jam):* Jam Tidur ${sleep12Session1Bed} s/d Jam Bangun ${sleep12Session1Wake} (Total: ${calculations.totalSleep12} Jam)
 ${hasSleep12Session2 ? `• *Sesi Tambahan (12 Jam):* Jam Tidur ${sleep12Session2Bed} s/d Jam Bangun ${sleep12Session2Wake}\n` : ''}• *Evaluasi 36 Jam:* Jam Tidur ${sleep36Session1Bed} s/d Jam Bangun ${sleep36Session1Wake} (Total: ${calculations.totalSleep36} Jam)
 
-🛡️ *Hasil Analisa Kelayakan:*
+ *Hasil Analisa Kelayakan:*
 • *Kondisi:* *${formatVerdict()}*
 • *Readiness Score:* ${calculations.readinessScore}%
 • *Fatigue Score:* ${calculations.totalFatigueScore} Penalti
 
-⚠️ *Faktor Risiko Tambahan:*
-• *Konsumsi Obat Sleepy:* ${consumesObat ? "Ya (Ada Risiko Mengantuk) 💊" : "Tidak"}
-• *Masalah Pribadi / Stres:* ${hasPersonalProblem ? "Ya (Fokus Terganggu) 🧠" : "Tidak"}
+ *Faktor Risiko Tambahan:*
+• *Konsumsi Obat Sleepy:* ${consumesObat ? "Ya (Ada Risiko Mengantuk) " : "Tidak"}
+• *Masalah Pribadi / Stres:* ${hasPersonalProblem ? "Ya (Fokus Terganggu) " : "Tidak"}
 
-💡 *Rekomendasi Kerja:*
+ *Rekomendasi Kerja:*
 • ${
       calculations.finalDecision === 'FIT' ? "Karyawan diizinkan bekerja normal." :
       calculations.finalDecision === 'FIT_CONDITIONAL' ? "Karyawan diizinkan bekerja normal (Wajib lapor supervisor)." :
@@ -2403,7 +2420,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
   const handleDownloadImage = () => {
     const element = badgeRef.current;
     if (!element) {
-      alert("Elemen sertifikat tidak ditemukan.");
+      notifyUser("Elemen sertifikat tidak ditemukan.");
       return;
     }
     
@@ -2421,7 +2438,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
       addLog("Gambar sertifikat diunduh.");
     }).catch(e => {
       console.error(e);
-      alert("Gagal merender gambar. Coba sekali lagi.");
+      notifyUser("Gagal merender gambar. Coba sekali lagi.");
     });
   };
 
@@ -2442,12 +2459,12 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
   };
 
   return (
-    <div className="min-h-screen bg-white text-neutral-800 flex flex-col font-sans transition-all duration-300">
+    <div className="min-h-dvh bg-white text-ink-800 flex flex-col font-sans transition-colors duration-300">
       
       {/* GLOBAL MASTER HEADER BAR Styled White Premium */}
-      <div className="bg-white border-b border-neutral-200 shadow-sm px-6 py-3.5 flex justify-between items-center z-10">
+      <div data-ui className="bg-white border-b border-ink-200 px-6 py-3.5 flex justify-between items-center z-10">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2.5 bg-white px-2.5 py-1 rounded-lg border border-neutral-200 hover:scale-[1.02] transition duration-150 shadow-xs shrink-0">
+          <div data-ui className="flex items-center gap-2.5 bg-white px-2.5 py-1 rounded-lg border border-ink-200 transition duration-150 shrink-0">
             <img 
               src="https://res.cloudinary.com/dgjnlxf69/image/upload/v1790130590/Logo_FTW_ul1dz4.png" 
               alt="Logo Fit to Work PT. WBS" 
@@ -2459,10 +2476,10 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
             />
           </div>
           <div className="hidden sm:flex flex-col">
-            <span className="text-[10.5px] font-black tracking-widest text-[#e11d48] leading-none uppercase">
+            <span className="text-xs font-black text-danger-600 leading-none">
               Fatigue Management
             </span>
-            <span className="text-[10px] tracking-wide text-neutral-900 font-extrabold leading-none mt-1.5 uppercase">FIT TO WORK ONLINE PT. WBS</span>
+            <span className="text-xs text-ink-900 font-extrabold leading-none mt-1.5">Fit to Work Online PT. WBS</span>
           </div>
         </div>
 
@@ -2476,7 +2493,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
               setHistoryNikFilter('');
               setShowHistoryOverlay(true);
             }}
-            className="text-[10px] sm:text-xs font-bold bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-neutral-700 cursor-pointer"
+            className="text-xs sm:text-xs font-bold bg-ink-100 hover:bg-ink-200 border border-ink-300 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-ink-700 cursor-pointer"
           >
             <History className="w-3.5 h-3.5" />
             <span className="hidden xs:inline">{lang === 'ID' ? 'Riwayat' : 'Registry'}</span>
@@ -2490,60 +2507,53 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
               setIsAdminPage(true);
               window.location.hash = '#admin';
             }}
-            className="text-[10px] sm:text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white border border-rose-500 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+            className="text-xs sm:text-xs font-bold bg-danger-600 hover:bg-danger-700 text-white border border-danger-500 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            <ShieldAlert className="w-3.5 h-3.5 text-white animate-pulse" />
+            <ShieldAlert className="w-3.5 h-3.5 text-white" />
             <span className="hidden xs:inline">{lang === 'ID' ? 'Halaman Admin' : 'Admin Portal'}</span>
-            <span className="xs:hidden">ADMIN</span>
+            <span className="xs:hidden">Admin</span>
           </button>
 
           {/* Language Toggle */}
           <button 
             type="button"
             onClick={() => setLang(lang === 'ID' ? 'EN' : 'ID')}
-            className="text-xs font-bold bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 text-neutral-700 px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer"
+            className="text-xs font-bold bg-ink-100 hover:bg-ink-200 border border-ink-200 text-ink-700 px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer"
           >
-            <span>🌎</span>
-            <span className="font-mono">{lang}</span>
+            
+            <span className="tabular-nums">{lang}</span>
           </button>
         </div>
       </div>
 
-      {/* TOP DESKTOP MODE NOTIFICATION BANNER */}
-      {deviceMode === 'mobile' && (
-        <div className="bg-amber-50 border-b border-amber-200 text-amber-800 text-center py-1 text-[10.5px] font-medium hidden md:block select-none">
-          💡 Mode <b>MOBILE VIEW</b> aktif. Tampilan disesuaikan dengan dimensi layar smartphone HP (390px × 844px).
+      {/* INLINE NOTIFICATION BANNER */}
+      {uiBanner && (
+        <div data-ui className="max-w-xl w-full mx-auto mt-3 px-4">
+          <div data-ui className={`p-3 rounded-xl border text-xs font-semibold flex items-start justify-between gap-3 ${
+            uiBanner.type === 'error'
+              ? 'bg-danger-50 border-danger-200 text-danger-800'
+              : uiBanner.type === 'success'
+                ? 'bg-safe-50 border-safe-200 text-safe-800'
+                : 'bg-info-50 border-info-200 text-info-800'
+          }`}>
+            <span className="whitespace-pre-wrap leading-relaxed">{uiBanner.text}</span>
+            <button
+              type="button"
+              onClick={() => setUiBanner(null)}
+              className="text-xs font-bold px-2 py-0.5 rounded border border-current shrink-0 cursor-pointer"
+            >
+              {lang === 'ID' ? 'Tutup' : 'Close'}
+            </button>
+          </div>
         </div>
       )}
 
-      {/* CHASSIS CONTAINER FOR REDESIGNED WHITE THEME */}
-      <div className="flex-1 flex flex-col items-center justify-center p-3 sm:p-6 bg-white">
-
-        {/* DEVICE WRAPPER - WHITE THEMED */}
-        <div className={`transition-all duration-300 w-full flex flex-col ${
-          deviceMode === 'mobile' 
-            ? 'max-w-[400px] h-[860px] border-[12px] border-neutral-900 rounded-[3rem] shadow-2xl bg-white overflow-hidden justify-between relative text-neutral-800' 
-            : 'max-w-xl bg-white border border-neutral-200 shadow-xl rounded-2xl self-center text-neutral-800 p-1'
-        }`}>
-          
-          {/* SPEAKER / CAMERA CAP IF PHONE FRAME */}
-          {deviceMode === 'mobile' && (
-            <div className="w-full flex justify-center py-3.5 absolute top-0 left-0 bg-neutral-100/85 z-20 border-b border-neutral-200/50">
-              <div className="w-24 h-4 bg-neutral-200 rounded-full flex items-center justify-around px-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-ping"></span>
-                <span className="w-1.5 h-1.5 rounded-full bg-neutral-300"></span>
-              </div>
-            </div>
-          )}
-
-          {/* MAIN PAGE CARD CONTENT */}
-          <div className={`w-full flex-1 flex flex-col p-5 sm:p-7 ${
-            deviceMode === 'mobile' ? 'mt-9 overflow-y-auto' : ''
-          }`}>
-            
-            {/* COMPONENT LOGO TITLE AREA */}
+      {/* MAIN CONTAINER */}
+      <div className="flex-1 flex flex-col items-center justify-center p-3 sm:p-6 bg-paper">
+        <div data-ui className="w-full max-w-xl bg-elevated border border-rule rounded-2xl self-center text-ink-800 p-1 flex flex-col">
+          <div className="w-full flex-1 flex flex-col p-5 sm:p-7">
             <div className="text-center mb-5 mt-2 flex flex-col items-center">
-              <div className="mb-2.5 p-2 bg-white rounded-2xl border border-neutral-200 inline-flex items-center justify-center shadow-xs">
+              <div data-ui className="mb-2.5 p-2 bg-elevated rounded-2xl border border-rule inline-flex items-center justify-center">
                 <img 
                   src="https://res.cloudinary.com/dgjnlxf69/image/upload/v1790130590/Logo_FTW_ul1dz4.png" 
                   alt="Logo Fit to Work PT. WBS" 
@@ -2554,50 +2564,47 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                   }}
                 />
               </div>
-              <span className="text-[10px] font-bold tracking-[0.25em] text-rose-600 uppercase block">
-                Fatigue Management
-              </span>
-              <h1 className="text-xl font-black tracking-tight text-neutral-900 mt-1 uppercase">
+              <h1 className="text-xl font-black tracking-tight text-ink-900 mt-1">
                 Fit To Work Online
               </h1>
-              <p className="text-neutral-500 text-[11px] font-semibold mt-0.5 uppercase tracking-wide">
-                PT. Wahana Bara Sentosa
+              <p className="text-ink-500 text-xs font-semibold mt-0.5">
+                PT. Wahana Bara Sentosa · Fatigue Management
               </p>
             </div>
 
             {/* STEP PROGRESS INDICATOR PIPES Light Mode Grid */}
-            <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-250 flex items-center justify-around mb-6 text-center select-none shadow-sm">
+            <div data-ui className="bg-ink-50 p-3 rounded-xl border border-rule flex items-center justify-around mb-6 text-center select-none">
               <div className="flex flex-col items-center gap-1">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black font-mono transition ${
-                  step === 1 ? 'bg-rose-600 text-white shadow-md' : step > 1 ? 'bg-emerald-600 text-white' : 'bg-neutral-200 text-neutral-500'
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black tabular-nums transition ${
+                  step === 1 ? 'bg-danger-600 text-white ' : step > 1 ? 'bg-safe-600 text-white' : 'bg-ink-200 text-ink-500'
                 }`}>
-                  {step > 1 ? '✓' : '1'}
+                  {step > 1 ? '' : '1'}
                 </div>
-                <span className="text-[9.5px] font-bold tracking-tight text-neutral-600 uppercase shrink-0">
+                <span className="text-xs font-bold tracking-tight text-ink-600 shrink-0">
                   {lang === 'ID' ? 'Identitas Karyawan' : 'ID'}
                 </span>
               </div>
-              <div className={`h-0.5 flex-1 mx-2 ${step > 1 ? 'bg-emerald-600' : 'bg-neutral-200'}`}></div>
+              <div className={`h-0.5 flex-1 mx-2 ${step > 1 ? 'bg-safe-600' : 'bg-ink-200'}`}></div>
 
               <div className="flex flex-col items-center gap-1">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black font-mono transition ${
-                  step === 2 ? 'bg-rose-600 text-white shadow-md' : step > 2 ? 'bg-emerald-600 text-white' : 'bg-neutral-200 text-neutral-500'
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black tabular-nums transition ${
+                  step === 2 ? 'bg-danger-600 text-white ' : step > 2 ? 'bg-safe-600 text-white' : 'bg-ink-200 text-ink-500'
                 }`}>
-                  {step > 2 ? '✓' : '2'}
+                  {step > 2 ? '' : '2'}
                 </div>
-                <span className="text-[9.5px] font-bold tracking-tight text-neutral-600 uppercase shrink-0">
+                <span className="text-xs font-bold tracking-tight text-ink-600 shrink-0">
                   {lang === 'ID' ? 'Jam Tidur' : 'Sleep'}
                 </span>
               </div>
-              <div className={`h-0.5 flex-1 mx-2 ${step > 2 ? 'bg-emerald-600' : 'bg-neutral-200'}`}></div>
+              <div className={`h-0.5 flex-1 mx-2 ${step > 2 ? 'bg-safe-600' : 'bg-ink-200'}`}></div>
 
               <div className="flex flex-col items-center gap-1">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black font-mono transition ${
-                  step === 3 ? 'bg-rose-600 text-white shadow-md' : 'bg-neutral-200 text-neutral-500'
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black tabular-nums transition ${
+                  step === 3 ? 'bg-danger-600 text-white ' : 'bg-ink-200 text-ink-500'
                 }`}>
                   3
                 </div>
-                <span className="text-[9.5px] font-bold tracking-tight text-neutral-600 uppercase shrink-0">
+                <span className="text-xs font-bold tracking-tight text-ink-600 shrink-0">
                   {lang === 'ID' ? 'Hasil FTW' : 'Result'}
                 </span>
               </div>
@@ -2605,8 +2612,8 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
 
             {/* ERROR TICKER */}
             {formError && (
-              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs font-semibold flex items-center gap-2 animate-bounce">
-                <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+              <div data-ui className="mb-4 p-3 bg-danger-50 border border-danger-200 rounded-lg text-danger-800 text-xs font-semibold flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-danger-500 shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
@@ -2615,26 +2622,26 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
             {/* HALAMAN 1: IDENTITAS KARYAWAN (Dengan Google sheet database integration) */}
             {/* ---------------------------------------------------------------------------------- */}
             {step === 1 && (
-              <div className="flex-1 flex flex-col gap-4 text-neutral-800">
-                <div className="pb-2 border-b border-neutral-200">
-                  <h2 className="text-sm font-bold tracking-wider text-rose-600 uppercase flex items-center gap-2">
+              <div className="flex-1 flex flex-col gap-4 text-ink-800">
+                <div data-ui className="pb-2 border-b border-ink-200">
+                  <h2 className="text-sm font-bold text-danger-600 flex items-center gap-2">
                     <User className="w-4 h-4" />
                     <span>{t.h1Title}</span>
                   </h2>
-                  <p className="text-[10px] text-neutral-500">{t.h1Sub}</p>
+                  <p className="text-xs text-ink-500">{t.h1Sub}</p>
                 </div>
 
                 {/* Spreadsheet status alert bar */}
                 {spreadsheetId && sheetsToken && (
-                  <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 p-2.5 rounded-lg text-[10px] flex items-center justify-between shadow-xs">
+                  <div data-ui className="bg-safe-50 text-safe-800 border border-safe-200 p-2.5 rounded-lg text-xs flex items-center justify-between">
                     <div className="flex items-center gap-1.5 font-bold">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      
                       <span>Connected to Google Sheets</span>
                     </div>
                     <button 
                       type="button" 
                       onClick={() => handleSyncKaryawan()}
-                      className="text-[9px] font-bold uppercase underline bg-white text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-300 hover:bg-neutral-50 cursor-pointer"
+                      className="text-xs font-bold underline bg-white text-safe-700 px-1.5 py-0.5 rounded border border-safe-300 hover:bg-ink-50 cursor-pointer"
                     >
                       Sync Now
                     </button>
@@ -2644,10 +2651,10 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                 {/* Input NIK with strict format guidelines & instant notification */}
                 <div className="flex flex-col gap-1.5 font-sans">
                   <div className="flex justify-between items-center">
-                    <label className="text-[9.5px] font-extrabold text-neutral-500 uppercase tracking-widest block">
+                    <label className="text-xs font-extrabold text-ink-500 block">
                       {lang === 'ID' ? 'Nomor Induk Karyawan (NIK)' : 'Employee ID Number (NIK)'}
                     </label>
-                    <span className="text-[8.5px] font-mono font-bold text-neutral-400">
+                    <span className="text-xs tabular-nums font-bold text-ink-400">
                       Wajib 9 Digit (Tanpa 0)
                     </span>
                   </div>
@@ -2655,14 +2662,14 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     <input 
                       type="text"
                       maxLength={12}
-                      className={`w-full bg-neutral-50 border rounded-lg py-2.5 px-3.5 pl-10 text-sm tracking-wider font-mono uppercase text-neutral-900 outline-none transition-all font-semibold shadow-xs ${
+                      className={`w-full bg-ink-50 border rounded-lg py-2.5 px-3.5 pl-10 text-sm  tabular-nums  text-ink-900  transition-colors font-semibold  ${
                         nik.trim().startsWith('0') 
-                          ? 'border-rose-500 bg-rose-50/30 focus:ring-2 focus:ring-rose-500' 
+                          ? 'border-danger-500 bg-danger-50/30 focus:ring-2 focus:ring-danger-500' 
                           : nik.trim().length > 0 && nik.trim().length !== 9 
-                            ? 'border-amber-400 bg-amber-50/20 focus:ring-2 focus:ring-amber-500' 
+                            ? 'border-warn-400 bg-warn-50/20 focus:ring-2 focus:ring-warn-500' 
                             : nik.trim().length === 9 && !nik.trim().startsWith('0') && /^\d+$/.test(nik.trim())
-                              ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
-                              : 'border-neutral-300 focus:ring-2 focus:ring-rose-500 focus:bg-white'
+                              ? 'border-safe-500 bg-safe-50/20 focus:ring-2 focus:ring-safe-500'
+                              : 'border-ink-300 focus:ring-2 focus:ring-danger-500 focus:bg-white'
                       }`}
                       placeholder={lang === 'ID' ? "Contoh: 123456789 (9 digit)" : "e.g. 123456789 (9 digits)"}
                       value={nik}
@@ -2671,9 +2678,9 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                         setNik(val);
                       }}
                     />
-                    <span className="absolute left-3.5 top-3.5 text-neutral-400 font-mono text-xs">#</span>
+                    <span className="absolute left-3.5 top-3.5 text-ink-400 tabular-nums text-xs">#</span>
                     {nik.trim().length > 0 && (
-                      <span className="absolute right-3 top-3 text-[10px] font-mono font-bold text-neutral-500">
+                      <span className="absolute right-3 top-3 text-xs tabular-nums font-bold text-ink-500">
                         {nik.trim().length}/9
                       </span>
                     )}
@@ -2687,13 +2694,13 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     // Condition 1: Starts with zero
                     if (trimmed.startsWith('0')) {
                       return (
-                        <div className="bg-rose-50 border border-rose-300 text-rose-800 p-2.5 rounded-lg text-xs flex items-start gap-2 shadow-xs animate-fadeIn">
-                          <span className="text-base shrink-0">⚠️</span>
+                        <div data-ui className="bg-danger-50 border border-danger-300 text-danger-800 p-2.5 rounded-lg text-xs flex items-start gap-2 animate-fadeIn">
+                          
                           <div>
-                            <p className="font-black uppercase tracking-wider text-[10px]">
+                            <p className="font-black text-xs">
                               {lang === 'ID' ? 'Pemberitahuan: NIK Tidak Boleh Diawali Nol' : 'Warning: NIK Cannot Start With Zero'}
                             </p>
-                            <p className="font-bold text-[11px] mt-0.5 leading-snug">
+                            <p className="font-bold text-xs mt-0.5 leading-snug">
                               {lang === 'ID' 
                                 ? 'NIK tidak boleh diawali dengan angka nol (0)! Harap masukkan NIK yang benar di input tanpa angka nol di depan.' 
                                 : 'NIK cannot start with zero (0)! Please enter your correct NIK without leading zero.'}
@@ -2706,13 +2713,13 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     // Condition 2: Contains non-digits
                     if (!/^\d+$/.test(trimmed)) {
                       return (
-                        <div className="bg-rose-50 border border-rose-300 text-rose-800 p-2.5 rounded-lg text-xs flex items-start gap-2 shadow-xs animate-fadeIn">
-                          <span className="text-base shrink-0">⚠️</span>
+                        <div data-ui className="bg-danger-50 border border-danger-300 text-danger-800 p-2.5 rounded-lg text-xs flex items-start gap-2 animate-fadeIn">
+                          
                           <div>
-                            <p className="font-black uppercase tracking-wider text-[10px]">
+                            <p className="font-black text-xs">
                               {lang === 'ID' ? 'Peringatan: Karakter Tidak Valid' : 'Warning: Invalid Characters'}
                             </p>
-                            <p className="font-bold text-[11px] mt-0.5 leading-snug">
+                            <p className="font-bold text-xs mt-0.5 leading-snug">
                               {lang === 'ID' 
                                 ? 'NIK hanya boleh berupa angka! Tidak boleh mengandung huruf atau simbol.' 
                                 : 'NIK must only consist of numbers! No letters or symbols allowed.'}
@@ -2725,13 +2732,13 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     // Condition 3: Abnormal length (not 9 digits)
                     if (trimmed.length !== 9) {
                       return (
-                        <div className="bg-amber-50 border border-amber-300 text-amber-900 p-2.5 rounded-lg text-xs flex items-start gap-2 shadow-xs animate-fadeIn">
-                          <span className="text-base shrink-0">⚠️</span>
+                        <div data-ui className="bg-warn-50 border border-warn-300 text-warn-900 p-2.5 rounded-lg text-xs flex items-start gap-2 animate-fadeIn">
+                          
                           <div>
-                            <p className="font-black uppercase tracking-wider text-[10px]">
+                            <p className="font-black text-xs">
                               {lang === 'ID' ? 'Peringatan: Jumlah Digit NIK Abnormal' : 'Warning: Abnormal NIK Length'}
                             </p>
-                            <p className="font-bold text-[11px] mt-0.5 leading-snug">
+                            <p className="font-bold text-xs mt-0.5 leading-snug">
                               {lang === 'ID' 
                                 ? `Jumlah digit NIK abnormal (${trimmed.length} digit). Format NIK wajib tepat 9 digit angka tanpa angka nol di depan. Anda tidak boleh mengisi FTW sebelum mengisi NIK dengan benar.` 
                                 : `Abnormal NIK length (${trimmed.length} digits). Format must be exactly 9 digits without leading zero. You cannot proceed to fill FTW until NIK is entered correctly.`}
@@ -2743,12 +2750,12 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
 
                     // Condition 4: Perfectly Valid 9-digit NIK
                     return (
-                      <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 py-1.5 px-3 rounded-lg text-[10px] flex items-center justify-between font-bold shadow-2xs animate-fadeIn">
+                      <div data-ui className="bg-safe-50 border border-safe-300 text-safe-800 py-1.5 px-3 rounded-lg text-xs flex items-center justify-between font-bold animate-fadeIn">
                         <span className="flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                          
                           <span>{lang === 'ID' ? 'Format NIK valid (9 digit angka tanpa angka nol di depan)' : 'Valid NIK format (9 digits, no leading zero)'}</span>
                         </span>
-                        <span className="font-mono text-emerald-700 font-black">9 / 9 DIGIT OK</span>
+                        <span className="tabular-nums text-safe-700 font-black">9 / 9 Digit Valid</span>
                       </div>
                     );
                   })()}
@@ -2759,14 +2766,10 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                   const cleanNik = nik.trim().toUpperCase();
                   const isVerified = !!employeeDb[cleanNik];
                   return (
-                    <div className="bg-neutral-50 px-3.5 py-2.5 rounded-lg border border-neutral-200 flex items-center justify-between shadow-xs">
+                    <div data-ui className="bg-ink-50 px-3.5 py-2.5 rounded-lg border border-ink-200 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className={`h-2.5 w-2.5 rounded-full ${
-                          isSearchingNikCloud 
-                            ? 'bg-sky-500 animate-ping' 
-                            : (isVerified ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500 animate-pulse')
-                        }`}></span>
-                        <span className="text-[10px] font-bold text-neutral-700 uppercase">
+                        
+                        <span className="text-xs font-bold text-ink-700">
                           {isSearchingNikCloud 
                             ? (lang === 'ID' ? 'Memeriksa NIK ke Cloud...' : 'Checking Cloud Database...') 
                             : (isVerified 
@@ -2777,7 +2780,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                         </span>
                       </div>
                       {isVerified && (
-                        <span className="text-[8.5px] font-extrabold uppercase text-emerald-700 font-mono bg-emerald-100 px-2.5 py-0.5 rounded-md">
+                        <span className="text-xs font-extrabold text-safe-700 tabular-nums bg-safe-100 px-2.5 py-0.5 rounded-md">
                           Autofill OK
                         </span>
                       )}
@@ -2790,18 +2793,18 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                   const cleanNik = nik.trim().toUpperCase();
                   const isVerified = !isManualOverride && !!employeeDb[cleanNik];
                   return (
-                    <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200/80 flex flex-col gap-3.5 shadow-xs">
+                    <div data-ui className="bg-ink-50 p-4 rounded-xl border border-ink-200/80 flex flex-col gap-3.5">
                       {/* Nama Field */}
                       <div className="flex flex-col gap-1">
-                        <span className="text-[9.5px] font-extrabold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Nama Lengkap Karyawan' : 'Full Name'}</span>
+                        <span className="text-xs font-extrabold text-ink-500">{lang === 'ID' ? 'Nama Lengkap Karyawan' : 'Full Name'}</span>
                         <input 
                           type="text" 
                           value={nama}
                           disabled={isVerified}
                           onChange={(e) => setNama(e.target.value)}
                           className={`w-full bg-white border ${
-                            isVerified ? 'border-neutral-200 text-neutral-400 font-semibold' : 'border-neutral-300 text-neutral-900 focus:ring-1 focus:ring-rose-500 font-bold'
-                          } text-xs py-2 px-3 rounded-lg outline-none`}
+                            isVerified ? 'border-ink-200 text-ink-400 font-semibold' : 'border-ink-300 text-ink-900 focus:ring-1 focus:ring-danger-500 font-bold'
+                          } text-xs py-2 px-3 rounded-lg `}
                           placeholder="Masukkan nama lengkap"
                         />
                       </div>
@@ -2809,28 +2812,28 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                       {/* Jabatan & Dept Row */}
                       <div className="grid grid-cols-2 gap-3">
                         <div className="flex flex-col gap-1">
-                          <span className="text-[9.5px] font-extrabold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Jabatan' : 'Job Title'}</span>
+                          <span className="text-xs font-extrabold text-ink-500">{lang === 'ID' ? 'Jabatan' : 'Job Title'}</span>
                           <input 
                             type="text" 
                             value={jabatan}
                             disabled={isVerified}
                             onChange={(e) => setJabatan(e.target.value)}
                             className={`w-full bg-white border ${
-                              isVerified ? 'border-neutral-200 text-neutral-400 font-semibold' : 'border-neutral-300 text-neutral-900 focus:ring-1 focus:ring-rose-500'
-                            } text-xs py-2 px-3 rounded-lg outline-none font-medium`}
+                              isVerified ? 'border-ink-200 text-ink-400 font-semibold' : 'border-ink-300 text-ink-900 focus:ring-1 focus:ring-danger-500'
+                            } text-xs py-2 px-3 rounded-lg  font-medium`}
                             placeholder="Operator, Driver, dll"
                           />
                         </div>
                         <div className="flex flex-col gap-1">
-                          <span className="text-[9.5px] font-extrabold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Departemen' : 'Department'}</span>
+                          <span className="text-xs font-extrabold text-ink-500">{lang === 'ID' ? 'Departemen' : 'Department'}</span>
                           <input 
                             type="text" 
                             value={dept}
                             disabled={isVerified}
                             onChange={(e) => setDept(e.target.value)}
                             className={`w-full bg-white border ${
-                              isVerified ? 'border-neutral-200 text-neutral-400 font-semibold' : 'border-neutral-300 text-neutral-900 focus:ring-1 focus:ring-rose-500'
-                            } text-xs py-2 px-3 rounded-lg outline-none font-medium`}
+                              isVerified ? 'border-ink-200 text-ink-400 font-semibold' : 'border-ink-300 text-ink-900 focus:ring-1 focus:ring-danger-500'
+                            } text-xs py-2 px-3 rounded-lg  font-medium`}
                             placeholder="Produksi, HSE, dll"
                           />
                         </div>
@@ -2842,34 +2845,34 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                 {/* Tanggal & Jam Pengisian */}
                 <div className="grid grid-cols-2 gap-3 w-full">
                   <div className="flex flex-col gap-1">
-                    <span className="text-[9.5px] font-extrabold text-neutral-550 uppercase tracking-wider">{lang === 'ID' ? 'Tanggal Assessment' : 'Assessment Date'}</span>
+                    <span className="text-xs font-extrabold text-ink-500">{lang === 'ID' ? 'Tanggal Assessment' : 'Assessment Date'}</span>
                     <input 
                       type="date"
                       value={tanggalPengisian}
                       onChange={(e) => setTanggalPengisian(e.target.value)}
-                      className="w-full bg-neutral-50 border border-neutral-300 rounded-lg text-neutral-900 text-xs py-2 px-3 outline-none"
+                      className="w-full bg-ink-50 border border-ink-300 rounded-lg text-ink-900 text-xs py-2 px-3"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-[9.5px] font-extrabold text-neutral-550 uppercase tracking-wider">{lang === 'ID' ? 'Waktu Pengisian' : 'Assessment Time'}</span>
+                    <span className="text-xs font-extrabold text-ink-500">{lang === 'ID' ? 'Waktu Pengisian' : 'Assessment Time'}</span>
                     <input 
                       type="time" 
                       value={jamPengisian}
                       onChange={(e) => setJamPengisian(e.target.value)}
-                      className="w-full bg-neutral-50 border border-neutral-300 rounded-lg text-neutral-900 text-xs py-2 px-3 outline-none"
+                      className="w-full bg-ink-50 border border-ink-300 rounded-lg text-ink-900 text-xs py-2 px-3"
                     />
                   </div>
                 </div>
 
                 {/* MENU RIWAYAT KARYAWAN */}
-                <div className="bg-neutral-50 border border-neutral-200 p-4 rounded-xl flex flex-col gap-2.5 shadow-xs">
+                <div data-ui className="bg-ink-50 border border-ink-200 p-4 rounded-xl flex flex-col gap-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-base shrink-0">📋</span>
+                    
                     <div>
-                      <h4 className="text-[10.5px] font-extrabold text-neutral-800 uppercase tracking-wider leading-tight">
+                      <h4 className="text-xs font-extrabold text-ink-800 leading-tight">
                         {lang === 'ID' ? 'Riwayat Pengisian Karyawan' : 'Employee Submission History'}
                       </h4>
-                      <p className="text-[9px] text-neutral-500 leading-none mt-0.5">
+                      <p className="text-xs text-ink-500 leading-none mt-0.5">
                         {lang === 'ID' ? 'Cek arsip pengisian penilaian sebelumnya' : 'Check previous self-assessment database records'}
                       </p>
                     </div>
@@ -2882,9 +2885,9 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                         setHistoryNikFilter(nik);
                         setShowHistoryOverlay(true);
                       }}
-                      className="w-full bg-white hover:bg-neutral-50 text-neutral-700 font-bold py-2 px-3 rounded-lg text-[11px] border border-neutral-300 hover:border-rose-500 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                      className="w-full bg-white hover:bg-ink-50 text-ink-700 font-bold py-2 px-3 rounded-lg text-xs border border-ink-300 hover:border-danger-500 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      <span>🔍</span>
+                      
                       <span className="truncate">
                         {lang === 'ID' 
                           ? `Riwayat NIK: ${nik || '(Belum Isi NIK)'}` 
@@ -2898,9 +2901,9 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                         setHistoryNikFilter('');
                         setShowHistoryOverlay(true);
                       }}
-                      className="w-full bg-white hover:bg-neutral-50 text-neutral-600 font-bold py-2 px-3 rounded-lg text-[11px] border border-neutral-300 hover:border-rose-500 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                      className="w-full bg-white hover:bg-ink-50 text-ink-600 font-bold py-2 px-3 rounded-lg text-xs border border-ink-300 hover:border-danger-500 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      <span>📂</span>
+                      
                       <span>{lang === 'ID' ? 'Tampilkan Semua' : 'View All'}</span>
                     </button>
                   </div>
@@ -2916,18 +2919,18 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                         <button 
                           type="button"
                           onClick={goToStep2}
-                          className={`w-full text-white font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md text-xs uppercase ${
+                          className={`w-full text-white font-black py-4 rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer  text-xs  ${
                             isNikInvalid 
-                              ? 'bg-neutral-500 hover:bg-neutral-600 shadow-neutral-200' 
-                              : 'bg-rose-600 hover:bg-rose-500 hover:scale-[1.01] shadow-rose-200'
+                              ? 'bg-ink-500 hover:bg-ink-600 shadow-neutral-200' 
+                              : 'bg-danger-600 hover:bg-danger-500  shadow-rose-200'
                           }`}
                         >
                           <span>{lang === 'ID' ? 'PILIH JAM TIDUR' : 'ENTER SLEEP TIMES'}</span>
                           <ArrowRight className="w-4 h-4" />
                         </button>
                         {isNikInvalid && (
-                          <p className="text-[10px] text-rose-600 font-bold text-center leading-tight mt-1">
-                            ⚠️ {nikVal.message}
+                          <p className="text-xs text-danger-600 font-bold text-center leading-tight mt-1">
+                             {nikVal.message}
                           </p>
                         )}
                       </>
@@ -2941,22 +2944,22 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
             {/* HALAMAN 2: JAM TIDUR & BANGUN */}
             {/* ---------------------------------------------------------------------------------- */}
             {step === 2 && (
-              <div className="flex-1 flex flex-col gap-4 text-neutral-800">
-                <div className="pb-2 border-b border-neutral-200">
-                  <h2 className="text-sm font-bold tracking-wider text-rose-600 uppercase flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-rose-600" />
+              <div className="flex-1 flex flex-col gap-4 text-ink-800">
+                <div data-ui className="pb-2 border-b border-ink-200">
+                  <h2 className="text-sm font-bold text-danger-600 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-danger-600" />
                     <span>{t.h2Title}</span>
                   </h2>
-                  <p className="text-[10px] text-neutral-500">{t.h2Sub}</p>
+                  <p className="text-xs text-ink-500">{t.h2Sub}</p>
                 </div>
 
                 <div className="flex-1 overflow-y-auto max-h-[460px] pr-1.5 flex flex-col gap-5">
                   
                   {/* --- AREA 1: 12 JAM TERAKHIR (Sleep block 1) --- */}
-                  <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200 flex flex-col gap-3 shadow-xs">
-                    <div className="flex justify-between items-center border-b border-neutral-200 pb-2">
-                      <h3 className="text-[11px] font-extrabold text-rose-600 uppercase tracking-widest flex items-center gap-2">
-                        <span className="bg-rose-600 w-1.5 h-3.5 rounded-sm"></span>
+                  <div data-ui className="bg-ink-50 p-4 rounded-xl border border-ink-200 flex flex-col gap-3">
+                    <div data-ui className="flex justify-between items-center border-b border-ink-200 pb-2">
+                      <h3 className="text-xs font-extrabold text-danger-600 flex items-center gap-2">
+                        
                         {lang === 'ID' ? 'Sesi Tidur Utama (12 Jam Terakhir)' : 'Primary Sleep Session (Last 12 Hours)'}
                       </h3>
                     </div>
@@ -2964,23 +2967,23 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     {/* Sesi 1 Times */}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Jam Mulai Tidur' : 'Bedtime (Session 1)'}</span>
+                        <span className="text-xs font-bold text-ink-500">{lang === 'ID' ? 'Jam Mulai Tidur' : 'Bedtime (Session 1)'}</span>
                         <input 
                           type="time" 
                           required
                           value={sleep12Session1Bed}
                           onChange={(e) => setSleep12Session1Bed(e.target.value)}
-                          className="w-full bg-white border border-neutral-300 rounded-lg text-neutral-900 font-mono text-xs py-2 px-3 text-center outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500"
+                          className="w-full bg-white border border-ink-300 rounded-lg text-ink-900 tabular-nums text-xs py-2 px-3 text-center focus:border-danger-500 focus:ring-1 focus:ring-danger-500"
                         />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Jam Bangun Tidur' : 'Wake-up (Session 1)'}</span>
+                        <span className="text-xs font-bold text-ink-500">{lang === 'ID' ? 'Jam Bangun Tidur' : 'Wake-up (Session 1)'}</span>
                         <input 
                           type="time" 
                           required
                           value={sleep12Session1Wake}
                           onChange={(e) => setSleep12Session1Wake(e.target.value)}
-                          className="w-full bg-white border border-neutral-300 rounded-lg text-neutral-900 font-mono text-xs py-2 px-3 text-center outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500"
+                          className="w-full bg-white border border-ink-300 rounded-lg text-ink-900 tabular-nums text-xs py-2 px-3 text-center focus:border-danger-500 focus:ring-1 focus:ring-danger-500"
                         />
                       </div>
                     </div>
@@ -2992,31 +2995,31 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                           type="checkbox"
                           checked={hasSleep12Session2}
                           onChange={(e) => setHasSleep12Session2(e.target.checked)}
-                          className="w-3.5 h-3.5 rounded text-rose-650 focus:ring-rose-500 bg-white border-neutral-300 transition"
+                          className="w-3.5 h-3.5 rounded text-danger-600 focus:ring-danger-500 bg-white border-ink-300 transition"
                         />
-                        <span className="text-[10px] uppercase font-bold text-rose-600 tracking-wider">
-                          {lang === 'ID' ? '🌙 Sesi Tidur Tambahan (Bila Terbangun)' : '🌙 Additional Sleep Session (If Interrupted/Woken Up)'}
+                        <span className="text-xs font-bold text-danger-600">
+                          {lang === 'ID' ? ' Sesi Tidur Tambahan (Bila Terbangun)' : ' Additional Sleep Session (If Interrupted/Woken Up)'}
                         </span>
                       </label>
 
                       {hasSleep12Session2 && (
-                        <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-dashed border-neutral-200">
+                        <div data-ui className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-dashed border-ink-200">
                           <div className="flex flex-col gap-1">
-                            <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Jam Tidur Sesi 2' : 'Bedtime (Session 2)'}</span>
+                            <span className="text-xs font-bold text-ink-500">{lang === 'ID' ? 'Jam Tidur Sesi 2' : 'Bedtime (Session 2)'}</span>
                             <input 
                               type="time" 
                               value={sleep12Session2Bed}
                               onChange={(e) => setSleep12Session2Bed(e.target.value)}
-                              className="w-full bg-white border border-neutral-300 rounded-lg text-neutral-900 font-mono text-xs py-2 px-3 text-center outline-none"
+                              className="w-full bg-white border border-ink-300 rounded-lg text-ink-900 tabular-nums text-xs py-2 px-3 text-center"
                             />
                           </div>
                           <div className="flex flex-col gap-1">
-                            <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Jam Bangun Sesi 2' : 'Wake-up (Session 2)'}</span>
+                            <span className="text-xs font-bold text-ink-500">{lang === 'ID' ? 'Jam Bangun Sesi 2' : 'Wake-up (Session 2)'}</span>
                             <input 
                               type="time" 
                               value={sleep12Session2Wake}
                               onChange={(e) => setSleep12Session2Wake(e.target.value)}
-                              className="w-full bg-white border border-neutral-300 rounded-lg text-neutral-900 font-mono text-xs py-2 px-3 text-center outline-none"
+                              className="w-full bg-white border border-ink-300 rounded-lg text-ink-900 tabular-nums text-xs py-2 px-3 text-center"
                             />
                           </div>
                         </div>
@@ -3025,33 +3028,33 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                   </div>
 
                   {/* --- AREA 2: 36 JAM TERAKHIR --- */}
-                  <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200 flex flex-col gap-3 shadow-xs">
-                    <div className="flex justify-between items-center border-b border-neutral-200 pb-2">
-                      <h3 className="text-[11px] font-extrabold text-neutral-700 uppercase tracking-widest flex items-center gap-2">
-                        <span className="bg-neutral-800 w-1.5 h-3.5 rounded-sm"></span>
+                  <div data-ui className="bg-ink-50 p-4 rounded-xl border border-ink-200 flex flex-col gap-3">
+                    <div data-ui className="flex justify-between items-center border-b border-ink-200 pb-2">
+                      <h3 className="text-xs font-extrabold text-ink-700 flex items-center gap-2">
+                        
                         {lang === 'ID' ? 'Sesi Tidur Siklus Sebelumnya (36 Jam Terakhir)' : 'Previous Cycle Sleep Session (Last 36 Hours)'}
                       </h3>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Jam Mulai Tidur' : 'Bedtime (Cycle 2)'}</span>
+                        <span className="text-xs font-bold text-ink-500">{lang === 'ID' ? 'Jam Mulai Tidur' : 'Bedtime (Cycle 2)'}</span>
                         <input 
                           type="time" 
                           required
                           value={sleep36Session1Bed}
                           onChange={(e) => setSleep36Session1Bed(e.target.value)}
-                          className="w-full bg-white border border-neutral-300 rounded-lg text-neutral-900 font-mono text-xs py-2 px-3 text-center outline-none focus:border-rose-500"
+                          className="w-full bg-white border border-ink-300 rounded-lg text-ink-900 tabular-nums text-xs py-2 px-3 text-center focus:border-danger-500"
                         />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Jam Bangun Tidur' : 'Wake-up (Cycle 2)'}</span>
+                        <span className="text-xs font-bold text-ink-500">{lang === 'ID' ? 'Jam Bangun Tidur' : 'Wake-up (Cycle 2)'}</span>
                         <input 
                           type="time" 
                           required
                           value={sleep36Session1Wake}
                           onChange={(e) => setSleep36Session1Wake(e.target.value)}
-                          className="w-full bg-white border border-neutral-300 rounded-lg text-neutral-900 font-mono text-xs py-2 px-3 text-center outline-none focus:border-rose-500"
+                          className="w-full bg-white border border-ink-300 rounded-lg text-ink-900 tabular-nums text-xs py-2 px-3 text-center focus:border-danger-500"
                         />
                       </div>
                     </div>
@@ -3063,31 +3066,31 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                           type="checkbox"
                           checked={hasSleep36Session2}
                           onChange={(e) => setHasSleep36Session2(e.target.checked)}
-                          className="w-3.5 h-3.5 rounded text-rose-650 focus:ring-rose-500 bg-white border-neutral-300 transition"
+                          className="w-3.5 h-3.5 rounded text-danger-600 focus:ring-danger-500 bg-white border-ink-300 transition"
                         />
-                        <span className="text-[10px] uppercase font-bold text-neutral-600 tracking-wider">
-                          {lang === 'ID' ? '🌙 Sesi Tidur Tambahan (Bila Terbangun)' : '🌙 Additional Sleep Session (If Interrupted/Woken Up)'}
+                        <span className="text-xs font-bold text-ink-600">
+                          {lang === 'ID' ? ' Sesi Tidur Tambahan (Bila Terbangun)' : ' Additional Sleep Session (If Interrupted/Woken Up)'}
                         </span>
                       </label>
 
                       {hasSleep36Session2 && (
-                        <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-dashed border-neutral-200">
+                        <div data-ui className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-dashed border-ink-200">
                           <div className="flex flex-col gap-1">
-                            <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Jam Tidur Sesi 2' : 'Bedtime (Session 2)'}</span>
+                            <span className="text-xs font-bold text-ink-500">{lang === 'ID' ? 'Jam Tidur Sesi 2' : 'Bedtime (Session 2)'}</span>
                             <input 
                               type="time" 
                               value={sleep36Session2Bed}
                               onChange={(e) => setSleep36Session2Bed(e.target.value)}
-                              className="w-full bg-white border border-neutral-300 rounded-lg text-neutral-900 font-mono text-xs py-2 px-3 text-center outline-none"
+                              className="w-full bg-white border border-ink-300 rounded-lg text-ink-900 tabular-nums text-xs py-2 px-3 text-center"
                             />
                           </div>
                           <div className="flex flex-col gap-1">
-                            <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider">{lang === 'ID' ? 'Jam Bangun Sesi 2' : 'Wake-up (Session 2)'}</span>
+                            <span className="text-xs font-bold text-ink-500">{lang === 'ID' ? 'Jam Bangun Sesi 2' : 'Wake-up (Session 2)'}</span>
                             <input 
                               type="time" 
                               value={sleep36Session2Wake}
                               onChange={(e) => setSleep36Session2Wake(e.target.value)}
-                              className="w-full bg-white border border-neutral-300 rounded-lg text-neutral-900 font-mono text-xs py-2 px-3 text-center outline-none"
+                              className="w-full bg-white border border-ink-300 rounded-lg text-ink-900 tabular-nums text-xs py-2 px-3 text-center"
                             />
                           </div>
                         </div>
@@ -3096,35 +3099,35 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                   </div>
 
                   {/* EXTRA RISK ASSESSMENTS */}
-                  <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200 flex flex-col gap-3.5 shadow-xs">
-                    <h3 className="text-[11px] font-extrabold text-[#7c2d12] uppercase tracking-widest border-b border-neutral-200 pb-2 flex items-center gap-2">
-                      <span className="bg-rose-700 w-1.5 h-3.5 rounded-sm"></span>
+                  <div data-ui className="bg-ink-50 p-4 rounded-xl border border-ink-200 flex flex-col gap-3.5">
+                    <h3 className="text-xs font-extrabold text-caution-700 border-b border-ink-200 pb-2 flex items-center gap-2">
+                      
                       {lang === 'ID' ? 'Tambahan Informasi' : 'Additional Information'}
                     </h3>
 
                     {/* Consumes medication */}
-                    <div className="flex flex-col gap-2 text-neutral-800">
-                      <span className="text-[10px] font-extrabold text-neutral-600 uppercase tracking-wide leading-tight block">
-                        💊 {lang === 'ID' ? 'Mengkonsumsi obat yang menyebabkan engantuk beberapa jam lalu?' : 'Have you consumed drowsiness-inducing medicine?'}
+                    <div className="flex flex-col gap-2 text-ink-800">
+                      <span className="text-xs font-extrabold text-ink-600 leading-tight block">
+                         {lang === 'ID' ? 'Mengkonsumsi obat yang menyebabkan mengantuk beberapa jam lalu?' : 'Have you consumed drowsiness-inducing medicine?'}
                       </span>
                       <div className="flex gap-6">
-                        <label className="flex items-center gap-2 text-xs font-bold cursor-pointer text-neutral-700">
+                        <label className="flex items-center gap-2 text-xs font-bold cursor-pointer text-ink-700">
                           <input 
                             type="radio" 
                             name="obat" 
                             checked={!consumesObat} 
                             onChange={() => setConsumesObat(false)}
-                            className="w-4 h-4 text-rose-600 focus:ring-rose-500" 
+                            className="w-4 h-4 text-danger-600 focus:ring-danger-500" 
                           />
                           {lang === 'ID' ? 'Tidak' : 'No'}
                         </label>
-                        <label className="flex items-center gap-2 text-xs font-bold cursor-pointer text-neutral-700">
+                        <label className="flex items-center gap-2 text-xs font-bold cursor-pointer text-ink-700">
                           <input 
                             type="radio" 
                             name="obat" 
                             checked={consumesObat} 
                             onChange={() => setConsumesObat(true)} 
-                            className="w-4 h-4 text-rose-600 focus:ring-rose-500"
+                            className="w-4 h-4 text-danger-600 focus:ring-danger-500"
                           />
                           {lang === 'ID' ? 'Ya' : 'Yes'}
                         </label>
@@ -3132,28 +3135,28 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     </div>
 
                     {/* Personal issue */}
-                    <div className="flex flex-col gap-2 pt-3 border-t border-neutral-200">
-                      <span className="text-[10px] font-extrabold text-neutral-600 uppercase tracking-wide leading-tight block">
-                        🧠 {lang === 'ID' ? 'Sedang dalam Masalah Pribadi / Perasaan Tertekan (Stres)?' : 'SOP Alert: Under heavy emotional distress / stress?'}
+                    <div data-ui className="flex flex-col gap-2 pt-3 border-t border-ink-200">
+                      <span className="text-xs font-extrabold text-ink-600 leading-tight block">
+                         {lang === 'ID' ? 'Sedang dalam Masalah Pribadi / Perasaan Tertekan (Stres)?' : 'SOP Alert: Under heavy emotional distress / stress?'}
                       </span>
                       <div className="flex gap-6 font-semibold">
-                        <label className="flex items-center gap-2 text-xs font-bold cursor-pointer text-neutral-700">
+                        <label className="flex items-center gap-2 text-xs font-bold cursor-pointer text-ink-700">
                           <input 
                             type="radio" 
                             name="stress" 
                             checked={!hasPersonalProblem} 
                             onChange={() => setHasPersonalProblem(false)}
-                            className="w-4 h-4 text-rose-650 focus:ring-rose-500" 
+                            className="w-4 h-4 text-danger-600 focus:ring-danger-500" 
                           />
                           {lang === 'ID' ? 'Tidak' : 'No'}
                         </label>
-                        <label className="flex items-center gap-2 text-xs font-bold cursor-pointer text-neutral-700">
+                        <label className="flex items-center gap-2 text-xs font-bold cursor-pointer text-ink-700">
                           <input 
                             type="radio" 
                             name="stress" 
                             checked={hasPersonalProblem} 
                             onChange={() => setHasPersonalProblem(true)} 
-                            className="w-4 h-4 text-rose-650 focus:ring-rose-500"
+                            className="w-4 h-4 text-danger-600 focus:ring-danger-500"
                           />
                           {lang === 'ID' ? 'Ya' : 'Yes'}
                         </label>
@@ -3168,7 +3171,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                   <button 
                     type="button"
                     onClick={() => setStep(1)}
-                    className="col-span-4 bg-white border border-neutral-300 hover:bg-neutral-100 text-neutral-700 py-3.5 font-bold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer text-xs uppercase shadow-xs"
+                    className="col-span-4 bg-white border border-ink-300 hover:bg-ink-100 text-ink-700 py-3.5 font-bold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer text-xs"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     <span>{lang === 'ID' ? 'KEMBALI' : 'BACK'}</span>
@@ -3177,7 +3180,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                   <button 
                     type="button"
                     onClick={processCalculationsAndShowResult}
-                    className="col-span-8 bg-rose-600 hover:bg-rose-500 text-white font-black py-3.5 rounded-xl hover:scale-[1.01] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-rose-200 text-xs uppercase tracking-wider"
+                    className="col-span-8 bg-danger-600 hover:bg-danger-500 text-white font-black py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-rose-200 text-xs"
                   >
                     <span>{lang === 'ID' ? 'LIHAT ANALISIS' : 'SOP DISPATCH'}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -3190,17 +3193,17 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
             {/* HALAMAN 3: HASIL SCORE FATIGUE & REKOMENDASI (Dengan Share WhatsApp & Unduh Gambar) */}
             {/* ---------------------------------------------------------------------------------- */}
             {step === 3 && (
-              <div className="flex-1 flex flex-col gap-4 text-neutral-800">
-                <div className="pb-2 border-b border-neutral-200 flex justify-between items-center">
+              <div className="flex-1 flex flex-col gap-4 text-ink-800">
+                <div data-ui className="pb-2 border-b border-ink-200 flex justify-between items-center">
                   <div>
-                    <h2 className="text-sm font-bold tracking-wider text-rose-600 uppercase flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-rose-650" />
+                    <h2 className="text-sm font-bold text-danger-600 flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-danger-600" />
                       <span>{t.h3Title}</span>
                     </h2>
-                    <p className="text-[10px] text-neutral-500">{t.h3Sub}</p>
+                    <p className="text-xs text-ink-500">{t.h3Sub}</p>
                   </div>
-                  <span className="text-[9.5px] bg-neutral-100 border border-neutral-250 text-neutral-600 px-2.5 py-1 rounded font-mono font-black">
-                    REPORT ID: ...{tanggalPengisian.substring(8, 10)}{jamPengisian.replace(':', '')}
+                  <span data-ui className="text-xs bg-ink-100 border border-rule text-ink-600 px-2.5 py-1 rounded tabular-nums font-black">
+                    ID Laporan: …{tanggalPengisian.substring(8, 10)}{jamPengisian.replace(':', '')}
                   </span>
                 </div>
 
@@ -3208,13 +3211,13 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                   
                   {/* WhatsApp Alert Status Banner if dispatched */}
                   {waNotificationSent && (
-                    <div className="bg-emerald-50 border border-emerald-300 text-emerald-900 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2.5 shadow-xs">
-                      <span className="text-lg">📱</span>
+                    <div data-ui className="bg-safe-50 border border-safe-300 text-safe-900 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2.5">
+                      
                       <div>
                         <p className="font-bold leading-tight">
                           {lang === 'ID' ? 'Notifikasi WhatsApp Otomatis Terkirim' : 'WhatsApp Notification Dispatched'}
                         </p>
-                        <p className="text-[11px] text-emerald-700 leading-snug">
+                        <p className="text-xs text-safe-700 leading-snug">
                           {lang === 'ID' 
                             ? `Laporan kondisi telah otomatis diteruskan ke grup WA Pengawas (${fonnteTarget || 'Tujuan'}) via Fonnte.` 
                             : `Safety condition alert has been automatically sent to supervisor WA group via Fonnte.`}
@@ -3224,20 +3227,20 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                   )}
 
                   {/* HIDDEN / CAPTURABLE HIGH RES REGISTER BADGE CARD (Pure Custom Styling for Capture) */}
-                  <div className="p-0.5 border border-dashed border-neutral-300 rounded-2xl bg-white shadow-xs">
-                    <div 
+                  <div data-ui className="p-0.5 border border-dashed border-ink-300 rounded-2xl bg-white">
+                    <div data-ui 
                       ref={badgeRef}
                       id="ftw-card-to-capture" 
-                      className="bg-white p-6 rounded-2xl border-4 border-rose-600 flex flex-col gap-4 font-sans select-text relative overflow-hidden"
+                      className="bg-white p-6 rounded-2xl border-4 border-danger-600 flex flex-col gap-4 font-sans select-text relative overflow-hidden"
                       style={{ minWidth: '320px' }}
                     >
-                      <div className="absolute -right-12 -top-12 w-28 h-28 bg-rose-100 rounded-full opacity-50"></div>
-                      <div className="absolute -left-12 -bottom-12 w-28 h-28 bg-neutral-100 rounded-full opacity-50"></div>
+                      <div className="absolute -right-12 -top-12 w-28 h-28 bg-danger-100 rounded-full opacity-50"></div>
+                      <div className="absolute -left-12 -bottom-12 w-28 h-28 bg-ink-100 rounded-full opacity-50"></div>
 
                       {/* Card Header inside Image */}
-                      <div className="flex items-center justify-between border-b pb-3 border-neutral-200">
+                      <div data-ui className="flex items-center justify-between border-b pb-3 border-ink-200">
                         <div className="flex items-center gap-2">
-                          <div className="bg-rose-50 border border-rose-200 p-1 rounded">
+                          <div data-ui className="bg-danger-50 border border-danger-200 p-1 rounded">
                             <img 
                               src="https://res.cloudinary.com/dgjnlxf69/image/upload/v1790130590/Logo_FTW_ul1dz4.png" 
                               alt="Logo Fit to Work" 
@@ -3250,52 +3253,52 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                             />
                           </div>
                           <div>
-                            <span className="text-[9.5px] font-black uppercase tracking-wider text-neutral-900 block leading-none">PT. WAHANA BARA SENTOSA FTW Online</span>
+                            <span className="text-xs font-black text-ink-900 block leading-none">PT. Wahana Bara Sentosa FTW Online</span>
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="text-[8px] font-mono text-neutral-450 block uppercase font-bold">DATE ASSESSED</span>
-                          <span className="text-[9.5px] font-mono font-bold text-neutral-700">{tanggalPengisian} {jamPengisian}</span>
+                          <span className="text-xs tabular-nums text-ink-500 block font-bold">Date Assessed</span>
+                          <span className="text-xs tabular-nums font-bold text-ink-700">{tanggalPengisian} {jamPengisian}</span>
                         </div>
                       </div>
 
                       {/* Employee Information in Image Card */}
-                      <div className="grid grid-cols-2 gap-y-2 border-b pb-3 border-neutral-150 text-xs">
+                      <div data-ui className="grid grid-cols-2 gap-y-2 border-b pb-3 border-rule text-xs">
                         <div>
-                          <span className="text-neutral-400 text-[8.5px] uppercase tracking-wider block font-bold">{lang === 'ID' ? 'NAMA PEKERJA' : 'NAME'}</span>
-                          <span className="font-extrabold text-neutral-900 text-[12px] uppercase">{nama}</span>
+                          <span className="text-ink-400 text-xs block font-bold">{lang === 'ID' ? 'NAMA PEKERJA' : 'NAME'}</span>
+                          <span className="font-extrabold text-ink-900 text-xs">{nama}</span>
                         </div>
                         <div>
-                          <span className="text-neutral-400 text-[8.5px] uppercase tracking-wider block font-bold">NIK / POSITION</span>
-                          <span className="font-bold text-neutral-700 text-[11px] font-mono">{nik} / {jabatan}</span>
+                          <span className="text-ink-400 text-xs block font-bold">NIK / Posisi</span>
+                          <span className="font-bold text-ink-700 text-xs tabular-nums">{nik} / {jabatan}</span>
                         </div>
                       </div>
 
                       {/* Jam Mulai Tidur & Jam Bangun (Capture Card) */}
-                      <div className="bg-neutral-50 border border-neutral-200/90 rounded-lg p-2.5 text-[9.5px]">
-                        <div className="flex justify-between items-center text-neutral-500 font-bold mb-1">
-                          <span className="uppercase text-[8px] tracking-wider">JADWAL TIDUR (12 JAM TERAKHIR)</span>
-                          <span className="font-mono font-black text-neutral-850">{calculations.totalSleep12} Jam</span>
+                      <div data-ui className="bg-ink-50 border border-ink-200/90 rounded-lg p-2.5 text-xs">
+                        <div className="flex justify-between items-center text-ink-500 font-bold mb-1">
+                          <span className="text-xs">Jadwal Tidur (12 Jam Terakhir)</span>
+                          <span className="tabular-nums font-black text-ink-800">{calculations.totalSleep12} Jam</span>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 font-mono">
+                        <div className="grid grid-cols-2 gap-2 tabular-nums">
                           <div>
-                            <span className="text-[7.5px] text-neutral-400 uppercase block font-bold">Jam Mulai Tidur:</span>
-                            <span className="font-black text-neutral-800 text-[11px]">{sleep12Session1Bed}</span>
+                            <span className="text-xs text-ink-400 block font-bold">Jam Mulai Tidur:</span>
+                            <span className="font-black text-ink-800 text-xs">{sleep12Session1Bed}</span>
                           </div>
                           <div>
-                            <span className="text-[7.5px] text-neutral-400 uppercase block font-bold">Jam Bangun Tidur:</span>
-                            <span className="font-black text-neutral-800 text-[11px]">{sleep12Session1Wake}</span>
+                            <span className="text-xs text-ink-400 block font-bold">Jam Bangun Tidur:</span>
+                            <span className="font-black text-ink-800 text-xs">{sleep12Session1Wake}</span>
                           </div>
                         </div>
                         {hasSleep12Session2 && (
-                          <div className="mt-1 pt-1 border-t border-dashed border-neutral-200 grid grid-cols-2 gap-2 font-mono text-[8.5px]">
+                          <div data-ui className="mt-1 pt-1 border-t border-dashed border-ink-200 grid grid-cols-2 gap-2 tabular-nums text-xs">
                             <div>
-                              <span className="text-[7px] text-neutral-400 uppercase block font-semibold">Sesi 2 Mulai:</span>
-                              <span className="font-bold text-neutral-700">{sleep12Session2Bed}</span>
+                              <span className="text-xs text-ink-400 block font-semibold">Sesi 2 Mulai:</span>
+                              <span className="font-bold text-ink-700">{sleep12Session2Bed}</span>
                             </div>
                             <div>
-                              <span className="text-[7px] text-neutral-400 uppercase block font-semibold">Sesi 2 Bangun:</span>
-                              <span className="font-bold text-neutral-700">{sleep12Session2Wake}</span>
+                              <span className="text-xs text-ink-400 block font-semibold">Sesi 2 Bangun:</span>
+                              <span className="font-bold text-ink-700">{sleep12Session2Wake}</span>
                             </div>
                           </div>
                         )}
@@ -3306,14 +3309,14 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                         <div className="col-span-4 flex flex-col items-center justify-center">
                           {/* Beautiful simplified visual count radial badge */}
                           <div className="relative w-20 h-20 flex flex-col items-center justify-center">
-                            <svg className="w-18 h-18 transform -rotate-90">
-                              <circle cx="36" cy="36" r="32" fill="none" stroke="#f3f4f6" strokeWidth="5"/>
+                            <svg className="w-18 h-18 transform -rotate-90" aria-hidden="true">
+                              <circle cx="36" cy="36" r="32" fill="none" stroke="var(--color-rule)" strokeWidth="5"/>
                               <circle 
                                 cx="36" cy="36" r="32" fill="none" 
                                 stroke={
-                                  calculations.finalDecision === 'FIT' ? '#10b981' :
-                                  calculations.finalDecision === 'FIT_CONDITIONAL' ? '#f59e0b' :
-                                  calculations.finalDecision === 'REST_BEFORE_WORK' ? '#f97316' : '#ef4444'
+                                  calculations.finalDecision === 'FIT' ? 'var(--color-safe-500)' :
+                                  calculations.finalDecision === 'FIT_CONDITIONAL' ? 'var(--color-warn-500)' :
+                                  calculations.finalDecision === 'REST_BEFORE_WORK' ? 'var(--color-caution-500)' : 'var(--color-danger-500)'
                                 } 
                                 strokeWidth="5"
                                 strokeDasharray="201"
@@ -3321,35 +3324,35 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                               />
                             </svg>
                             <span className="absolute text-center leading-none">
-                              <span className="text-base font-black font-mono text-neutral-900">{calculations.readinessScore}%</span>
-                              <span className="text-[6.5px] block font-extrabold text-neutral-400 uppercase leading-none mt-0.5">Ready</span>
+                              <span className="text-base font-black tabular-nums text-ink-900">{calculations.readinessScore}%</span>
+                              <span className="text-xs block font-extrabold text-ink-400 leading-none mt-0.5">Ready</span>
                             </span>
                           </div>
                         </div>
 
                         <div className="col-span-8 flex flex-col justify-center">
-                          <span className="text-[8.5px] font-mono text-neutral-500 block font-bold uppercase">ASPEK ANALISA KEPUTUSAN</span>
-                          <span className="text-[9px] text-neutral-700 font-mono mt-0.5">Skor Fatigue: <b>{calculations.totalFatigueScore}</b> / 31</span>
+                          <span className="text-xs tabular-nums text-ink-500 block font-bold">Aspek Analisis Keputusan</span>
+                          <span className="text-xs text-ink-700 tabular-nums mt-0.5">Skor Fatigue: <b>{calculations.totalFatigueScore}</b> / 31</span>
                           
                           {/* Highlight big tag */}
-                          <div className={`mt-2 px-3 py-1.5 rounded-lg text-[10.5px] font-black uppercase inline-block text-center tracking-wider max-w-fit ${
-                            calculations.finalDecision === 'FIT' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                            calculations.finalDecision === 'FIT_CONDITIONAL' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                            calculations.finalDecision === 'REST_BEFORE_WORK' ? 'bg-orange-100 text-orange-850 border border-orange-200' : 
-                            'bg-rose-100 text-rose-800 border border-rose-200'
+                          <div data-ui className={`mt-2 px-3 py-1.5 rounded-lg text-xs font-black  inline-block text-center  max-w-fit ${
+                            calculations.finalDecision === 'FIT' ? 'bg-safe-100 text-safe-800 border border-safe-200' :
+                            calculations.finalDecision === 'FIT_CONDITIONAL' ? 'bg-warn-100 text-warn-800 border border-warn-200' :
+                            calculations.finalDecision === 'REST_BEFORE_WORK' ? 'bg-caution-100 text-caution-800 border border-caution-200' : 
+                            'bg-danger-100 text-danger-800 border border-danger-200'
                           }`}>
-                            {calculations.finalDecision === 'FIT' && '✓ FIT TO WORK'}
-                            {calculations.finalDecision === 'FIT_CONDITIONAL' && '⚠ BEKERJA DALAM PENGAWASAN KHUSUS'}
-                            {calculations.finalDecision === 'REST_BEFORE_WORK' && '💤 WAJIB ISTIRAHAT SEBELUM BEKERJA'}
-                            {calculations.finalDecision === 'UNFIT' && '✖ TIDAK BOLEH BEKERJA'}
+                            {calculations.finalDecision === 'FIT' && ' Fit to Work'}
+                            {calculations.finalDecision === 'FIT_CONDITIONAL' && ' BEKERJA DALAM Pengawasan Khusus'}
+                            {calculations.finalDecision === 'REST_BEFORE_WORK' && ' Wajib Istirahat Sebelum Bekerja'}
+                            {calculations.finalDecision === 'UNFIT' && ' Tidak Boleh Bekerja'}
                           </div>
                         </div>
                       </div>
 
                       {/* Verification Badge Code footer */}
-                      <div className="pt-2.5 border-t border-neutral-150 flex items-center justify-between text-[7px] font-mono text-neutral-450 uppercase">
+                      <div data-ui className="pt-2.5 border-t border-rule flex items-center justify-between text-xs tabular-nums text-ink-500">
                         <span>FTW-ONLINE-SHE-WBS-{tanggalPengisian.replace(/-/g,'')}</span>
-                        <span className="font-extrabold text-neutral-700">ONLINE REGISTER SYNCED</span>
+                        <span className="font-extrabold text-ink-700">Online Register Synced</span>
                       </div>
                     </div>
                   </div>
@@ -3361,7 +3364,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     <button 
                       type="button"
                       onClick={handleShareWhatsApp}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs hover:scale-[1.01] transition-all cursor-pointer shadow-md shadow-emerald-200"
+                      className="bg-safe-600 hover:bg-safe-500 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-emerald-200"
                     >
                       <Share2 className="w-4 h-4 shrink-0" />
                       <span>{lang === 'ID' ? 'Kirim ke WhatsApp' : 'Share to WhatsApp'}</span>
@@ -3371,7 +3374,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     <button 
                       type="button"
                       onClick={handleDownloadImage}
-                      className="bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs hover:scale-[1.01] transition-all cursor-pointer shadow-md shadow-rose-200"
+                      className="bg-danger-600 hover:bg-danger-500 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-rose-200"
                     >
                       <Download className="w-4 h-4 shrink-0" />
                       <span>{lang === 'ID' ? 'Unduh Gambar FTW' : 'Download Pass-Card'}</span>
@@ -3379,19 +3382,19 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                   </div>
 
                   {/* ACTION RECOMMENDATIONS LIST */}
-                  <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200 flex flex-col gap-2 shadow-xs">
-                    <h4 className="text-[10.5px] font-extrabold text-neutral-800 uppercase tracking-wider">
+                  <div data-ui className="bg-ink-50 p-4 rounded-xl border border-ink-200 flex flex-col gap-2">
+                    <h4 className="text-xs font-extrabold text-ink-800">
                       Protokol & Rekomendasi Kerja:
                     </h4>
 
                     {calculations.isSleepDeficit && (
-                      <div className="bg-rose-50/50 border border-rose-200 p-3 rounded-lg flex gap-2.5 text-xs leading-relaxed mb-1 items-start">
-                        <span className="text-base select-none shrink-0 font-sans">💤</span>
+                      <div data-ui className="bg-danger-50/50 border border-danger-200 p-3 rounded-lg flex gap-2.5 text-xs leading-relaxed mb-1 items-start">
+                        
                         <div>
-                          <p className="font-extrabold text-rose-800 uppercase text-[9px] tracking-wider leading-tight">
+                          <p className="font-extrabold text-danger-800 text-xs leading-tight">
                             {lang === 'ID' ? 'REKOMENDASI DURASI ISTIRAHAT MANDATORI' : 'MANDATORY REST TIME REQUIRED'}
                           </p>
-                          <p className="text-[10.5px] text-neutral-800 mt-1 font-bold leading-normal">
+                          <p className="text-xs text-ink-800 mt-1 font-bold leading-normal">
                             Karyawan kurang tidur sebanyak <b>{calculations.requiredRecoveryRest} jam</b>. 
                             Wajib melakukan <b>Tidur / Istirahat pemulihan mandatori selama minimal {calculations.requiredRecoveryRest} jam</b> sebelum diizinkan mengoperasikan unit critical. Hubungi pengawas untuk penjadwalan istirahat!
                           </p>
@@ -3399,23 +3402,23 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                       </div>
                     )}
 
-                    <ul className="text-xs text-neutral-700 flex flex-col gap-2 pl-1 select-text">
+                    <ul className="text-xs text-ink-700 flex flex-col gap-2 pl-1 select-text">
                       <li className="flex gap-2.5 items-start">
-                        <span className="text-rose-600 shrink-0 font-extrabold">•</span>
+                        <span className="text-danger-600 shrink-0 font-extrabold">•</span>
                         <span>
-                          {calculations.finalDecision === 'FIT' && 'Karyawan memenuhi syarat untuk FIT TO WORK.'}
-                          {calculations.finalDecision === 'FIT_CONDITIONAL' && 'Karyawan masuk dalam kategori BEKERJA DALAM PENGAWASAN KHUSUS.'}
-                          {calculations.finalDecision === 'REST_BEFORE_WORK' && 'Karyawan WAJIB ISTIRAHAT SEBELUM BEKERJA.'}
-                          {calculations.finalDecision === 'UNFIT' && 'Karyawan TIDAK BOLEH BEKERJA.'}
+                          {calculations.finalDecision === 'FIT' && 'Karyawan memenuhi syarat untuk Fit to Work.'}
+                          {calculations.finalDecision === 'FIT_CONDITIONAL' && 'Karyawan masuk dalam kategori BEKERJA DALAM Pengawasan Khusus.'}
+                          {calculations.finalDecision === 'REST_BEFORE_WORK' && 'Karyawan Wajib Istirahat Sebelum Bekerja.'}
+                          {calculations.finalDecision === 'UNFIT' && 'Karyawan Tidak Boleh Bekerja.'}
                         </span>
                       </li>
 
                       {consumesObat && (
-                        <li className="flex gap-2.5 items-start bg-amber-50 p-2.5 rounded-lg border border-amber-200 text-amber-800 flex-col md:flex-row">
-                          <span className="shrink-0 text-base">💊</span>
+                        <li data-ui className="flex gap-2.5 items-start bg-warn-50 p-2.5 rounded-lg border border-warn-200 text-warn-800 flex-col md:flex-row">
+                          
                           <div>
-                            <span className="font-bold uppercase text-[9.5px] block tracking-wide text-rose-700">Rekomendasi Medikasi:</span>
-                            <span className="block mt-0.5 text-xs text-neutral-800">
+                            <span className="font-bold text-xs block text-danger-700">Rekomendasi Medikasi:</span>
+                            <span className="block mt-0.5 text-xs text-ink-800">
                               {lang === 'ID' 
                                 ? 'Mengkonsumsi Obat: Efek kantuk obat berisiko tinggi. Dilarang keras mengoperasikan unit critical / alat berat selama 4 jam ke depan. Wajib lapor kepada tim SHE atau Paramedis untuk memperoleh rekomendasi kelayakan selanjutnya!' 
                                 : 'Consuming Medication: Medical drowsiness safety risk. Do not operate critical machinery or heavy equipment for the next 4 hours. You are required to report to the SHE department or Paramedic to receive further fitness check recommendations.'}
@@ -3425,11 +3428,11 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                       )}
 
                       {hasPersonalProblem && (
-                        <li className="flex gap-2.5 items-start bg-rose-50 p-2.5 rounded-lg border border-rose-200 text-rose-850 flex-col md:flex-row">
-                          <span className="shrink-0 text-base">🧠</span>
+                        <li data-ui className="flex gap-2.5 items-start bg-danger-50 p-2.5 rounded-lg border border-danger-200 text-danger-800 flex-col md:flex-row">
+                          
                           <div>
-                            <span className="font-bold uppercase text-[9.5px] block tracking-wide text-rose-700">Rekomendasi Konsentrasi:</span>
-                            <span className="block mt-0.5 text-xs text-neutral-800">
+                            <span className="font-bold text-xs block text-danger-700">Rekomendasi Konsentrasi:</span>
+                            <span className="block mt-0.5 text-xs text-ink-800">
                               {lang === 'ID' 
                                 ? 'Ada Masalah / Gangguan Fokus (Stres): Wajib dilakukan koordinasi dan pengawasan ketat oleh foreman. Karyawan wajib melakukan konseling dengan pengawas sebelum memulai pekerjaan!' 
                                 : 'Personal/Stress Issues: Close supervision by field foreman is required. Employee must undergo counseling with the supervisor before executing any tasks.'}
@@ -3438,10 +3441,10 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                         </li>
                       )}
 
-                      <li className="flex gap-2.5 items-start text-xs pt-2 border-t border-neutral-200">
-                        <span className="text-neutral-500 font-mono font-bold shrink-0">R-SOP</span>
-                        <span className="text-[10px] italic text-neutral-500 font-mono">
-                          ID LAPORAN: {tanggalPengisian.replace(/-/g,'')}/{jamPengisian.replace(':','')} - PT. Wahana Bara Sentosa FTW Online.
+                      <li data-ui className="flex gap-2.5 items-start text-xs pt-2 border-t border-ink-200">
+                        <span className="text-ink-500 tabular-nums font-bold shrink-0">Ref SOP</span>
+                        <span className="text-xs italic text-ink-500 tabular-nums">
+                          ID Laporan: {tanggalPengisian.replace(/-/g,'')}/{jamPengisian.replace(':','')} - PT. Wahana Bara Sentosa FTW Online.
                         </span>
                       </li>
                     </ul>
@@ -3451,13 +3454,13 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
 
                 {/* STEP 3 ACTIONS with local database and google spreadsheet upload */}
                 <div className="mt-auto pt-5 flex flex-col gap-3">
-                  <div className="bg-emerald-50 border border-emerald-150 rounded-xl p-3.5 flex gap-3 items-start shadow-xs">
-                    <span className="text-emerald-700 text-base select-none mt-0.5">🔒</span>
+                  <div data-ui className="bg-safe-50 border border-safe-200 rounded-xl p-3.5 flex gap-3 items-start">
+                    
                     <div className="flex flex-col">
-                      <span className="text-emerald-800 text-[10.5px] font-black uppercase tracking-wider leading-none">
+                      <span className="text-safe-800 text-xs font-black leading-none">
                         {lang === 'ID' ? 'Penilaian Terkirim Aman' : 'Submission Saved'}
                       </span>
-                      <span className="text-[10px] text-emerald-600 font-semibold leading-normal mt-1.5 font-sans">
+                      <span className="text-xs text-safe-600 font-semibold leading-normal mt-1.5 font-sans">
                         {lang === 'ID' 
                           ? 'Seluruh data Anda telah dikirim dan tercatat dalam server monitoring Fit to Work PT. WBS secara langsung. Anda dilarang melakukan pengisian ulang ganda / manipulasi jam tidur untuk menjunjung integritas keselamatan kerja.'
                           : 'Your assessment response has been submitted and recorded permanently. You are not allowed to submit multiple entries or manipulate sleeping hours for work safety integrity.'}
@@ -3471,13 +3474,13 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
           </div>
 
           {/* SYSTEM STATS FOOTER BAR */}
-          <div className="bg-neutral-100 border-t border-neutral-200 px-5 py-3.5 flex justify-between items-center text-[10px] text-neutral-500 select-none rounded-b-2xl">
-            <span className="font-mono tracking-widest text-neutral-600">
-              SOP-SA-001 // FATIGUE MANAGEMENT
+          <div data-ui className="bg-ink-100 border-t border-ink-200 px-5 py-3.5 flex justify-between items-center text-xs text-ink-500 select-none rounded-b-2xl">
+            <span className="tabular-nums text-ink-600">
+              SOP-SA-001 · Fatigue Management
             </span>
-            <span className="flex items-center gap-1.5 tracking-wide uppercase font-black text-rose-600">
-              <span className="h-2 w-2 rounded-full bg-rose-600"></span>
-              WBS CLOUD-READY
+            <span className="flex items-center gap-1.5 font-black text-danger-600">
+              
+              WBS Cloud-Ready
             </span>
           </div>
 
@@ -3489,30 +3492,30 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
       {/* CONFIRM SUBMISSION WITH INTEGRITY & COMPANY REGULATIONS DECLARATION MODAL */}
       {/* ---------------------------------------------------------------------------------- */}
       {showConfirmSubmitModal && (
-        <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[60] select-none animate-fadeIn">
-          <div className="bg-white rounded-2xl border-2 border-rose-600 w-full max-w-md flex flex-col shadow-2xl overflow-hidden text-neutral-800">
-            <div className="bg-rose-50 border-b border-rose-100 px-5 py-4 flex gap-3 items-center">
-              <span className="text-xl shrink-0">⚠️</span>
+        <div className="fixed inset-0 bg-ink-900/60 flex items-center justify-center p-4 z-[60] select-none animate-fadeIn">
+          <div data-ui className="bg-white rounded-2xl border-2 border-danger-600 w-full max-w-md flex flex-col overflow-hidden text-ink-800">
+            <div data-ui className="bg-danger-50 border-b border-danger-100 px-5 py-4 flex gap-3 items-center">
+              
               <div>
-                <h3 className="text-xs font-black text-rose-800 uppercase tracking-wider">
+                <h3 className="text-xs font-black text-danger-800">
                   {lang === 'ID' ? 'PERNYATAAN INTEGRITAS & DISIPLIN' : 'INTEGRITY & DISCIPLINE DECLARATION'}
                 </h3>
-                <p className="text-[9px] text-rose-600 font-bold uppercase tracking-wider mt-0.5 leading-none">
+                <p className="text-xs text-danger-600 font-bold mt-0.5 leading-none">
                   {lang === 'ID' ? 'DATA TIDAK DAPAT DIUBAH SETELAH DIKIRIM' : 'DATA CANNOT BE MODIFIED AFTER SENT'}
                 </p>
               </div>
             </div>
 
             <div className="p-5 flex flex-col gap-4">
-              <p className="text-xs text-neutral-700 leading-relaxed">
+              <p className="text-xs text-ink-700 leading-relaxed">
                 {lang === 'ID' 
                   ? 'Sebelum melihat hasil analisis kelayakan kerja (Fit to Work), harap baca dan setujui peraturan integritas keselamatan berikut ini:' 
-                  : 'Before proceeding to unlock your active safety assessment pass, please read and confirm the following regulations:'}
+                  : 'Before viewing your safety assessment result, please read and confirm the following regulations:'}
               </p>
 
-              <div className="bg-neutral-50 border border-neutral-200. flex flex-col gap-3 p-4 rounded-xl text-xs leading-relaxed text-neutral-800 select-text">
+              <div data-ui className="bg-ink-50 border border-rule flex flex-col gap-3 p-4 rounded-xl text-xs leading-relaxed text-ink-800 select-text">
                 <div className="flex gap-2.5 items-start">
-                  <span className="text-rose-600 font-extrabold shrink-0">•</span>
+                  <span className="text-danger-600 font-extrabold shrink-0">•</span>
                   <span>
                     <b>{lang === 'ID' ? 'Pernyataan Sebenarnya:' : 'Declaration of Truth:'}</b>{' '}
                     {lang === 'ID' 
@@ -3522,10 +3525,10 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                 </div>
 
                 <div className="flex gap-2.5 items-start">
-                  <span className="text-rose-600 font-extrabold shrink-0">•</span>
+                  <span className="text-danger-600 font-extrabold shrink-0">•</span>
                   <span>
                     <b>{lang === 'ID' ? 'Sanksi Peraturan Perusahaan:' : 'Company Regulation Actions:'}</b>{' '}
-                    <span className="text-rose-700 font-bold">
+                    <span className="text-danger-700 font-bold">
                       {lang === 'ID' 
                         ? 'Apabila saya memberikan data yang tidak benar atau memanipulasi informasi, maka saya bersedia diberikan sanksi kedisiplinan sesuai Peraturan Perusahaan PT. Wahana Bara Sentosa.'
                         : 'Any false representation of safety and sleep data will subject me to strict disciplinary actions in accordance with the Company Regulations of PT. Wahana Bara Sentosa.'}
@@ -3533,9 +3536,9 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                   </span>
                 </div>
 
-                <div className="flex gap-2.5 items-start pt-2 border-t border-dashed border-neutral-300">
-                  <span className="text-neutral-500 font-extrabold shrink-0">🔒</span>
-                  <span className="text-[10px] text-neutral-500 italic">
+                <div data-ui className="flex gap-2.5 items-start pt-2 border-t border-dashed border-ink-300">
+                  
+                  <span className="text-xs text-ink-500 italic">
                     {lang === 'ID'
                       ? 'Data Anda akan disinkronisasikan ke sistem K3 dan lembar backup data admin, dan tidak dapat diedit ulang.'
                       : 'This record will be sealed in the safety database and admin Sheets backup; it cannot be edited or resubmitted today.'}
@@ -3547,15 +3550,15 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                 <button
                   type="button"
                   onClick={handleConfirmAndSubmitAssessment}
-                  className="w-full bg-rose-600 hover:bg-rose-500 text-white font-black py-4 px-4 rounded-xl text-xs uppercase tracking-wider shadow-md hover:scale-[1.01] transition-all cursor-pointer text-center"
+                  className="w-full bg-danger-600 hover:bg-danger-500 text-white font-black py-4 px-4 rounded-xl text-xs transition-colors cursor-pointer text-center"
                 >
-                  {lang === 'ID' ? '✓ SAYA SETUJU & KIRIM' : '✓ I AGREE & SUBMIT'}
+                  {lang === 'ID' ? ' SAYA SETUJU & KIRIM' : ' I AGREE & SUBMIT'}
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setShowConfirmSubmitModal(false)}
-                  className="w-full bg-white hover:bg-neutral-50 border border-neutral-300 text-neutral-700 font-extrabold py-3 px-4 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer text-center"
+                  className="w-full bg-white hover:bg-ink-50 border border-ink-300 text-ink-700 font-extrabold py-3 px-4 rounded-xl text-xs transition-colors cursor-pointer text-center"
                 >
                   {lang === 'ID' ? 'Batal / Periksa Kembali' : 'Cancel / Verify Input'}
                 </button>
@@ -3569,47 +3572,47 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
       {/* HISTORICAL REGISTRY OUTS OVERLAY PANEL */}
       {/* ---------------------------------------------------------------------------------- */}
       {showHistoryOverlay && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 select-none animate-fadeIn">
-          <div className="bg-white rounded-2xl border border-neutral-200 w-full max-w-lg flex flex-col max-h-[90vh] shadow-2xl overflow-hidden text-neutral-800">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 sm:p-6 z-50 select-none animate-fadeIn">
+          <div data-ui className="bg-white rounded-2xl border border-ink-200 w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden text-ink-800">
             
             {/* Drawer Header */}
-            <div className="bg-neutral-50 px-6 py-4 border-b border-neutral-200 flex justify-between items-center">
+            <div data-ui className="bg-ink-50 px-6 py-4 border-b border-ink-200 flex justify-between items-center">
               <div>
-                <h3 className="text-sm font-black text-neutral-950 uppercase flex items-center gap-2">
-                  <Database className="w-4 h-4 text-emerald-600" />
+                <h3 className="text-sm font-black text-ink-950 flex items-center gap-2">
+                  <Database className="w-4 h-4 text-safe-600" />
                   <span>{lang === 'ID' ? 'Arsip Database Penilaian' : 'Shift Fatigue Registry logs'}</span>
                 </h3>
-                <p className="text-[10px] text-neutral-500">PT. WAHANA BARA SENTOSA</p>
+                <p className="text-xs text-ink-500">PT. Wahana Bara Sentosa</p>
               </div>
               <button 
                 type="button"
                 onClick={() => setShowHistoryOverlay(false)}
-                className="bg-neutral-100 hover:bg-neutral-200 text-neutral-600 py-1.5 px-3 border border-neutral-300 rounded-lg font-black cursor-pointer text-xs transition"
+                className="bg-ink-100 hover:bg-ink-200 text-ink-600 py-1.5 px-3 border border-ink-300 rounded-lg font-black cursor-pointer text-xs transition"
               >
-                ✖
+                
               </button>
             </div>
 
             {/* Filter Search Field */}
-            <div className="px-5 py-3.5 bg-white border-b border-neutral-150 flex flex-col sm:flex-row gap-2.5 items-center">
-              <label className="text-[10px] font-extrabold text-neutral-500 uppercase tracking-wider shrink-0">
+            <div data-ui className="px-5 py-3.5 bg-white border-b border-rule flex flex-col sm:flex-row gap-2.5 items-center">
+              <label className="text-xs font-extrabold text-ink-500 shrink-0">
                 {lang === 'ID' ? 'Cari NIK Karyawan:' : 'Search Employee NIK:'}
               </label>
               <div className="relative w-full">
                 <input 
                   type="text"
-                  className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-1.5 px-3 pl-8 text-xs font-mono uppercase text-neutral-900 outline-none focus:ring-1 focus:ring-rose-500 font-bold"
+                  className="w-full bg-ink-50 border border-rule rounded-lg py-1.5 px-3 pl-8 text-xs tabular-nums text-ink-900 focus:ring-1 focus:ring-danger-500 font-bold"
                   placeholder={lang === 'ID' ? 'Masukkan NIK untuk filter...' : 'Enter NIK to filter...'}
                   value={historyNikFilter}
                   onChange={(e) => setHistoryNikFilter(e.target.value)}
                 />
-                <span className="absolute left-2.5 top-2.5 text-neutral-400 font-mono text-[10px]">🔍</span>
+                
               </div>
               {historyNikFilter && (
                 <button 
                   type="button" 
                   onClick={() => setHistoryNikFilter('')}
-                  className="text-[10px] text-rose-600 hover:underline shrink-0 font-extrabold uppercase tracking-tight"
+                  className="text-xs text-danger-600 hover:underline shrink-0 font-extrabold tracking-tight"
                 >
                   {lang === 'ID' ? 'Reset' : 'Clear'}
                 </button>
@@ -3617,14 +3620,14 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
             </div>
 
             {/* List entries */}
-            <div className="p-4 sm:p-5 overflow-y-auto flex-1 flex flex-col gap-3.5 bg-neutral-50">
+            <div className="p-4 sm:p-5 overflow-y-auto flex-1 flex flex-col gap-3.5 bg-ink-50">
               {filteredHistory.length === 0 ? (
-                <div className="py-12 text-center text-neutral-500 border border-dashed border-neutral-300 rounded-xl bg-white shadow-xs">
-                  <p className="text-3xl mb-2">📂</p>
-                  <p className="text-xs uppercase font-extrabold text-neutral-600">
+                <div data-ui className="py-12 text-center text-ink-500 border border-dashed border-ink-300 rounded-xl bg-white">
+                  <p className="text-3xl mb-2"></p>
+                  <p className="text-xs font-extrabold text-ink-600">
                     {lang === 'ID' ? 'Arsip Tidak Ditemukan' : 'Records Not Found'}
                   </p>
-                  <p className="text-[10px] text-neutral-450 mt-1">
+                  <p className="text-xs text-ink-500 mt-1">
                     {historyNikFilter 
                       ? (lang === 'ID' ? `Tidak ada pengisian untuk NIK: "${historyNikFilter.toUpperCase()}"` : `No records match NIK: "${historyNikFilter.toUpperCase()}"`) 
                       : (lang === 'ID' ? 'Lakukan penilaian dan klik simpan.' : 'Run assessment and click save.')
@@ -3633,24 +3636,24 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                 </div>
               ) : (
                 filteredHistory.map((record, index) => (
-                  <div key={record.id ? `${record.id}-${index}` : index} className="bg-white border border-neutral-200 p-4 rounded-xl flex flex-col gap-2.5 relative shadow-xs">
+                  <div data-ui key={record.id ? `${record.id}-${index}` : index} className="bg-white border border-ink-200 p-4 rounded-xl flex flex-col gap-2.5 relative">
                     
                     {/* Top Row ID */}
                     <div className="flex justify-between items-start">
                       <div>
-                        <span className="text-[9.5px] font-mono text-neutral-500 block uppercase font-bold">
+                        <span className="text-xs tabular-nums text-ink-500 block font-bold">
                           {record.tanggalPengisian} • {record.jamPengisian} • ID: {record.id}
                         </span>
-                        <span className="text-sm font-black text-neutral-900 block uppercase mt-0.5">{record.nama}</span>
-                        <span className="text-[10px] font-mono text-neutral-550 block font-bold mt-0.5">{record.nik} • {record.jabatan}</span>
+                        <span className="text-sm font-black text-ink-900 block mt-0.5">{record.nama}</span>
+                        <span className="text-xs tabular-nums text-ink-500 block font-bold mt-0.5">{record.nik} • {record.jabatan}</span>
                       </div>
                       
                       {/* Decision pill */}
-                      <span className={`px-2.5 py-1 rounded text-[10px] font-black uppercase text-center ${
-                        record.finalDecision === 'FIT' ? 'bg-emerald-50 text-emerald-700 border border-emerald-250' :
-                        record.finalDecision === 'FIT_CONDITIONAL' ? 'bg-amber-50 text-amber-700 border border-amber-250 font-bold' :
-                        record.finalDecision === 'REST_BEFORE_WORK' ? 'bg-orange-50 text-orange-700 border border-orange-200' :
-                        'bg-rose-50 text-rose-700 border border-rose-200 shadow-xs'
+                      <span data-ui className={`px-2.5 py-1 rounded text-xs font-black  text-center ${
+                        record.finalDecision === 'FIT' ? 'bg-safe-50 text-safe-700 border border-safe-200' :
+                        record.finalDecision === 'FIT_CONDITIONAL' ? 'bg-warn-50 text-warn-700 border border-warn-200 font-bold' :
+                        record.finalDecision === 'REST_BEFORE_WORK' ? 'bg-caution-50 text-caution-700 border border-caution-200' :
+                        'bg-danger-50 text-danger-700 border border-danger-200 '
                       }`}>
                         {record.finalDecision === 'FIT' && (lang === 'ID' ? 'Bekerja Normal' : 'FIT')}
                         {record.finalDecision === 'FIT_CONDITIONAL' && (lang === 'ID' ? 'Normal (Dengan Pengawasan)' : 'FIT CONDITIONAL')}
@@ -3660,39 +3663,39 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     </div>
 
                     {/* Sleep analytics breakdown with Jam Tidur & Jam Bangun */}
-                    <div className="grid grid-cols-3 gap-2 py-2 border-t border-b border-neutral-100 text-[10px] font-mono">
+                    <div data-ui className="grid grid-cols-3 gap-2 py-2 border-t border-b border-ink-100 text-xs tabular-nums">
                       <div>
-                        <span className="text-neutral-400 block uppercase text-[8px] font-bold">{lang === 'ID' ? 'Total Tidur 12J' : 'TOTAL SLEEP'}</span>
-                        <span className="font-extrabold text-neutral-700 mt-0.5 block">{record.totalSleep12} Jam</span>
+                        <span className="text-ink-400 block text-xs font-bold">{lang === 'ID' ? 'Total Tidur 12J' : 'TOTAL SLEEP'}</span>
+                        <span className="font-extrabold text-ink-700 mt-0.5 block">{record.totalSleep12} Jam</span>
                       </div>
                       <div>
-                        <span className="text-neutral-400 block uppercase text-[8px] font-bold">{lang === 'ID' ? 'Tidur 36J' : 'SLEEP 36h'}</span>
-                        <span className="font-extrabold text-neutral-700 mt-0.5 block">{record.totalSleep36} Jam</span>
+                        <span className="text-ink-400 block text-xs font-bold">{lang === 'ID' ? 'Tidur 36J' : 'SLEEP 36h'}</span>
+                        <span className="font-extrabold text-ink-700 mt-0.5 block">{record.totalSleep36} Jam</span>
                       </div>
                       <div>
-                        <span className="text-neutral-400 block uppercase text-[8px] font-bold">{lang === 'ID' ? 'Fatigue Skor' : 'FATIGUE SCORE'}</span>
-                        <span className="font-bold text-rose-600 mt-0.5 block">{record.totalFatigueScore}</span>
+                        <span className="text-ink-400 block text-xs font-bold">{lang === 'ID' ? 'Fatigue Skor' : 'FATIGUE SCORE'}</span>
+                        <span className="font-bold text-danger-600 mt-0.5 block">{record.totalFatigueScore}</span>
                       </div>
                     </div>
 
                     {/* Detail Jam Tidur & Bangun */}
-                    <div className="bg-neutral-50 p-2 rounded-lg border border-neutral-200/70 text-[9.5px] font-mono flex flex-col gap-1">
-                      <div className="flex items-center justify-between text-neutral-700">
-                        <span className="text-neutral-400 font-bold uppercase text-[8px]">🌙 Tidur 12 Jam:</span>
+                    <div data-ui className="bg-ink-50 p-2 rounded-lg border border-ink-200/70 text-xs tabular-nums flex flex-col gap-1">
+                      <div className="flex items-center justify-between text-ink-700">
+                        <span className="text-ink-400 font-bold text-xs"> Tidur 12 Jam:</span>
                         <span className="font-bold">
-                          Tidur: <b>{record.sleep12Session1Bed || '-'}</b> ➔ Bangun: <b>{record.sleep12Session1Wake || '-'}</b>
+                          Tidur: <b>{record.sleep12Session1Bed || '-'}</b>  Bangun: <b>{record.sleep12Session1Wake || '-'}</b>
                         </span>
                       </div>
                       {record.hasSleep12Session2 && (
-                        <div className="flex items-center justify-between text-neutral-500 text-[8.5px]">
-                          <span className="text-neutral-400 font-bold uppercase text-[7.5px]">🌙 Sesi 2:</span>
-                          <span>Tidur: {record.sleep12Session2Bed || '-'} ➔ Bangun: {record.sleep12Session2Wake || '-'}</span>
+                        <div className="flex items-center justify-between text-ink-500 text-xs">
+                          <span className="text-ink-400 font-bold text-xs"> Sesi 2:</span>
+                          <span>Tidur: {record.sleep12Session2Bed || '-'}  Bangun: {record.sleep12Session2Wake || '-'}</span>
                         </div>
                       )}
-                      <div className="flex items-center justify-between text-neutral-600 text-[9px]">
-                        <span className="text-neutral-400 font-bold uppercase text-[8px]">⏱️ Tidur 36 Jam:</span>
+                      <div className="flex items-center justify-between text-ink-600 text-xs">
+                        <span className="text-ink-400 font-bold text-xs"> Tidur 36 Jam:</span>
                         <span className="font-semibold">
-                          Tidur: <b>{record.sleep36Session1Bed || '-'}</b> ➔ Bangun: <b>{record.sleep36Session1Wake || '-'}</b>
+                          Tidur: <b>{record.sleep36Session1Bed || '-'}</b>  Bangun: <b>{record.sleep36Session1Wake || '-'}</b>
                         </span>
                       </div>
                     </div>
@@ -3701,13 +3704,13 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                     <div className="flex justify-between items-center pt-1.5">
                       <div className="flex gap-2">
                         {record.consumesObat && (
-                          <span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded text-[8.5px] font-bold uppercase border border-amber-200">💊 {lang === 'ID' ? 'Obat' : 'Meds'}</span>
+                          <span data-ui className="bg-warn-50 text-warn-700 px-1.5 py-0.5 rounded text-xs font-bold border border-warn-200"> {lang === 'ID' ? 'Obat' : 'Meds'}</span>
                         )}
                         {record.hasPersonalProblem && (
-                          <span className="bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded text-[8.5px] font-bold uppercase border border-rose-200">🧠 {lang === 'ID' ? 'Stres' : 'Stress'}</span>
+                          <span data-ui className="bg-danger-50 text-danger-700 px-1.5 py-0.5 rounded text-xs font-bold border border-danger-200"> {lang === 'ID' ? 'Stres' : 'Stress'}</span>
                         )}
                         {record.totalSleep12 < 6.0 && (
-                          <span className="bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded text-[8.5px] font-bold uppercase border border-neutral-200">💤 {lang === 'ID' ? 'Low' : 'Low'}</span>
+                          <span data-ui className="bg-ink-100 text-ink-600 px-1.5 py-0.5 rounded text-xs font-bold border border-ink-200"> {lang === 'ID' ? 'Low' : 'Low'}</span>
                         )}
                       </div>
 
@@ -3717,9 +3720,9 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                           <button 
                             type="button"
                             onClick={() => handlePushResultToSheets(record)}
-                            className="text-[10px] font-black text-rose-600 hover:text-rose-500 uppercase transition cursor-pointer"
+                            className="text-xs font-black text-danger-600 hover:text-danger-500 transition cursor-pointer"
                           >
-                            ☁️ Backup
+                             Backup
                           </button>
                         )}
 
@@ -3727,7 +3730,7 @@ _Laporan sah secara sistem PT. Wahana Bara Sentosa FTW Online_`;
                         <button 
                           type="button"
                           onClick={() => {
-                            const details = `--- LAPORAN INDIVIDU FIT TO WORK WBS ---
+                            const details = `--- LAPORAN INDIVIDU Fit to Work WBS ---
 ID: ${record.id}
 Tanggal: ${record.tanggalPengisian} pukul ${record.jamPengisian}
 Nama: ${record.nama} (${record.nik})
@@ -3745,12 +3748,12 @@ ${record.hasSleep12Session2 ? `• Sesi 2: Mulai ${record.sleep12Session2Bed || 
 [HASIL PENILAIAN]
 • Skor Fatigue: ${record.totalFatigueScore}
 • Kesiapan Kerja: ${record.readinessScore}%
-• Keputusan: ${record.finalDecision === 'FIT' ? 'FIT TO WORK' : record.finalDecision === 'FIT_CONDITIONAL' ? 'BEKERJA DALAM PENGAWASAN KHUSUS' : record.finalDecision === 'REST_BEFORE_WORK' ? 'WAJIB ISTIRAHAT SEBELUM BEKERJA' : 'TIDAK BOLEH BEKERJA'}
+• Keputusan: ${record.finalDecision === 'FIT' ? 'Fit to Work' : record.finalDecision === 'FIT_CONDITIONAL' ? 'BEKERJA DALAM Pengawasan Khusus' : record.finalDecision === 'REST_BEFORE_WORK' ? 'Wajib Istirahat Sebelum Bekerja' : 'Tidak Boleh Bekerja'}
 
-PT. WAHANA BARA SENTOSA`;
-                            alert(details);
+PT. Wahana Bara Sentosa`;
+                            notifyUser(details);
                           }}
-                          className="text-[10px] font-bold text-neutral-600 hover:text-neutral-900 border border-neutral-200 rounded px-1.5 py-0.5 hover:bg-neutral-50 transition cursor-pointer"
+                          className="text-xs font-bold text-ink-600 hover:text-ink-900 border border-ink-200 rounded px-1.5 py-0.5 hover:bg-ink-50 transition cursor-pointer"
                         >
                           {lang === 'ID' ? 'Cetak' : 'Detail'}
                         </button>
@@ -3759,7 +3762,7 @@ PT. WAHANA BARA SENTOSA`;
                         <button 
                           type="button"
                           onClick={() => handleDeleteRecord(record.id)}
-                          className="text-[10px] font-bold text-rose-650 hover:text-rose-700 uppercase transition cursor-pointer"
+                          className="text-xs font-bold text-danger-600 hover:text-danger-700 transition cursor-pointer"
                         >
                           {lang === 'ID' ? 'Hapus' : 'Delete'}
                         </button>
@@ -3772,42 +3775,49 @@ PT. WAHANA BARA SENTOSA`;
             </div>
 
             {/* Clear All & Bulk Sheet upload */}
-            <div className="bg-neutral-100 p-3 flex justify-between items-center text-center border-t border-neutral-200 gap-2">
+            <div data-ui className="bg-ink-100 p-3 flex justify-between items-center text-center border-t border-ink-200 gap-2">
               {sheetsToken && spreadsheetId && history.length > 0 && (
                 <button 
                   type="button"
                   onClick={handleBulkUploadHistory}
-                  className="text-[10px] font-black bg-emerald-600 hover:bg-emerald-500 text-white rounded px-3 py-1.5 cursor-pointer uppercase text-left transition"
+                  className="text-xs font-black bg-safe-600 hover:bg-safe-500 text-white rounded px-3 py-1.5 cursor-pointer text-left transition"
                 >
-                  ☁️ Backup Semua ke Sheets
+                   Backup Semua ke Sheets
                 </button>
               )}
               {history.length > 0 && (
                 <button 
                   type="button"
-                  onClick={async () => {
-                    if (confirm(lang === 'ID' ? 'HAPUS SELURUH LOG RIWAYAT PENILAIAN DI CLOUD DAN LOKAL?' : 'PURGE ALL CLOUD AND LOCAL RECORDS PERMANENTLY?')) {
-                      try {
-                        await fetch('/api/history/clear', { method: 'POST' });
-                      } catch (e) {
-                        console.error("Failed to clear history on server", e);
+                  onClick={() => {
+                    setConfirmDialog({
+                      title: lang === 'ID' ? 'Hapus Seluruh Riwayat' : 'Purge All Records',
+                      message: lang === 'ID'
+                        ? 'Hapus seluruh log riwayat penilaian di cloud dan penyimpanan lokal?'
+                        : 'Purge all cloud and local assessment records permanently?',
+                      onConfirm: async () => {
+                        try {
+                          await fetch('/api/history/clear', { method: 'POST' });
+                        } catch (e) {
+                          console.error("Failed to clear history on server", e);
+                        }
+                        saveToHistory([]);
+                        notifyUser(lang === 'ID' ? 'Seluruh riwayat penilaian telah dibersihkan.' : 'All records cleared.', 'info');
                       }
-                      saveToHistory([]);
-                    }
+                    });
                   }}
-                  className="text-[10px] font-mono font-bold text-rose-600 hover:text-rose-700 uppercase ml-auto py-1 px-3 cursor-pointer"
+                  className="text-xs tabular-nums font-bold text-danger-600 hover:text-danger-700 ml-auto py-1 px-3 cursor-pointer"
                 >
-                  🗑️ Purge Semua
+                   Purge Semua
                 </button>
               )}
             </div>
 
             {/* Top Close Footer */}
-            <div className="p-4 bg-white text-center border-t border-neutral-200">
+            <div data-ui className="p-4 bg-white text-center border-t border-ink-200">
               <button 
                 type="button"
                 onClick={() => setShowHistoryOverlay(false)}
-                className="w-full bg-neutral-800 hover:bg-neutral-950 font-bold py-2 px-6 rounded-lg text-xs cursor-pointer text-white transition uppercase tracking-wider"
+                className="w-full bg-ink-800 hover:bg-ink-950 font-bold py-2 px-6 rounded-lg text-xs cursor-pointer text-white transition"
               >
                 {lang === 'ID' ? 'Kembali Ke Menu Utama' : 'Close Registry Logs'}
               </button>
@@ -3821,10 +3831,10 @@ PT. WAHANA BARA SENTOSA`;
       {/* HALAMAN ADMIN TERSENDIRI (DEDICATED FULL-SCREEN ADMIN PAGE) */}
       {/* ---------------------------------------------------------------------------------- */}
       {isAdminPage && (
-        <div className="fixed inset-0 z-50 bg-slate-100 overflow-y-auto flex flex-col font-sans">
+        <div className="fixed inset-0 z-50 bg-ink-100 overflow-y-auto flex flex-col font-sans">
           
           {/* Header Navigasi Halaman Admin */}
-          <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
+          <header data-ui className="bg-ink-900 text-white border-b border-ink-800 sticky top-0 z-30">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap justify-between items-center gap-3">
               <div className="flex items-center gap-3">
                 <button 
@@ -3835,13 +3845,13 @@ PT. WAHANA BARA SENTOSA`;
                     setEditingEmpNik(null);
                     setSelectedDashboardRecordId(null);
                   }}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-100 hover:text-white px-3.5 py-1.5 rounded-lg border border-slate-700 text-xs font-bold flex items-center gap-2 transition cursor-pointer shadow-xs"
+                  className="bg-ink-800 hover:bg-ink-700 text-ink-100 hover:text-white px-3.5 py-1.5 rounded-lg border border-ink-700 text-xs font-bold flex items-center gap-2 transition cursor-pointer"
                 >
-                  <ArrowLeft className="w-4 h-4 text-rose-400" />
+                  <ArrowLeft className="w-4 h-4 text-danger-400" />
                   <span>{lang === 'ID' ? '← Kembali ke Formulir Asesmen' : '← Back to Assessment Form'}</span>
                 </button>
 
-                <div className="h-6 w-px bg-slate-700 hidden sm:block"></div>
+                <div className="h-6 w-px bg-ink-700 hidden sm:block"></div>
 
                 <div className="flex items-center gap-2.5">
                   <div className="bg-white p-1 rounded-md shrink-0">
@@ -3855,10 +3865,10 @@ PT. WAHANA BARA SENTOSA`;
                     />
                   </div>
                   <div>
-                    <h1 className="text-sm font-black uppercase tracking-wider text-white leading-none">
+                    <h1 className="text-sm font-black text-white leading-none">
                       {lang === 'ID' ? 'Halaman Admin Pusat' : 'Central Admin Portal'}
                     </h1>
-                    <p className="text-[10px] text-slate-400 font-medium leading-none mt-1">
+                    <p className="text-xs text-ink-400 font-medium leading-none mt-1">
                       PT. Wahana Bara Sentosa • Fatigue Management System
                     </p>
                   </div>
@@ -3869,9 +3879,9 @@ PT. WAHANA BARA SENTOSA`;
                 <button 
                   type="button"
                   onClick={() => setLang(lang === 'ID' ? 'EN' : 'ID')}
-                  className="text-xs font-bold bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-bold bg-ink-800 hover:bg-ink-700 border border-ink-700 text-ink-200 px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer"
                 >
-                  <span>🌎 {lang}</span>
+                  <span> {lang}</span>
                 </button>
 
                 {isAdminAuthenticated ? (
@@ -3883,7 +3893,7 @@ PT. WAHANA BARA SENTOSA`;
                       setAdminUsernameInput('');
                       setAdminPasswordInput('');
                     }}
-                    className="bg-rose-900 hover:bg-rose-800 text-rose-100 hover:text-white border border-rose-700 rounded-lg py-1.5 px-3 font-bold text-xs cursor-pointer transition shadow-sm uppercase tracking-wider flex items-center gap-1.5"
+                    className="bg-danger-900 hover:bg-danger-800 text-danger-100 hover:text-white border border-danger-700 rounded-lg py-1.5 px-3 font-bold text-xs cursor-pointer transition flex items-center gap-1.5"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Logout</span>
@@ -3895,9 +3905,9 @@ PT. WAHANA BARA SENTOSA`;
                       setIsAdminPage(false);
                       window.location.hash = '';
                     }}
-                    className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg py-1.5 px-3 font-bold text-xs cursor-pointer transition shadow-sm"
+                    className="bg-ink-800 hover:bg-ink-700 text-ink-200 border border-ink-700 rounded-lg py-1.5 px-3 font-bold text-xs cursor-pointer transition"
                   >
-                    ✕ Tutup
+                     Tutup
                   </button>
                 )}
               </div>
@@ -3906,15 +3916,33 @@ PT. WAHANA BARA SENTOSA`;
 
           {/* Kontainer Utama Halaman Admin */}
           <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 flex-1 flex flex-col">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col flex-1 overflow-hidden">
+            {uiBanner && (
+              <div data-ui className={`mb-4 p-3.5 rounded-xl border text-xs font-semibold flex items-start justify-between gap-3 ${
+                uiBanner.type === 'error'
+                  ? 'bg-danger-50 border-danger-200 text-danger-800'
+                  : uiBanner.type === 'success'
+                    ? 'bg-safe-50 border-safe-200 text-safe-800'
+                    : 'bg-info-50 border-info-200 text-info-800'
+              }`}>
+                <span className="whitespace-pre-wrap leading-relaxed">{uiBanner.text}</span>
+                <button
+                  type="button"
+                  onClick={() => setUiBanner(null)}
+                  className="text-xs font-bold px-2.5 py-1 rounded border border-current shrink-0 cursor-pointer"
+                >
+                  {lang === 'ID' ? 'Tutup' : 'Close'}
+                </button>
+              </div>
+            )}
+            <div data-ui className="bg-white rounded-2xl border border-ink-200 flex flex-col flex-1 overflow-hidden">
 
             {!isAdminAuthenticated ? (
               /* SECURE LOGIN SCREEN */
-              <div className="flex-1 overflow-y-auto p-6 sm:p-12 bg-neutral-50 flex items-center justify-center">
+              <div className="flex-1 overflow-y-auto p-6 sm:p-12 bg-ink-50 flex items-center justify-center">
                 <form 
                   onSubmit={(e) => {
                     e.preventDefault();
-                    if (adminUsernameInput.trim() === 'admin' && adminPasswordInput === 'wbsadmin123') {
+                    if (adminUsernameInput.trim() === 'admin' && adminPasswordInput === DEFAULT_ADMIN_PASSWORD) {
                       setIsAdminAuthenticated(true);
                       safeStorage.setSession('wbs_admin_auth', 'true');
                       setAdminLoginError('');
@@ -3922,35 +3950,35 @@ PT. WAHANA BARA SENTOSA`;
                       setAdminLoginError(lang === 'ID' ? 'Username atau password salah!' : 'Invalid username or password!');
                     }
                   }}
-                  className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8 max-w-md w-full shadow-lg"
+                  className="bg-white rounded-2xl border border-ink-200 p-6 sm:p-8 max-w-md w-full"
                 >
                   <div className="text-center mb-6">
-                    <div className="bg-rose-50 border border-rose-100 rounded-full w-14 h-14 flex items-center justify-center mx-auto mb-3">
-                      <ShieldAlert className="w-7 h-7 text-rose-700" />
+                    <div data-ui className="bg-danger-50 border border-danger-100 rounded-full w-14 h-14 flex items-center justify-center mx-auto mb-3">
+                      <ShieldAlert className="w-7 h-7 text-danger-700" />
                     </div>
-                    <h4 className="text-base font-black text-neutral-900 uppercase tracking-widest">
+                    <h4 className="text-base font-black text-ink-900">
                       {lang === 'ID' ? 'Verifikasi Keamanan' : 'Security Clearance Check'}
                     </h4>
-                    <p className="text-xs text-neutral-500 mt-1">
+                    <p className="text-xs text-ink-500 mt-1">
                       {lang === 'ID' ? 'Bagian ini dilindungi sandi untuk hak akses Administrator WBS.' : 'This panel is secure and requires authorization to manage records.'}
                     </p>
                   </div>
 
                   {adminLoginError && (
-                    <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-lg p-3 text-xs font-bold mb-4 text-center">
-                      ⚠️ {adminLoginError}
+                    <div data-ui className="bg-danger-50 border border-danger-200 text-danger-700 rounded-lg p-3 text-xs font-bold mb-4 text-center">
+                       {adminLoginError}
                     </div>
                   )}
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-[10px] font-black text-neutral-600 uppercase mb-1 tracking-wider">
+                      <label className="block text-xs font-black text-ink-600 mb-1">
                         {lang === 'ID' ? 'Username Pengguna:' : 'Admin Username:'}
                       </label>
                       <input 
                         type="text"
                         required
-                        className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-2 px-3 text-xs font-bold text-neutral-900 focus:ring-1 focus:ring-rose-500 outline-none"
+                        className="w-full bg-ink-50 border border-rule rounded-lg py-2 px-3 text-xs font-bold text-ink-900 focus:ring-1 focus:ring-danger-500"
                         placeholder="Masukkan username..."
                         value={adminUsernameInput}
                         onChange={(e) => setAdminUsernameInput(e.target.value)}
@@ -3958,13 +3986,13 @@ PT. WAHANA BARA SENTOSA`;
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-black text-neutral-600 uppercase mb-1 tracking-wider">
+                      <label className="block text-xs font-black text-ink-600 mb-1">
                         Password:
                       </label>
                       <input 
                         type="password"
                         required
-                        className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-2 px-3 text-xs font-mono font-bold text-neutral-900 focus:ring-1 focus:ring-rose-500 outline-none"
+                        className="w-full bg-ink-50 border border-rule rounded-lg py-2 px-3 text-xs tabular-nums font-bold text-ink-900 focus:ring-1 focus:ring-danger-500"
                         placeholder="••••••••"
                         value={adminPasswordInput}
                         onChange={(e) => setAdminPasswordInput(e.target.value)}
@@ -3975,9 +4003,9 @@ PT. WAHANA BARA SENTOSA`;
 
                     <button
                       type="submit"
-                      className="w-full bg-rose-700 hover:bg-rose-800 text-white font-black py-2.5 px-4 rounded-lg text-xs cursor-pointer text-center uppercase tracking-widest transition shadow-sm"
+                      className="w-full bg-danger-700 hover:bg-danger-800 text-white font-black py-2.5 px-4 rounded-lg text-xs cursor-pointer text-center transition"
                     >
-                      🔓 {lang === 'ID' ? 'Masuk Panel Admin' : 'Authorize & Unlock'}
+                       {lang === 'ID' ? 'Masuk Panel Admin' : 'Verify & Sign In'}
                     </button>
                   </div>
                 </form>
@@ -3986,59 +4014,59 @@ PT. WAHANA BARA SENTOSA`;
               /* AUTHENTICATED ADMIN DASHBOARD & SYSTEM CONTROLS */
               <>
                 {/* Tab segment buttons */}
-                <div className="bg-neutral-50 px-6 py-2 border-b border-neutral-200 flex items-center gap-1.5 shrink-0 overflow-x-auto">
+                <div data-ui className="bg-ink-50 px-6 py-2 border-b border-ink-200 flex items-center gap-1.5 shrink-0 overflow-x-auto">
                   <button
                     type="button"
                     onClick={() => setAdminActiveTab('dashboard')}
-                    className={`py-2 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition shrink-0 ${
+                    className={`py-2 px-3 rounded-lg font-black text-xs   cursor-pointer transition shrink-0 ${
                       adminActiveTab === 'dashboard' 
-                        ? 'bg-rose-600 text-white shadow-sm' 
-                        : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-250'
+                        ? 'bg-danger-600 text-white ' 
+                        : 'bg-ink-100 hover:bg-ink-200 text-ink-700 border border-rule'
                     }`}
                   >
-                    📊 Fit to Work Dashboard
+                     Fit to Work Dashboard
                   </button>
                   <button
                     type="button"
                     onClick={() => setAdminActiveTab('employees')}
-                    className={`py-2 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition shrink-0 ${
+                    className={`py-2 px-3 rounded-lg font-black text-xs   cursor-pointer transition shrink-0 ${
                       adminActiveTab === 'employees' 
-                        ? 'bg-rose-600 text-white shadow-sm' 
-                        : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-250'
+                        ? 'bg-danger-600 text-white ' 
+                        : 'bg-ink-100 hover:bg-ink-200 text-ink-700 border border-rule'
                     }`}
                   >
-                    👥 {lang === 'ID' ? 'Karyawan Aktif' : 'Employee Database'}
+                     {lang === 'ID' ? 'Karyawan Aktif' : 'Employee Database'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setAdminActiveTab('trends')}
-                    className={`py-2 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition shrink-0 flex items-center gap-1.5 ${
+                    className={`py-2 px-3 rounded-lg font-black text-xs   cursor-pointer transition shrink-0 flex items-center gap-1.5 ${
                       adminActiveTab === 'trends' 
-                        ? 'bg-rose-600 text-white shadow-sm' 
-                        : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-250'
+                        ? 'bg-danger-600 text-white ' 
+                        : 'bg-ink-100 hover:bg-ink-200 text-ink-700 border border-rule'
                     }`}
                   >
-                    <TrendingUp className="w-3.5 h-3.5 text-rose-500" />
-                    <span>📈 {lang === 'ID' ? 'Analisis Trend & Frekuensi' : 'Trend & Frequency Analysis'}</span>
+                    <TrendingUp className="w-3.5 h-3.5 text-danger-500" />
+                    <span> {lang === 'ID' ? 'Analisis Trend & Frekuensi' : 'Trend & Frequency Analysis'}</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setAdminActiveTab('integrations')}
-                    className={`py-2 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition shrink-0 flex items-center gap-1.5 ${
+                    className={`py-2 px-3 rounded-lg font-black text-xs   cursor-pointer transition shrink-0 flex items-center gap-1.5 ${
                       adminActiveTab === 'integrations' 
-                        ? 'bg-rose-600 text-white shadow-sm' 
-                        : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-250'
+                        ? 'bg-danger-600 text-white ' 
+                        : 'bg-ink-100 hover:bg-ink-200 text-ink-700 border border-rule'
                     }`}
                   >
-                    <Settings className="w-3.5 h-3.5 text-neutral-600" />
-                    <span>⚙️ {lang === 'ID' ? 'Integrasi & Cloud Backup' : 'Integrations & Cloud'}</span>
+                    <Settings className="w-3.5 h-3.5 text-ink-600" />
+                    <span> {lang === 'ID' ? 'Integrasi & Cloud Backup' : 'Integrations & Cloud'}</span>
                   </button>
                 </div>
 
                 {/* Scrollable Container */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-neutral-50">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-ink-50">
                   
-                  {/* TAB 1: INTERACTIVE FATIGUE & FIT TO WORK DASHBOARD */}
+                  {/* TAB 1: INTERACTIVE FATIGUE & Fit to Work DASHBOARD */}
                   {adminActiveTab === 'dashboard' && (() => {
                     // Helper to normalize date strings to YYYY-MM-DD
                     const normalizeDateStr = (d?: string) => {
@@ -4047,9 +4075,9 @@ PT. WAHANA BARA SENTOSA`;
                       const parts = clean.split('-');
                       if (parts.length === 3) {
                         if (parts[0].length === 4) {
-                          return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                          return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`; // taste-skill-ignore
                         } else if (parts[2].length === 4) {
-                          return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                          return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`; // taste-skill-ignore
                         }
                       }
                       return clean;
@@ -4125,90 +4153,90 @@ PT. WAHANA BARA SENTOSA`;
                     return (
                       <div className="flex flex-col gap-6">
                         {/* Interactive Toolbar Filter */}
-                        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
-                          <h4 className="text-xs font-black text-rose-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                            <span>🔍</span>
+                        <div data-ui className="bg-white rounded-xl border border-ink-200 p-4">
+                          <h4 className="text-xs font-black text-danger-800 mb-3 flex items-center gap-1.5">
+                            
                             <span>{lang === 'ID' ? 'Penyaringan Periode, Status, Shift & Karyawan' : 'Filter Period, Status, Shift & Employee'}</span>
                           </h4>
 
                           <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
                             <div>
-                              <label className="block text-[9px] font-black text-neutral-600 uppercase mb-1 tracking-wide">
+                              <label className="block text-xs font-black text-ink-600 mb-1">
                                 {lang === 'ID' ? 'Tanggal Mulai:' : 'Start Date:'}
                               </label>
                               <input 
                                 type="date"
-                                className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-1.5 px-2.5 text-xs font-bold text-neutral-900"
+                                className="w-full bg-ink-50 border border-rule rounded-lg py-1.5 px-2.5 text-xs font-bold text-ink-900"
                                 value={adminFilterStartDate}
                                 onChange={(e) => setAdminFilterStartDate(e.target.value)}
                               />
                             </div>
 
                             <div>
-                              <label className="block text-[9px] font-black text-neutral-600 uppercase mb-1 tracking-wide">
+                              <label className="block text-xs font-black text-ink-600 mb-1">
                                 {lang === 'ID' ? 'Tanggal Selesai:' : 'End Date:'}
                               </label>
                               <input 
                                 type="date"
-                                className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-1.5 px-2.5 text-xs font-bold text-neutral-900"
+                                className="w-full bg-ink-50 border border-rule rounded-lg py-1.5 px-2.5 text-xs font-bold text-ink-900"
                                 value={adminFilterEndDate}
                                 onChange={(e) => setAdminFilterEndDate(e.target.value)}
                               />
                             </div>
 
                             <div>
-                              <label className="block text-[9px] font-black text-neutral-600 uppercase mb-1 tracking-wide">
+                              <label className="block text-xs font-black text-ink-600 mb-1">
                                 {lang === 'ID' ? 'Pilih Shift:' : 'Filter Shift:'}
                               </label>
                               <select 
-                                className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-1.5 px-2 text-xs font-bold text-neutral-900 outline-none cursor-pointer focus:ring-1 focus:ring-rose-500"
+                                className="w-full bg-ink-50 border border-rule rounded-lg py-1.5 px-2 text-xs font-bold text-ink-900 cursor-pointer focus:ring-1 focus:ring-danger-500"
                                 value={adminFilterShift}
                                 onChange={(e) => setAdminFilterShift(e.target.value as any)}
                               >
-                                <option value="ALL">{lang === 'ID' ? '🟢 Semua Shift' : 'All Shifts'}</option>
-                                <option value="DAY">{lang === 'ID' ? '☀️ Shift Siang (Input 01:00 - 07:00)' : 'Day Shift (Input 01:00 - 07:00)'}</option>
-                                <option value="NIGHT">{lang === 'ID' ? '🌙 Shift Malam (Input 13:00 - 19:00)' : 'Night Shift (Input 13:00 - 19:00)'}</option>
+                                <option value="ALL">{lang === 'ID' ? ' Semua Shift' : 'All Shifts'}</option>
+                                <option value="DAY">{lang === 'ID' ? ' Shift Siang (Input 01:00 - 07:00)' : 'Day Shift (Input 01:00 - 07:00)'}</option>
+                                <option value="NIGHT">{lang === 'ID' ? ' Shift Malam (Input 13:00 - 19:00)' : 'Night Shift (Input 13:00 - 19:00)'}</option>
                               </select>
                             </div>
 
                             <div>
-                              <label className="block text-[9px] font-black text-neutral-600 uppercase mb-1 tracking-wide">
+                              <label className="block text-xs font-black text-ink-600 mb-1">
                                 {lang === 'ID' ? 'Status Kelayakan:' : 'Fitness Status:'}
                               </label>
                               <select 
-                                className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-1.5 px-2 text-xs font-bold text-neutral-950 outline-none cursor-pointer focus:ring-1 focus:ring-rose-500 font-extrabold"
+                                className="w-full bg-ink-50 border border-rule rounded-lg py-1.5 px-2 text-xs font-bold text-ink-950 cursor-pointer focus:ring-1 focus:ring-danger-500 font-extrabold"
                                 value={adminFilterStatus}
                                 onChange={(e) => setAdminFilterStatus(e.target.value as any)}
                               >
-                                <option value="ALL">📋 {lang === 'ID' ? 'Semua Status (Seluruh Laporan)' : 'All Status (Show All)'}</option>
-                                <option value="ANOMALY">🚨 {lang === 'ID' ? 'Hanya Data Aneh / Manipulasi Jam (Rahasia Pengawas)' : 'Suspicious / Anomaly Data Only'}</option>
-                                <option value="PROBLEMATIC">⚠️ {lang === 'ID' ? 'Hanya Bermasalah (Kurang/Tidak Fit)' : 'Problematic / Kurang Fit Only'}</option>
-                                <option value="FIT">🟢 FIT TO WORK</option>
-                                <option value="FIT_CONDITIONAL">🟡 BEKERJA DALAM PENGAWASAN KHUSUS</option>
-                                <option value="REST_BEFORE_WORK">🟠 WAJIB ISTIRAHAT SEBELUM BEKERJA</option>
-                                <option value="UNFIT">🔴 TIDAK BOLEH BEKERJA</option>
+                                <option value="ALL"> {lang === 'ID' ? 'Semua Status (Seluruh Laporan)' : 'All Status (Show All)'}</option>
+                                <option value="ANOMALY"> {lang === 'ID' ? 'Hanya Data Aneh / Manipulasi Jam (Rahasia Pengawas)' : 'Suspicious / Anomaly Data Only'}</option>
+                                <option value="PROBLEMATIC"> {lang === 'ID' ? 'Hanya Bermasalah (Kurang/Tidak Fit)' : 'Problematic / Kurang Fit Only'}</option>
+                                <option value="FIT"> Fit to Work</option>
+                                <option value="FIT_CONDITIONAL"> BEKERJA DALAM Pengawasan Khusus</option>
+                                <option value="REST_BEFORE_WORK"> Wajib Istirahat Sebelum Bekerja</option>
+                                <option value="UNFIT"> Tidak Boleh Bekerja</option>
                               </select>
                             </div>
 
                             <div>
-                              <label className="block text-[9px] font-black text-neutral-600 uppercase mb-1 tracking-wide">
+                              <label className="block text-xs font-black text-ink-600 mb-1">
                                 {lang === 'ID' ? 'Cari Nama / NIK:' : 'Search Name / NIK:'}
                               </label>
                               <div className="relative">
                                 <input 
                                   type="text"
                                   placeholder={lang === 'ID' ? 'Ketik nama / NIK...' : 'Search name / NIK...'}
-                                  className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-1.5 pl-6 pr-2 text-xs font-bold text-neutral-900 placeholder:text-neutral-400 placeholder:font-normal"
+                                  className="w-full bg-ink-50 border border-rule rounded-lg py-1.5 pl-6 pr-2 text-xs font-bold text-ink-900 placeholder:text-ink-400 placeholder:font-normal"
                                   value={adminSearchQuery}
                                   onChange={(e) => setAdminSearchQuery(e.target.value)}
                                 />
-                                <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-neutral-400 pointer-events-none">🔍</span>
+                                
                               </div>
                             </div>
                           </div>
 
-                          <div className="mt-3.5 flex flex-wrap justify-between items-center bg-neutral-50 border border-neutral-200/60 p-2 rounded-lg gap-2">
-                            <span className="text-[10px] text-neutral-500 font-semibold">
+                          <div data-ui className="mt-3.5 flex flex-wrap justify-between items-center bg-ink-50 border border-ink-200/60 p-2 rounded-lg gap-2">
+                            <span className="text-xs text-ink-500 font-semibold">
                               * {lang === 'ID' ? 'Kriteria Shift dinilai berdasarkan jam pengisian sertifikat laporan secara tepat.' : 'Shift determined based on the exact submission timestamp hour.'}
                             </span>
                             <div className="flex items-center gap-2 flex-wrap">
@@ -4217,16 +4245,16 @@ PT. WAHANA BARA SENTOSA`;
                                 onClick={() => {
                                   const niks = Array.from(new Set(periodRecords.map(r => r.nik))).filter(Boolean);
                                   if (niks.length === 0) {
-                                    alert(lang === 'ID' ? 'Tidak ada data NIK pada filter ini' : 'No NIKs in this filter');
+                                    notifyUser(lang === 'ID' ? 'Tidak ada data NIK pada filter ini' : 'No NIKs in this filter');
                                     return;
                                   }
                                   navigator.clipboard.writeText(niks.join('\n'));
-                                  alert(lang === 'ID' ? `✅ Berhasil menyalin ${niks.length} NIK karyawan/operator untuk shift & tanggal ini ke clipboard!` : `✅ Copied ${niks.length} operator NIKs to clipboard!`);
+                                  notifyUser(lang === 'ID' ? ` Berhasil menyalin ${niks.length} NIK karyawan/operator untuk shift & tanggal ini ke clipboard!` : ` Copied ${niks.length} operator NIKs to clipboard!`);
                                 }}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase py-1 px-2.5 rounded cursor-pointer transition shadow-xs flex items-center gap-1"
+                                className="bg-safe-600 hover:bg-safe-700 text-white text-xs font-black py-1 px-2.5 rounded cursor-pointer transition flex items-center gap-1"
                                 title="Salin daftar NIK ke clipboard untuk setting operator"
                               >
-                                📋 Salin Daftar NIK ({Array.from(new Set(periodRecords.map(r => r.nik))).filter(Boolean).length})
+                                 Salin Daftar NIK ({Array.from(new Set(periodRecords.map(r => r.nik))).filter(Boolean).length})
                               </button>
                               <button
                                 type="button"
@@ -4237,9 +4265,9 @@ PT. WAHANA BARA SENTOSA`;
                                   setAdminFilterStatus('ALL');
                                   setAdminSearchQuery('');
                                 }}
-                                className="bg-neutral-200 hover:bg-neutral-300 text-neutral-700 text-[10px] font-black uppercase py-1 px-3 border border-neutral-300 rounded cursor-pointer transition shadow-sm"
+                                className="bg-ink-200 hover:bg-ink-300 text-ink-700 text-xs font-black py-1 px-3 border border-ink-300 rounded cursor-pointer transition"
                               >
-                                🔄 Clear Filters
+                                 Clear Filters
                               </button>
                             </div>
                           </div>
@@ -4247,79 +4275,85 @@ PT. WAHANA BARA SENTOSA`;
 
                         {/* Summary Widget Badge Cards */}
                         <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5">
-                          <div 
+                          <button
+                            type="button"
                             onClick={() => setAdminFilterStatus('ALL')}
-                            className={`border rounded-xl p-3 text-center shadow-xs cursor-pointer transition ${adminFilterStatus === 'ALL' ? 'bg-neutral-900 text-white border-neutral-950 ring-2 ring-neutral-400' : 'bg-white hover:bg-neutral-50 border-neutral-200'}`}
+                            className={`border rounded-xl p-3 text-center whitespace-nowrap cursor-pointer transition-colors ${adminFilterStatus === 'ALL' ? 'bg-ink-900 text-ink-50 border-ink-950 ring-2 ring-ink-400' : 'bg-elevated hover:bg-surface border-rule'}`}
                           >
-                            <span className={`block text-[9px] font-black uppercase tracking-wider ${adminFilterStatus === 'ALL' ? 'text-neutral-300' : 'text-neutral-500'}`}>{lang === 'ID' ? 'TOTAL PENILAIAN' : 'TOTAL PERIOD'}</span>
-                            <span className={`block text-xl font-mono font-black mt-1 ${adminFilterStatus === 'ALL' ? 'text-white' : 'text-neutral-900'}`}>{periodTotalCount}</span>
-                            <span className={`text-[8.5px] font-bold block mt-0.5 uppercase ${adminFilterStatus === 'ALL' ? 'text-neutral-300' : 'text-neutral-400'}`}>Laporan</span>
-                          </div>
+                            <span className={`block text-xs font-bold ${adminFilterStatus === 'ALL' ? 'text-ink-200' : 'text-ink-500'}`}>{lang === 'ID' ? 'Total Penilaian' : 'Total Period'}</span>
+                            <span className={`block text-xl tabular-nums font-black mt-1 ${adminFilterStatus === 'ALL' ? 'text-ink-50' : 'text-ink-900'}`}>{periodTotalCount}</span>
+                            <span className={`text-xs font-semibold block mt-0.5 ${adminFilterStatus === 'ALL' ? 'text-ink-200' : 'text-ink-500'}`}>Laporan</span>
+                          </button>
 
-                          <div 
+                          <button
+                            type="button"
                             onClick={() => setAdminFilterStatus('PROBLEMATIC')}
-                            className={`border rounded-xl p-3 text-center shadow-xs cursor-pointer transition ${adminFilterStatus === 'PROBLEMATIC' ? 'bg-rose-700 text-white border-rose-800 ring-2 ring-rose-400' : 'bg-rose-50 hover:bg-rose-100 border-rose-200'}`}
+                            className={`border rounded-xl p-3 text-center whitespace-nowrap cursor-pointer transition-colors ${adminFilterStatus === 'PROBLEMATIC' ? 'bg-danger-700 text-ink-50 border-danger-800 ring-2 ring-danger-400' : 'bg-danger-50 hover:bg-danger-100 border-danger-200'}`}
                           >
-                            <span className={`block text-[9px] font-black uppercase tracking-wider ${adminFilterStatus === 'PROBLEMATIC' ? 'text-white' : 'text-rose-700'}`}>⚠️ {lang === 'ID' ? 'BERMASALAH' : 'CURBED ISSUES'}</span>
-                            <span className={`block text-xl font-mono font-black mt-1 ${adminFilterStatus === 'PROBLEMATIC' ? 'text-white' : 'text-rose-800'}`}>{problematicCount}</span>
-                            <span className={`text-[8.5px] font-bold block mt-0.5 uppercase ${adminFilterStatus === 'PROBLEMATIC' ? 'text-rose-100' : 'text-rose-500'}`}>({periodTotalCount > 0 ? Math.round((problematicCount/periodTotalCount)*100) : 0}%) Kurang Fit</span>
-                          </div>
+                            <span className={`block text-xs font-bold ${adminFilterStatus === 'PROBLEMATIC' ? 'text-ink-50' : 'text-danger-700'}`}>{lang === 'ID' ? 'Bermasalah' : 'Curbed Issues'}</span>
+                            <span className={`block text-xl tabular-nums font-black mt-1 ${adminFilterStatus === 'PROBLEMATIC' ? 'text-ink-50' : 'text-danger-800'}`}>{problematicCount}</span>
+                            <span className={`text-xs font-semibold block mt-0.5 ${adminFilterStatus === 'PROBLEMATIC' ? 'text-danger-100' : 'text-danger-600'}`}>({periodTotalCount > 0 ? Math.round((problematicCount/periodTotalCount)*100) : 0}%) Kurang Fit</span>
+                          </button>
 
-                          <div 
+                          <button
+                            type="button"
                             onClick={() => setAdminFilterStatus(adminFilterStatus === 'ANOMALY' ? 'ALL' : 'ANOMALY')}
-                            className={`border rounded-xl p-3 text-center shadow-xs cursor-pointer transition ${
+                            className={`border rounded-xl p-3 text-center whitespace-nowrap cursor-pointer transition-colors ${
                               adminFilterStatus === 'ANOMALY'
-                                ? 'bg-red-600 text-white border-red-700 ring-2 ring-red-400 shadow-md' 
+                                ? 'bg-danger-600 text-ink-50 border-danger-700 ring-2 ring-danger-400' 
                                 : anomalyCount > 0 
-                                  ? 'bg-red-50 hover:bg-red-100 border-red-300 animate-pulse' 
-                                  : 'bg-neutral-50 border-neutral-200'
+                                  ? 'bg-danger-50 hover:bg-danger-100 border-danger-300' 
+                                  : 'bg-surface border-rule'
                             }`}
                             title="Filter karyawan yang mengisi data aneh / manipulasi jam (rahasia pengawas)"
                           >
-                            <span className={`block text-[9px] font-black uppercase tracking-wider ${adminFilterStatus === 'ANOMALY' ? 'text-white' : 'text-red-700'}`}>
-                              🚨 {lang === 'ID' ? 'DATA ANEH' : 'ANOMALIES'}
+                            <span className={`block text-xs font-bold ${adminFilterStatus === 'ANOMALY' ? 'text-ink-50' : 'text-danger-700'}`}>
+                              {lang === 'ID' ? 'Data Anomali' : 'Anomalies'}
                             </span>
-                            <span className={`block text-xl font-mono font-black mt-1 ${adminFilterStatus === 'ANOMALY' ? 'text-white' : 'text-red-850'}`}>
+                            <span className={`block text-xl tabular-nums font-black mt-1 ${adminFilterStatus === 'ANOMALY' ? 'text-ink-50' : 'text-danger-800'}`}>
                               {anomalyCount}
                             </span>
-                            <span className={`text-[8px] font-bold block mt-0.5 uppercase ${adminFilterStatus === 'ANOMALY' ? 'text-red-100' : 'text-red-600'}`}>
-                              {lang === 'ID' ? 'Rahasia Pengawas' : 'Supervisor Secret'}
+                            <span className={`text-xs font-semibold block mt-0.5 ${adminFilterStatus === 'ANOMALY' ? 'text-danger-100' : 'text-danger-600'}`}>
+                              {lang === 'ID' ? 'Rahasia Pengawas' : 'Supervisor Only'}
                             </span>
-                          </div>
+                          </button>
 
-                          <div 
+                          <button
+                            type="button"
                             onClick={() => setAdminFilterStatus('FIT_CONDITIONAL')}
-                            className={`border rounded-xl p-3 text-center shadow-sm cursor-pointer transition ${adminFilterStatus === 'FIT_CONDITIONAL' ? 'bg-amber-600 text-white border-amber-700 ring-2 ring-amber-400' : 'bg-amber-50 hover:bg-amber-100 border-amber-200'}`}
+                            className={`border rounded-xl p-3 text-center whitespace-nowrap cursor-pointer transition-colors ${adminFilterStatus === 'FIT_CONDITIONAL' ? 'bg-warn-600 text-ink-50 border-warn-700 ring-2 ring-warn-400' : 'bg-warn-50 hover:bg-warn-100 border-warn-200'}`}
                           >
-                            <span className={`block text-[9px] font-black uppercase tracking-wide ${adminFilterStatus === 'FIT_CONDITIONAL' ? 'text-white' : 'text-amber-700'}`}>🟡 PENGAWASAN</span>
-                            <span className={`block text-base font-black mt-1.5 ${adminFilterStatus === 'FIT_CONDITIONAL' ? 'text-white' : 'text-amber-800'}`}>{fitCondCount}</span>
-                            <span className={`text-[8px] font-bold block mt-1 uppercase ${adminFilterStatus === 'FIT_CONDITIONAL' ? 'text-amber-100' : 'text-amber-500'}`}>Pengawasan Khusus</span>
-                          </div>
+                            <span className={`block text-xs font-bold ${adminFilterStatus === 'FIT_CONDITIONAL' ? 'text-ink-50' : 'text-warn-700'}`}>Pengawasan</span>
+                            <span className={`block text-xl tabular-nums font-black mt-1 ${adminFilterStatus === 'FIT_CONDITIONAL' ? 'text-ink-50' : 'text-warn-800'}`}>{fitCondCount}</span>
+                            <span className={`text-xs font-semibold block mt-0.5 ${adminFilterStatus === 'FIT_CONDITIONAL' ? 'text-warn-100' : 'text-warn-600'}`}>Pantau</span>
+                          </button>
 
-                          <div 
+                          <button
+                            type="button"
                             onClick={() => setAdminFilterStatus('REST_BEFORE_WORK')}
-                            className={`border rounded-xl p-3 text-center shadow-sm cursor-pointer transition ${adminFilterStatus === 'REST_BEFORE_WORK' ? 'bg-orange-600 text-white border-orange-700 ring-2 ring-orange-400' : 'bg-orange-50 hover:bg-orange-100 border-orange-200/80'}`}
+                            className={`border rounded-xl p-3 text-center whitespace-nowrap cursor-pointer transition-colors ${adminFilterStatus === 'REST_BEFORE_WORK' ? 'bg-caution-600 text-ink-50 border-caution-700 ring-2 ring-caution-400' : 'bg-caution-50 hover:bg-caution-100 border-caution-200'}`}
                           >
-                            <span className={`block text-[9px] font-black uppercase tracking-wide ${adminFilterStatus === 'REST_BEFORE_WORK' ? 'text-white' : 'text-orange-700'}`}>🟠 ISTIRAHAT</span>
-                            <span className={`block text-base font-black mt-1.5 ${adminFilterStatus === 'REST_BEFORE_WORK' ? 'text-white' : 'text-orange-850'}`}>{restCount}</span>
-                            <span className={`text-[8px] font-bold block mt-1 uppercase ${adminFilterStatus === 'REST_BEFORE_WORK' ? 'text-orange-100' : 'text-orange-500'}`}>Wajib Istirahat</span>
-                          </div>
+                            <span className={`block text-xs font-bold ${adminFilterStatus === 'REST_BEFORE_WORK' ? 'text-ink-50' : 'text-caution-700'}`}>Istirahat</span>
+                            <span className={`block text-xl tabular-nums font-black mt-1 ${adminFilterStatus === 'REST_BEFORE_WORK' ? 'text-ink-50' : 'text-caution-800'}`}>{restCount}</span>
+                            <span className={`text-xs font-semibold block mt-0.5 ${adminFilterStatus === 'REST_BEFORE_WORK' ? 'text-caution-100' : 'text-caution-600'}`}>Wajib Tidur</span>
+                          </button>
 
-                          <div 
+                          <button
+                            type="button"
                             onClick={() => setAdminFilterStatus('UNFIT')}
-                            className={`border rounded-xl p-3 text-center shadow-sm cursor-pointer transition ${adminFilterStatus === 'UNFIT' ? 'bg-rose-700 text-white border-rose-800 ring-2 ring-rose-400' : 'bg-rose-100 hover:bg-rose-200 border-rose-200'}`}
+                            className={`border rounded-xl p-3 text-center whitespace-nowrap cursor-pointer transition-colors ${adminFilterStatus === 'UNFIT' ? 'bg-danger-700 text-ink-50 border-danger-800 ring-2 ring-danger-400' : 'bg-danger-100 hover:bg-danger-200 border-danger-200'}`}
                           >
-                            <span className={`block text-[9px] font-black uppercase tracking-wide ${adminFilterStatus === 'UNFIT' ? 'text-white' : 'text-rose-800'}`}>🔴 TIDAK BOLEH KERJA</span>
-                            <span className={`block text-base font-black mt-1.5 ${adminFilterStatus === 'UNFIT' ? 'text-white' : 'text-rose-900'}`}>{unfitCount}</span>
-                            <span className={`text-[8px] font-bold block mt-1 uppercase ${adminFilterStatus === 'UNFIT' ? 'text-rose-100' : 'text-rose-600'}`}>Dilarang Bekerja</span>
-                          </div>
+                            <span className={`block text-xs font-bold ${adminFilterStatus === 'UNFIT' ? 'text-ink-50' : 'text-danger-800'}`}>Tidak Fit</span>
+                            <span className={`block text-xl tabular-nums font-black mt-1 ${adminFilterStatus === 'UNFIT' ? 'text-ink-50' : 'text-danger-900'}`}>{unfitCount}</span>
+                            <span className={`text-xs font-semibold block mt-0.5 ${adminFilterStatus === 'UNFIT' ? 'text-danger-100' : 'text-danger-600'}`}>Dilarang</span>
+                          </button>
                         </div>
 
                         {/* Table list */}
-                        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-xs">
-                          <div className="bg-rose-950/5 border-b border-neutral-200 px-4 py-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2.5">
-                            <span className="text-xs font-black text-neutral-900 uppercase tracking-wider flex items-center gap-1.5">
-                              <span>📊</span>
+                        <div data-ui className="bg-white rounded-xl border border-ink-200 overflow-hidden">
+                          <div data-ui className="bg-danger-950/5 border-b border-ink-200 px-4 py-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2.5">
+                            <span className="text-xs font-black text-ink-900 flex items-center gap-1.5">
+                              
                               <span>
                                 {adminFilterStatus === 'PROBLEMATIC'
                                   ? (lang === 'ID' ? 'Daftar Karyawan Kurang Fit Terdeteksi' : 'Problematic Fatigue Fit-to-Work logs')
@@ -4332,22 +4366,22 @@ PT. WAHANA BARA SENTOSA`;
                                 type="button"
                                 onClick={() => syncAssessmentsFromCloud(true)}
                                 disabled={isCloudSyncing}
-                                className="bg-white hover:bg-neutral-100 text-neutral-700 font-bold text-[10.5px] px-2.5 py-1.5 rounded-lg border border-neutral-300 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+                                className="bg-white hover:bg-ink-100 text-ink-700 font-bold text-xs px-2.5 py-1.5 rounded-lg border border-ink-300 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                                 title={lastCloudSyncTime ? `Terakhir sinkron: ${lastCloudSyncTime}` : 'Segarkan data'}
                               >
-                                <RefreshCw className={`w-3.5 h-3.5 ${isCloudSyncing ? 'animate-spin text-emerald-600' : 'text-neutral-600'}`} />
+                                <RefreshCw className={`w-3.5 h-3.5 ${isCloudSyncing ? 'animate-spin text-safe-600' : 'text-ink-600'}`} />
                                 <span className="hidden sm:inline">{isCloudSyncing ? (lang === 'ID' ? 'Memuat...' : 'Syncing...') : (lang === 'ID' ? 'Segarkan' : 'Refresh')}</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleExportExcel(filteredRecords)}
-                                className="bg-emerald-600 hover:bg-emerald-700 font-bold text-white text-[10.5px] px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm tracking-wide"
+                                className="bg-safe-600 hover:bg-safe-700 font-bold text-white text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
                                 title="Unduh data tabel ke format Excel (.xlsx)"
                               >
-                                <span>📊</span>
+                                
                                 <span>{lang === 'ID' ? 'Unduh Rekap (Excel)' : 'Download Excel (.xlsx)'}</span>
                               </button>
-                              <span className="bg-neutral-800 text-white text-[9px] px-2 py-1 font-mono font-bold rounded-full h-fit shrink-0">
+                              <span className="bg-ink-800 text-white text-xs px-2 py-1 tabular-nums font-bold rounded-full h-fit shrink-0">
                                 {filteredRecords.length} Logs Match
                               </span>
                             </div>
@@ -4355,20 +4389,20 @@ PT. WAHANA BARA SENTOSA`;
 
                           {/* Active Search Result Banner */}
                           {isSearching && (
-                            <div className="bg-sky-50 border border-sky-200 text-sky-900 px-3.5 py-2.5 rounded-xl text-xs font-bold flex flex-wrap items-center justify-between gap-2 shadow-xs">
+                            <div data-ui className="bg-info-50 border border-info-200 text-info-900 px-3.5 py-2.5 rounded-xl text-xs font-bold flex flex-wrap items-center justify-between gap-2">
                               <div className="flex items-center gap-2">
-                                <span className="text-base">🔍</span>
+                                
                                 <span>
-                                  {lang === 'ID' ? 'Hasil pencarian untuk:' : 'Search results for:'} <span className="bg-sky-200/80 px-1.5 py-0.5 rounded font-mono text-sky-950 font-black">"{adminSearchQuery}"</span>
-                                  <span className="ml-2 font-normal text-sky-700">({filteredRecords.length} {lang === 'ID' ? 'laporan ditemukan di seluruh shift' : 'records matched across all shifts'})</span>
+                                  {lang === 'ID' ? 'Hasil pencarian untuk:' : 'Search results for:'} <span className="bg-info-200/80 px-1.5 py-0.5 rounded tabular-nums text-info-950 font-black">"{adminSearchQuery}"</span>
+                                  <span className="ml-2 font-normal text-info-700">({filteredRecords.length} {lang === 'ID' ? 'laporan ditemukan di seluruh shift' : 'records matched across all shifts'})</span>
                                 </span>
                               </div>
                               <button 
                                 type="button" 
                                 onClick={() => setAdminSearchQuery('')} 
-                                className="text-rose-600 hover:text-rose-800 text-[11px] font-black uppercase underline cursor-pointer"
+                                className="text-danger-600 hover:text-danger-800 text-xs font-black underline cursor-pointer"
                               >
-                                ✕ {lang === 'ID' ? 'Hapus Pencarian' : 'Clear Search'}
+                                 {lang === 'ID' ? 'Hapus Pencarian' : 'Clear Search'}
                               </button>
                             </div>
                           )}
@@ -4376,17 +4410,17 @@ PT. WAHANA BARA SENTOSA`;
                           <div className="overflow-x-auto">
                             <table className="w-full text-left text-xs border-collapse font-sans">
                               <thead>
-                                <tr className="bg-neutral-50 border-b border-neutral-200 text-neutral-500 font-black uppercase text-[9.5px]">
+                                <tr className="bg-ink-50 border-b border-ink-200 text-ink-500 font-black text-xs">
                                   <th className="px-4 py-3 text-center">{lang === 'ID' ? 'WAKTU LAPOR & ID TIKET' : 'DATE, TIME & TICKET ID'}</th>
                                   <th className="px-4 py-3">{lang === 'ID' ? 'IDENTITAS KARYAWAN' : 'EMPLOYEE IDENTITY'}</th>
-                                  <th className="px-3 py-3 text-center">SHIFT</th>
-                                  <th className="px-4 py-3">{lang === 'ID' ? 'DETAIL JAM TIDUR' : 'SLEEP DURATION'}</th>
+                                  <th className="px-3 py-3 text-center">Shift</th>
+                                  <th className="px-4 py-3 text-right">{lang === 'ID' ? 'Detail Jam Tidur' : 'Sleep Duration'}</th>
                                   <th className="px-4 py-3">{lang === 'ID' ? 'ASPEK RISIKO' : 'RISKY METRIC'}</th>
                                   <th className="px-4 py-3 text-center">{lang === 'ID' ? 'REKOMENDASI FIT' : 'FIT DECISION'}</th>
                                   <th className="px-4 py-3 text-center">AKSI</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-neutral-150">
+                              <tbody className="divide-y divide-rule">
                                 {filteredRecords.map((rec, index) => {
                                   // Parse shift
                                   const isDay = checkIsDayShift(rec.jamPengisian);
@@ -4398,65 +4432,65 @@ PT. WAHANA BARA SENTOSA`;
                                   const anom = checkAssessmentAnomalies(rec);
 
                                   return (
-                                    <tr key={rec.id ? `${rec.id}-${index}` : index} className={`hover:bg-neutral-50/70 transition-colors ${
-                                      rec.finalDecision === 'UNFIT' ? 'bg-rose-50/20' : 
-                                      anom.hasAnomaly ? 'bg-red-50/30' : 
-                                      rec.finalDecision === 'REST_BEFORE_WORK' ? 'bg-orange-50/10' : ''
+                                    <tr key={rec.id ? `${rec.id}-${index}` : index} className={`hover:bg-ink-50/70 transition-colors ${
+                                      rec.finalDecision === 'UNFIT' ? 'bg-danger-50/20' : 
+                                      anom.hasAnomaly ? 'bg-danger-50/30' : 
+                                      rec.finalDecision === 'REST_BEFORE_WORK' ? 'bg-caution-50/10' : ''
                                     }`}>
                                       <td className="px-4 py-3 text-center whitespace-nowrap align-middle">
-                                        <div className="font-bold text-neutral-900 font-mono text-[11px]">
+                                        <div className="font-bold text-ink-900 tabular-nums text-xs">
                                           {rec.tanggalPengisian}
                                         </div>
-                                        <div className="text-[9.5px] text-neutral-400 font-semibold mt-0.5">
-                                          ⏱️ {rec.jamPengisian}
+                                        <div className="text-xs text-ink-400 font-semibold mt-0.5">
+                                           {rec.jamPengisian}
                                         </div>
-                                        <div className="text-[9px] font-mono text-neutral-600 font-black bg-neutral-100 border border-neutral-250 px-1.5 py-0.5 rounded mt-1 inline-block tracking-tight" title={`ID Tiket: ${rec.id}`}>
+                                        <div data-ui className="text-xs tabular-nums text-ink-600 font-black bg-ink-100 border border-rule px-1.5 py-0.5 rounded mt-1 inline-block tracking-tight" title={`ID Tiket: ${rec.id}`}>
                                           ID: {rec.id}
                                         </div>
                                         {anom.hasAnomaly && (
                                           <div className="mt-1">
-                                            <span 
-                                              className="text-[8.5px] font-black text-rose-700 bg-rose-100 border border-rose-300 px-1.5 py-0.5 rounded uppercase tracking-tight inline-block"
+                                            <span data-ui 
+                                              className="text-xs font-black text-danger-700 bg-danger-100 border border-danger-300 px-1.5 py-0.5 rounded tracking-tight inline-block"
                                               title={anom.reasons.join('\n')}
                                             >
-                                              🚨 DATA ANEH
+                                               Data Anomali
                                             </span>
                                           </div>
                                         )}
                                       </td>
                                       
                                       <td className="px-4 py-3 align-middle">
-                                        <div className="font-black text-neutral-900 text-xs flex items-center gap-1">
+                                        <div className="font-black text-ink-900 text-xs flex items-center gap-1">
                                           <span>{rec.nama}</span>
-                                          <span className="font-mono text-[9.5px] font-black text-neutral-400">({rec.nik})</span>
+                                          <span className="tabular-nums text-xs font-black text-ink-400">({rec.nik})</span>
                                         </div>
-                                        <div className="text-[10px] text-neutral-500 font-bold uppercase mt-0.5 tracking-tight">
-                                          {rec.jabatan} • <span className="text-neutral-400 font-medium">{rec.dept}</span>
+                                        <div className="text-xs text-ink-500 font-bold mt-0.5 tracking-tight">
+                                          {rec.jabatan} • <span className="text-ink-400 font-medium">{rec.dept}</span>
                                         </div>
                                       </td>
 
                                       <td className="px-3 py-3 text-center align-middle whitespace-nowrap">
                                         {isDay ? (
-                                          <span className="inline-flex items-center gap-0.5 bg-amber-50 border border-amber-200 text-amber-800 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
-                                            ☀️ SIANG
+                                          <span data-ui className="inline-flex items-center gap-0.5 bg-warn-50 border border-warn-200 text-warn-800 text-xs font-black px-1.5 py-0.5 rounded">
+                                             Siang
                                           </span>
                                         ) : (
-                                          <span className="inline-flex items-center gap-0.5 bg-indigo-50 border border-indigo-200 text-indigo-800 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
-                                            🌙 MALAM
+                                          <span data-ui className="inline-flex items-center gap-0.5 bg-info-50 border border-info-200 text-info-800 text-xs font-black px-1.5 py-0.5 rounded">
+                                             Malam
                                           </span>
                                         )}
                                       </td>
 
-                                      <td className="px-4 py-3 align-middle whitespace-nowrap">
-                                        <div className="text-[11px]">
-                                          <span className="font-bold text-neutral-500 uppercase text-[9px]">12 Jam:</span>{' '}
-                                          <span className={`font-mono font-black ${sleepheroLow ? 'text-rose-600' : 'text-neutral-800'}`}>
+                                      <td className="px-4 py-3 text-right align-middle whitespace-nowrap tabular-nums">
+                                        <div className="text-xs">
+                                          <span className="font-bold text-ink-500 text-xs">12 Jam:</span>{' '}
+                                          <span className={`tabular-nums font-black ${sleepheroLow ? 'text-danger-600' : 'text-ink-800'}`}>
                                             {rec.totalSleep12} Jam
                                           </span>
                                         </div>
-                                        <div className="text-[11px] mt-1 pt-1 border-t border-neutral-150">
-                                          <span className="font-bold text-neutral-400 uppercase text-[9px]">36 Jam:</span>{' '}
-                                          <span className="font-mono font-bold text-neutral-700">
+                                        <div data-ui className="text-xs mt-1 pt-1 border-t border-rule">
+                                          <span className="font-bold text-ink-400 text-xs">36 Jam:</span>{' '}
+                                          <span className="tabular-nums font-bold text-ink-700">
                                             {rec.totalSleep36} Jam
                                           </span>
                                         </div>
@@ -4465,49 +4499,49 @@ PT. WAHANA BARA SENTOSA`;
                                       <td className="px-4 py-3 align-middle">
                                         <div className="flex flex-col gap-1 max-w-[160px]">
                                           {anom.hasAnomaly && (
-                                            <span 
-                                              className="text-[9px] font-black text-rose-800 bg-rose-100 border border-rose-300 rounded px-1.5 py-0.5 w-fit leading-tight" 
+                                            <span data-ui 
+                                              className="text-xs font-black text-danger-800 bg-danger-100 border border-danger-300 rounded px-1.5 py-0.5 w-fit leading-tight" 
                                               title={anom.reasons.join('\n')}
                                             >
-                                              🚨 {anom.reasons[0].length > 40 ? anom.reasons[0].substring(0, 40) + '...' : anom.reasons[0]}
+                                               {anom.reasons[0].length > 40 ? anom.reasons[0].substring(0, 40) + '...' : anom.reasons[0]}
                                             </span>
                                           )}
                                           {rec.consumesObat && (
-                                            <span className="text-[9.5px] font-bold text-yellow-700 bg-yellow-50 border border-yellow-200 rounded px-1.5 py-0.2 w-fit">
-                                              💊 Obat / Meds
+                                            <span data-ui className="text-xs font-bold text-warn-700 bg-warn-50 border border-warn-200 rounded px-1.5 py-0.5 w-fit">
+                                               Obat / Meds
                                             </span>
                                           )}
                                           {rec.hasPersonalProblem && (
-                                            <span className="text-[9.5px] font-bold text-red-700 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.2 w-fit">
-                                              ⚠️ Masalah Keluarga
+                                            <span data-ui className="text-xs font-bold text-danger-700 bg-danger-50 border border-danger-200 rounded px-1.5 py-0.5 w-fit">
+                                               Masalah Keluarga
                                             </span>
                                           )}
                                           {rec.totalFatigueScore >= 6 ? (
-                                            <span className="text-[9.5px] font-bold text-orange-700 bg-orange-50 border border-orange-200 rounded px-1.5 py-0.2 w-fit">
-                                              💤 Fatigue Score: {rec.totalFatigueScore}
+                                            <span data-ui className="text-xs font-bold text-caution-700 bg-caution-50 border border-caution-200 rounded px-1.5 py-0.5 w-fit">
+                                               Fatigue Score: {rec.totalFatigueScore}
                                             </span>
                                           ) : !anom.hasAnomaly && !rec.consumesObat && !rec.hasPersonalProblem ? (
-                                            <span className="text-[9px] font-medium text-neutral-400">✓ No risk drugs</span>
+                                            <span className="text-xs font-medium text-ink-400"> No risk drugs</span>
                                           ) : null}
                                         </div>
                                       </td>
 
                                       <td className="px-4 py-3 text-center align-middle whitespace-nowrap">
                                         {rec.finalDecision === 'FIT' ? (
-                                          <span className="inline-block px-2.5 py-1 bg-emerald-100 text-emerald-800 border border-emerald-250 font-black text-[9.5px] tracking-wide rounded-lg uppercase">
-                                            🟢 FIT TO WORK
+                                          <span data-ui className="inline-block px-2.5 py-1 bg-safe-100 text-safe-800 border border-safe-200 font-black text-xs rounded-lg">
+                                             Fit to Work
                                           </span>
                                         ) : rec.finalDecision === 'FIT_CONDITIONAL' ? (
-                                          <span className="inline-block px-2.5 py-1 bg-amber-100 text-amber-800 border border-amber-255 font-black text-[9.5px] tracking-wide rounded-lg uppercase">
-                                            🟡 PENGAWASAN KHUSUS
+                                          <span data-ui className="inline-block px-2.5 py-1 bg-warn-100 text-warn-800 border border-warn-200 font-black text-xs rounded-lg">
+                                             Pengawasan Khusus
                                           </span>
                                         ) : rec.finalDecision === 'REST_BEFORE_WORK' ? (
-                                          <span className="inline-block px-2.5 py-1 bg-orange-100 text-orange-850 border border-orange-200 font-black text-[9.5px] tracking-wide rounded-lg uppercase">
-                                            🟠 WAJIB ISTIRAHAT
+                                          <span data-ui className="inline-block px-2.5 py-1 bg-caution-100 text-caution-800 border border-caution-200 font-black text-xs rounded-lg">
+                                             Wajib Istirahat
                                           </span>
                                         ) : (
-                                          <span className="inline-block px-2.5 py-1 bg-rose-100 text-rose-800 border border-rose-250 font-black text-[9.5px] tracking-wide rounded-lg uppercase">
-                                            🔴 TIDAK BOLEH BEKERJA
+                                          <span data-ui className="inline-block px-2.5 py-1 bg-danger-100 text-danger-800 border border-danger-200 font-black text-xs rounded-lg">
+                                             Tidak Boleh Bekerja
                                           </span>
                                         )}
                                       </td>
@@ -4516,9 +4550,9 @@ PT. WAHANA BARA SENTOSA`;
                                         <button
                                           type="button"
                                           onClick={() => setSelectedDashboardRecordId(rec.id)}
-                                          className="bg-neutral-800 hover:bg-neutral-900 hover:scale-103 font-bold text-white text-[10px] px-2.5 py-1 rounded transition-all cursor-pointer shadow-xs uppercase tracking-tight"
+                                          className="bg-ink-800 hover:bg-ink-900 font-bold text-white text-xs px-2.5 py-1 rounded transition-colors cursor-pointer tracking-tight"
                                         >
-                                          🔍 DETAIL
+                                           Detail
                                         </button>
                                       </td>
                                     </tr>
@@ -4527,7 +4561,7 @@ PT. WAHANA BARA SENTOSA`;
 
                                 {filteredRecords.length === 0 && (
                                   <tr>
-                                    <td colSpan={7} className="py-16 text-center text-neutral-400 font-bold bg-neutral-50/40">
+                                    <td colSpan={7} className="py-16 text-center text-ink-400 font-bold bg-ink-50/40">
                                       {lang === 'ID' 
                                         ? 'Tidak ditemukan riwayat karyawan dengan kriteria yang Anda cari.' 
                                         : 'No employee fatigue report logs match selected date or shift parameters.'}
@@ -4539,30 +4573,30 @@ PT. WAHANA BARA SENTOSA`;
                           </div>
                         </div>
 
-                        {/* DETAILED DRILLDOWN MODAL OVERLAY */}
+                        {/* DetailED DRILLDOWN MODAL OVERLAY */}
                         {selectedDashboardRecordId && (() => {
                           const det = history.find(r => r.id === selectedDashboardRecordId);
                           if (!det) return null;
                           return (
-                            <div className="fixed inset-0 bg-neutral-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-[60] animate-fadeIn">
-                              <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-neutral-200 shadow-2xl p-5 sm:p-6 text-neutral-800 flex flex-col">
+                            <div className="fixed inset-0 bg-ink-950/70 flex items-center justify-center p-4 z-[60] animate-fadeIn">
+                              <div data-ui className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-ink-200 p-5 sm:p-6 text-ink-800 flex flex-col">
                                 
                                 {/* Header */}
-                                <div className="border-b border-neutral-200 pb-3 mb-4 flex justify-between items-start">
+                                <div data-ui className="border-b border-ink-200 pb-3 mb-4 flex justify-between items-start">
                                   <div>
-                                    <span className="text-[10px] bg-neutral-100 text-neutral-600 font-black px-2 py-0.5 rounded uppercase">
-                                      ID REKAP: {det.id}
+                                    <span className="text-xs bg-ink-100 text-ink-600 font-black px-2 py-0.5 rounded">
+                                      ID Rekap: {det.id}
                                     </span>
-                                    <h4 className="text-base font-black text-rose-900 uppercase mt-1 tracking-tight">
-                                      🔍 DIAGNOSTIK KELELAHAN FATIGUE
+                                    <h4 className="text-base font-black text-danger-900 mt-1 tracking-tight">
+                                       Diagnostik Kelelahan Fatigue
                                     </h4>
                                   </div>
                                   <button
                                     type="button"
                                     onClick={() => setSelectedDashboardRecordId(null)}
-                                    className="bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 text-neutral-700 w-8 h-8 rounded-full flex items-center justify-center font-black cursor-pointer text-sm transition"
+                                    className="bg-ink-100 hover:bg-ink-200 border border-ink-300 text-ink-700 w-8 h-8 rounded-full flex items-center justify-center font-black cursor-pointer text-sm transition"
                                   >
-                                    ✕
+                                    
                                   </button>
                                 </div>
 
@@ -4572,18 +4606,18 @@ PT. WAHANA BARA SENTOSA`;
                                     const anom = checkAssessmentAnomalies(det);
                                     if (!anom.hasAnomaly) return null;
                                     return (
-                                      <div className="bg-rose-50 border-2 border-rose-500 rounded-xl p-4 shadow-sm animate-fadeIn">
-                                        <div className="flex items-center gap-2 text-rose-800 font-black text-xs uppercase">
-                                          <span className="text-lg">🚨</span>
-                                          <span>TEMUAN ANOMALI PENGISIAN (RAHASIA PENGAWAS)</span>
+                                      <div data-ui className="bg-danger-50 border-2 border-danger-500 rounded-xl p-4 animate-fadeIn">
+                                        <div className="flex items-center gap-2 text-danger-800 font-black text-xs">
+                                          
+                                          <span>Temuan Anomali Pengisian (Rahasia Pengawas)</span>
                                         </div>
-                                        <p className="text-[10.5px] text-rose-700 font-semibold mt-1 leading-snug">
+                                        <p className="text-xs text-danger-700 font-semibold mt-1 leading-snug">
                                           Sistem mendeteksi indikasi ketidakwajaran / manipulasi waktu tidur. Catatan ini hanya terlihat oleh pengawas/admin di fitur admin dan dirahasiakan sepenuhnya dari karyawan.
                                         </p>
                                         <div className="mt-2.5 space-y-1.5">
                                           {anom.reasons.map((r, i) => (
-                                            <div key={i} className="text-xs font-bold text-rose-950 bg-white border border-rose-300 p-2.5 rounded-lg flex items-start gap-2 shadow-2xs">
-                                              <span className="text-rose-600 font-mono text-sm leading-none shrink-0">•</span>
+                                            <div data-ui key={i} className="text-xs font-bold text-danger-950 bg-white border border-danger-300 p-2.5 rounded-lg flex items-start gap-2">
+                                              <span className="text-danger-600 tabular-nums text-sm leading-none shrink-0">•</span>
                                               <span className="leading-snug">{r}</span>
                                             </div>
                                           ))}
@@ -4593,83 +4627,83 @@ PT. WAHANA BARA SENTOSA`;
                                   })()}
 
                                   {/* Identity Card */}
-                                  <div className="bg-neutral-50 border border-neutral-200 p-3.5 rounded-xl">
-                                    <span className="block text-[8.5px] font-black text-neutral-500 uppercase tracking-wider mb-1.5">KARYAWAN TERKAIT:</span>
-                                    <div className="text-sm font-black text-neutral-900">{det.nama}</div>
-                                    <div className="grid grid-cols-2 gap-2 mt-2 text-[11px] text-neutral-600 font-semibold uppercase">
-                                      <div>NIK: <span className="font-mono font-bold text-neutral-800">{det.nik}</span></div>
-                                      <div>DEPT: <span className="font-bold text-neutral-800">{det.dept}</span></div>
-                                      <div className="col-span-2">JABATAN: <span className="font-bold text-neutral-800">{det.jabatan}</span></div>
+                                  <div data-ui className="bg-ink-50 border border-ink-200 p-3.5 rounded-xl">
+                                    <span className="block text-xs font-black text-ink-500 mb-1.5">Karyawan Terkait:</span>
+                                    <div className="text-sm font-black text-ink-900">{det.nama}</div>
+                                    <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-ink-600 font-semibold">
+                                      <div>NIK: <span className="tabular-nums font-bold text-ink-800">{det.nik}</span></div>
+                                      <div>DEPT: <span className="font-bold text-ink-800">{det.dept}</span></div>
+                                      <div className="col-span-2">JABATAN: <span className="font-bold text-ink-800">{det.jabatan}</span></div>
                                     </div>
                                   </div>
 
                                   {/* Sleep Metrics breakdown with explicit Bedtime and Wake-up time */}
-                                  <div className="border border-neutral-200 rounded-xl p-3.5">
-                                    <span className="block text-[8.5px] font-black text-neutral-500 uppercase tracking-wider mb-2">DETAIL ANALISIS REKAP TIDUR & WAKTU:</span>
+                                  <div data-ui className="border border-ink-200 rounded-xl p-3.5">
+                                    <span className="block text-xs font-black text-ink-500 mb-2">Detail Analisis Rekap Tidur & Waktu:</span>
                                     
                                     <div className="space-y-2 mt-1">
-                                      <div className="flex justify-between items-center text-[11px] border-b border-neutral-100 pb-1.5">
-                                        <span className="font-bold text-neutral-600">Total Jam Tidur (12 Jam):</span>
-                                        <span className={`font-mono font-black ${det.totalSleep12 < 6 ? 'text-rose-600' : 'text-emerald-700'}`}>
-                                          {det.totalSleep12} Jam {det.totalSleep12 < 6 ? '(🚨 KURANG)' : ' (Kategori Baik)'}
+                                      <div data-ui className="flex justify-between items-center text-xs border-b border-ink-100 pb-1.5">
+                                        <span className="font-bold text-ink-600">Total Jam Tidur (12 Jam):</span>
+                                        <span className={`tabular-nums font-black ${det.totalSleep12 < 6 ? 'text-danger-600' : 'text-safe-700'}`}>
+                                          {det.totalSleep12} Jam {det.totalSleep12 < 6 ? '( KURANG)' : ' (Kategori Baik)'}
                                         </span>
                                       </div>
 
-                                      <div className="flex justify-between items-center text-[11px] border-b border-neutral-100 pb-1.5">
-                                        <span className="font-bold text-neutral-600">Total Jam Tidur 36 Jam Terakhir:</span>
-                                        <span className="font-mono font-black text-neutral-700">
+                                      <div data-ui className="flex justify-between items-center text-xs border-b border-ink-100 pb-1.5">
+                                        <span className="font-bold text-ink-600">Total Jam Tidur 36 Jam Terakhir:</span>
+                                        <span className="tabular-nums font-black text-ink-700">
                                           {det.totalSleep36} Jam
                                         </span>
                                       </div>
 
-                                      <div className="flex justify-between items-center text-[11px] border-b border-neutral-100 pb-1.5">
-                                        <span className="font-bold text-neutral-600">Fatigue Score (Skor Kelelahan):</span>
-                                        <span className={`font-mono font-black ${det.totalFatigueScore >= 6 ? 'text-rose-600' : 'text-neutral-700'}`}>
-                                          {det.totalFatigueScore} / 12 {det.totalFatigueScore >= 6 ? '(⚠️ TINGGI)' : ''}
+                                      <div data-ui className="flex justify-between items-center text-xs border-b border-ink-100 pb-1.5">
+                                        <span className="font-bold text-ink-600">Fatigue Score (Skor Kelelahan):</span>
+                                        <span className={`tabular-nums font-black ${det.totalFatigueScore >= 6 ? 'text-danger-600' : 'text-ink-700'}`}>
+                                          {det.totalFatigueScore} / 12 {det.totalFatigueScore >= 6 ? '( TINGGI)' : ''}
                                         </span>
                                       </div>
 
-                                      <div className="flex justify-between items-center text-[11px]">
-                                        <span className="font-bold text-neutral-600">Kesiapan Kerja (Readiness Score):</span>
-                                        <span className="font-mono font-black text-emerald-700 font-extrabold text-xs">
+                                      <div className="flex justify-between items-center text-xs">
+                                        <span className="font-bold text-ink-600">Kesiapan Kerja (Readiness Score):</span>
+                                        <span className="tabular-nums font-black text-safe-700 font-extrabold text-xs">
                                           {det.readinessScore}% Kesiapan
                                         </span>
                                       </div>
                                     </div>
 
                                     {/* Jam Mulai Tidur & Jam Bangun Section */}
-                                    <div className="mt-3 pt-3 border-t border-neutral-200">
-                                      <span className="block text-[8.5px] font-black text-neutral-500 uppercase tracking-wider mb-2">
-                                        🕒 DETAIL JADWAL JAM TIDUR & JAM BANGUN:
+                                    <div data-ui className="mt-3 pt-3 border-t border-ink-200">
+                                      <span className="block text-xs font-black text-ink-500 mb-2">
+                                         Detail Jadwal Jam Tidur & Jam Bangun:
                                       </span>
-                                      <div className="bg-neutral-50 p-3 rounded-lg border border-neutral-200 space-y-2 text-[11px] font-mono">
+                                      <div data-ui className="bg-ink-50 p-3 rounded-lg border border-ink-200 space-y-2 text-xs tabular-nums">
                                         <div>
-                                          <div className="text-[9px] font-sans font-bold text-neutral-500 uppercase">Sesi Utama (12 Jam Terakhir):</div>
+                                          <div className="text-xs font-sans font-bold text-ink-500">Sesi Utama (12 Jam Terakhir):</div>
                                           <div className="flex justify-between items-center mt-1">
-                                            <span>Mulai Tidur: <b className="text-neutral-900">{det.sleep12Session1Bed || '-'}</b></span>
-                                            <span>Bangun: <b className="text-neutral-900">{det.sleep12Session1Wake || '-'}</b></span>
+                                            <span>Mulai Tidur: <b className="text-ink-900">{det.sleep12Session1Bed || '-'}</b></span>
+                                            <span>Bangun: <b className="text-ink-900">{det.sleep12Session1Wake || '-'}</b></span>
                                           </div>
                                         </div>
 
                                         {det.hasSleep12Session2 && (
-                                          <div className="pt-1.5 border-t border-dashed border-neutral-200">
-                                            <div className="text-[9px] font-sans font-bold text-neutral-500 uppercase">Sesi Tambahan 2 (12 Jam):</div>
+                                          <div data-ui className="pt-1.5 border-t border-dashed border-ink-200">
+                                            <div className="text-xs font-sans font-bold text-ink-500">Sesi Tambahan 2 (12 Jam):</div>
                                             <div className="flex justify-between items-center mt-1">
-                                              <span>Mulai: <b className="text-neutral-900">{det.sleep12Session2Bed || '-'}</b></span>
-                                              <span>Bangun: <b className="text-neutral-900">{det.sleep12Session2Wake || '-'}</b></span>
+                                              <span>Mulai: <b className="text-ink-900">{det.sleep12Session2Bed || '-'}</b></span>
+                                              <span>Bangun: <b className="text-ink-900">{det.sleep12Session2Wake || '-'}</b></span>
                                             </div>
                                           </div>
                                         )}
 
-                                        <div className="pt-1.5 border-t border-neutral-200">
-                                          <div className="text-[9px] font-sans font-bold text-neutral-500 uppercase">Evaluasi Tidur 36 Jam:</div>
+                                        <div data-ui className="pt-1.5 border-t border-ink-200">
+                                          <div className="text-xs font-sans font-bold text-ink-500">Evaluasi Tidur 36 Jam:</div>
                                           <div className="flex justify-between items-center mt-1">
-                                            <span>Mulai Tidur: <b className="text-neutral-900">{det.sleep36Session1Bed || '-'}</b></span>
-                                            <span>Bangun: <b className="text-neutral-900">{det.sleep36Session1Wake || '-'}</b></span>
+                                            <span>Mulai Tidur: <b className="text-ink-900">{det.sleep36Session1Bed || '-'}</b></span>
+                                            <span>Bangun: <b className="text-ink-900">{det.sleep36Session1Wake || '-'}</b></span>
                                           </div>
                                         </div>
 
-                                        <div className="pt-1.5 border-t border-neutral-200 text-neutral-600 text-[10px] flex justify-between">
+                                        <div data-ui className="pt-1.5 border-t border-ink-200 text-ink-600 text-xs flex justify-between">
                                           <span className="font-sans font-semibold">Waktu Pengisian Aktual:</span>
                                           <span>{det.tanggalPengisian} pukul <b>{det.jamPengisian}</b></span>
                                         </div>
@@ -4678,64 +4712,64 @@ PT. WAHANA BARA SENTOSA`;
                                   </div>
 
                                   {/* Medical & Personal Problem risk section */}
-                                  <div className="border border-neutral-200 rounded-xl p-3.5">
-                                    <span className="block text-[8.5px] font-black text-neutral-400 uppercase tracking-widest mb-1.5">KONTEKS TAMBAHAN RISIKO:</span>
-                                    <div className="grid grid-cols-2 gap-2 text-[10.5px]">
-                                      <div className="bg-neutral-50/50 p-2 rounded border border-neutral-150">
-                                        <span className="block text-[8px] text-neutral-500 font-bold uppercase">Konsumsi Obat Dokter:</span>
-                                        <span className={`font-extrabold block mt-0.5 ${det.consumesObat ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                          {det.consumesObat ? '💊 YA (RECON)' : '✓ TIDAK'}
+                                  <div data-ui className="border border-ink-200 rounded-xl p-3.5">
+                                    <span className="block text-xs font-black text-ink-400 mb-1.5">Konteks Tambahan Risiko:</span>
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                      <div data-ui className="bg-ink-50/50 p-2 rounded border border-rule">
+                                        <span className="block text-xs text-ink-500 font-bold">Konsumsi Obat Dokter:</span>
+                                        <span className={`font-extrabold block mt-0.5 ${det.consumesObat ? 'text-danger-600' : 'text-safe-600'}`}>
+                                          {det.consumesObat ? ' YA (RECON)' : ' TIDAK'}
                                         </span>
                                       </div>
                                       
-                                      <div className="bg-neutral-50/50 p-2 rounded border border-neutral-150">
-                                        <span className="block text-[8px] text-neutral-500 font-bold uppercase">Masalah Pribadi Keluarga:</span>
-                                        <span className={`font-extrabold block mt-0.5 ${det.hasPersonalProblem ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                          {det.hasPersonalProblem ? '⚠️ YA (CURBED)' : '✓ TIDAK'}
+                                      <div data-ui className="bg-ink-50/50 p-2 rounded border border-rule">
+                                        <span className="block text-xs text-ink-500 font-bold">Masalah Pribadi Keluarga:</span>
+                                        <span className={`font-extrabold block mt-0.5 ${det.hasPersonalProblem ? 'text-danger-600' : 'text-safe-600'}`}>
+                                          {det.hasPersonalProblem ? ' YA (CURBED)' : ' TIDAK'}
                                         </span>
                                       </div>
                                     </div>
                                   </div>
 
                                   {/* Rekomendasi Follow Up */}
-                                  <div className="bg-rose-50 border border-rose-100 rounded-xl p-4">
-                                    <span className="block text-[8.5px] font-mono font-black text-rose-900 uppercase tracking-wide mb-1.5">
-                                      🛡️ REKOMENDASI FOLLOW UP (PT. WBS):
+                                  <div data-ui className="bg-danger-50 border border-danger-100 rounded-xl p-4">
+                                    <span className="block text-xs tabular-nums font-black text-danger-900 mb-1.5">
+                                       Rekomendasi Tindak Lanjut (PT. WBS):
                                     </span>
-                                    <div className="font-bold text-neutral-800 text-[11px] leading-relaxed space-y-2">
+                                    <div className="font-bold text-ink-800 text-xs leading-relaxed space-y-2">
                                       {(() => {
                                         const totalSleep12 = det.totalSleep12 || 0;
                                         if (totalSleep12 < 6.0) {
                                           const deficit = parseFloat((6.0 - totalSleep12).toFixed(1));
                                           return (
-                                            <p className="text-rose-800">
-                                              💤 Karyawan kurang tidur sebanyak <b>{deficit} jam</b> dari standar minimal 6 jam. Rekomendasi follow up adalah <b>tidur {deficit} jam sebelum mulai bekerja</b>.
+                                            <p className="text-danger-800">
+                                               Karyawan kurang tidur sebanyak <b>{deficit} jam</b> dari standar minimal 6 jam. Rekomendasi follow up adalah <b>tidur {deficit} jam sebelum mulai bekerja</b>.
                                             </p>
                                           );
                                         } else {
                                           return (
-                                            <p className="text-emerald-800">
-                                              ✓ Karyawan telah memenuhi standar jam tidur minimal yaitu 6 jam harian (Total tidur: {totalSleep12} jam). Tidak diperlukan tambahan istirahat wajib.
+                                            <p className="text-safe-800">
+                                               Karyawan telah memenuhi standar jam tidur minimal yaitu 6 jam harian (Total tidur: {totalSleep12} jam). Tidak diperlukan tambahan istirahat wajib.
                                             </p>
                                           );
                                         }
                                       })()}
                                       
-                                      <p className="mt-1.5 text-neutral-600 border-t border-rose-100 pt-1.5 text-[10.5px]">
+                                      <p data-ui className="mt-1.5 text-ink-600 border-t border-danger-100 pt-1.5 text-xs">
                                         <b>Klasifikasi Status ({det.finalDecision}):</b>{' '}
-                                        {det.finalDecision === 'FIT' && 'FIT TO WORK - Karyawan layak melaksanakan tugas.'}
-                                        {det.finalDecision === 'FIT_CONDITIONAL' && 'BEKERJA DALAM PENGAWASAN KHUSUS - Pengawasan ketat di lapangan oleh Foreman.'}
-                                        {det.finalDecision === 'REST_BEFORE_WORK' && 'WAJIB ISTIRAHAT SEBELUM BEKERJA - Mandat wajib beristirahat tidur siang / tidur pulas.'}
-                                        {det.finalDecision === 'UNFIT' && 'TIDAK BOLEH BEKERJA - Dilarang keras mengoperasikan unit atau turun ke lapangan.'}
+                                        {det.finalDecision === 'FIT' && 'Fit to Work - Karyawan layak melaksanakan tugas.'}
+                                        {det.finalDecision === 'FIT_CONDITIONAL' && 'BEKERJA DALAM Pengawasan Khusus - Pengawasan ketat di lapangan oleh Foreman.'}
+                                        {det.finalDecision === 'REST_BEFORE_WORK' && 'Wajib Istirahat Sebelum Bekerja - Mandat wajib beristirahat tidur siang / tidur pulas.'}
+                                        {det.finalDecision === 'UNFIT' && 'Tidak Boleh Bekerja - Dilarang keras mengoperasikan unit atau turun ke lapangan.'}
                                       </p>
                                     </div>
                                     {(det.consumesObat || det.hasPersonalProblem) && (
-                                      <div className="mt-2.5 pt-2 border-t border-rose-200 text-[10px] text-neutral-850 flex flex-col gap-1.5 leading-relaxed">
+                                      <div data-ui className="mt-2.5 pt-2 border-t border-danger-200 text-xs text-ink-800 flex flex-col gap-1.5 leading-relaxed">
                                         {det.consumesObat && (
-                                          <p>💊 <b>Rekomendasi Medikasi:</b> Mengonsumsi obat efek kantuk. Dilarang mengoperasikan unit critical / alat berat selama 4 jam ke depan. Karyawan WAJIB lapor SHE atau Paramedis.</p>
+                                          <p> <b>Rekomendasi Medikasi:</b> Mengonsumsi obat efek kantuk. Dilarang mengoperasikan unit critical / alat berat selama 4 jam ke depan. Karyawan WAJIB lapor SHE atau Paramedis.</p>
                                         )}
                                         {det.hasPersonalProblem && (
-                                          <p>🧠 <b>Rekomendasi Konsentrasi:</b> Masalah stres / konsentrasi terganggu. Wajib pengawasan foreman & karyawan WAJIB konseling dengan pengawas.</p>
+                                          <p> <b>Rekomendasi Konsentrasi:</b> Masalah stres / konsentrasi terganggu. Wajib pengawasan foreman & karyawan WAJIB konseling dengan pengawas.</p>
                                         )}
                                       </div>
                                     )}
@@ -4744,7 +4778,7 @@ PT. WAHANA BARA SENTOSA`;
                                 </div>
 
                                 {/* Actions */}
-                                <div className="mt-5 pt-3 border-t border-neutral-200 flex flex-wrap justify-between items-center gap-2 shrink-0">
+                                <div data-ui className="mt-5 pt-3 border-t border-ink-200 flex flex-wrap justify-between items-center gap-2 shrink-0">
                                   <button
                                     type="button"
                                     disabled={isSendingModalWa}
@@ -4753,26 +4787,26 @@ PT. WAHANA BARA SENTOSA`;
                                       try {
                                         const result = await handleDispatchRecordAlert(det);
                                         if (result.success) {
-                                          alert(`✅ ${result.message}`);
+                                          notifyUser(` ${result.message}`);
                                         } else {
-                                          alert(`❌ Gagal: ${result.message}`);
+                                          notifyUser(` Gagal: ${result.message}`);
                                         }
                                       } catch (err: any) {
-                                        alert(`❌ Galat: ${err.message || 'Gagal mengirim alert'}`);
+                                        notifyUser(` Galat: ${err.message || 'Gagal mengirim alert'}`);
                                       } finally {
                                         setIsSendingModalWa(false);
                                       }
                                     }}
-                                    className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-[10.5px] py-1.5 px-3 rounded-lg uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                    className="bg-safe-600 hover:bg-safe-700 disabled:opacity-50 text-white font-bold text-xs py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
                                   >
-                                    <Send className={`w-3.5 h-3.5 ${isSendingModalWa ? 'animate-pulse' : ''}`} />
+                                    <Send className={`w-3.5 h-3.5 ${isSendingModalWa ? '' : ''}`} />
                                     <span>{isSendingModalWa ? (lang === 'ID' ? 'Mengirim...' : 'Sending...') : (lang === 'ID' ? 'Kirim Alert ke Grup WA' : 'Send Alert to WA Group')}</span>
                                   </button>
 
                                   <button
                                     type="button"
                                     onClick={() => setSelectedDashboardRecordId(null)}
-                                    className="bg-neutral-950 hover:bg-black font-black text-white text-[10.5px] py-1.5 px-3 rounded uppercase tracking-wider cursor-pointer"
+                                    className="bg-ink-950 hover:bg-black font-black text-white text-xs py-1.5 px-3 rounded cursor-pointer"
                                   >
                                     Kembali ke Dashboard
                                   </button>
@@ -4795,48 +4829,48 @@ PT. WAHANA BARA SENTOSA`;
                       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                         
                         {/* TAMBAH KARYAWAN BARU FORM */}
-                        <div className="lg:col-span-3 bg-white rounded-xl border border-neutral-200 p-4 shadow-sm flex flex-col justify-between">
+                        <div data-ui className="lg:col-span-3 bg-white rounded-xl border border-ink-200 p-4 flex flex-col justify-between">
                           <div>
-                            <h4 className="text-xs font-black text-rose-800 uppercase tracking-wider mb-3 flex items-center gap-2">
-                              <span>➕</span>
+                            <h4 className="text-xs font-black text-danger-800 mb-3 flex items-center gap-2">
+                              
                               <span>{lang === 'ID' ? 'Tambah Data Karyawan Baru' : 'Add New Employee Record'}</span>
                             </h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <div>
-                                <label className="block text-[9.5px] font-black text-neutral-600 uppercase mb-1">NIK:</label>
+                                <label className="block text-xs font-black text-ink-600 mb-1">NIK:</label>
                                 <input 
                                   type="text"
-                                  className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-1.5 px-2.5 text-xs font-mono font-black placeholder-neutral-400 focus:ring-1 focus:ring-rose-500 text-neutral-900 uppercase"
-                                  placeholder="88204911"
+                                  className="w-full bg-ink-50 border border-rule rounded-lg py-1.5 px-2.5 text-xs tabular-nums font-black placeholder-ink-400 focus:ring-1 focus:ring-danger-500 text-ink-900"
+                                  placeholder="9 digit NIK (tanpa angka 0 di depan)"
                                   value={newEmpNik}
                                   onChange={(e) => setNewEmpNik(e.target.value)}
                                 />
                               </div>
                               <div>
-                                <label className="block text-[9.5px] font-black text-neutral-600 uppercase mb-1">{lang === 'ID' ? 'Nama:' : 'Name:'}</label>
+                                <label className="block text-xs font-black text-ink-600 mb-1">{lang === 'ID' ? 'Nama:' : 'Name:'}</label>
                                 <input 
                                   type="text"
-                                  className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-1.5 px-2.5 text-xs font-bold placeholder-neutral-400 focus:ring-1 focus:ring-rose-500 text-neutral-900"
+                                  className="w-full bg-ink-50 border border-rule rounded-lg py-1.5 px-2.5 text-xs font-bold placeholder-ink-400 focus:ring-1 focus:ring-danger-500 text-ink-900"
                                   placeholder="Nama Lengkap Karyawan"
                                   value={newEmpNama}
                                   onChange={(e) => setNewEmpNama(e.target.value)}
                                 />
                               </div>
                               <div>
-                                <label className="block text-[9.5px] font-black text-neutral-600 uppercase mb-1">{lang === 'ID' ? 'Jabatan:' : 'Position:'}</label>
+                                <label className="block text-xs font-black text-ink-600 mb-1">{lang === 'ID' ? 'Jabatan:' : 'Position:'}</label>
                                 <input 
                                   type="text" 
-                                  className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-1.5 px-2.5 text-xs font-bold placeholder-neutral-400 focus:ring-1 focus:ring-rose-500 text-neutral-900"
+                                  className="w-full bg-ink-50 border border-rule rounded-lg py-1.5 px-2.5 text-xs font-bold placeholder-ink-400 focus:ring-1 focus:ring-danger-500 text-ink-900"
                                   placeholder="Operator / Driver / Staff"
                                   value={newEmpJabatan}
                                   onChange={(e) => setNewEmpJabatan(e.target.value)}
                                 />
                               </div>
                               <div>
-                                <label className="block text-[9.5px] font-black text-neutral-600 uppercase mb-1">Departemen:</label>
+                                <label className="block text-xs font-black text-ink-600 mb-1">Departemen:</label>
                                 <input 
                                   type="text" 
-                                  className="w-full bg-neutral-50 border border-neutral-250 rounded-lg py-1.5 px-2.5 text-xs font-bold placeholder-neutral-400 focus:ring-1 focus:ring-rose-500 text-neutral-900"
+                                  className="w-full bg-ink-50 border border-rule rounded-lg py-1.5 px-2.5 text-xs font-bold placeholder-ink-400 focus:ring-1 focus:ring-danger-500 text-ink-900"
                                   placeholder="Produksi / HSE / Logistik"
                                   value={newEmpDept}
                                   onChange={(e) => setNewEmpDept(e.target.value)}
@@ -4849,22 +4883,22 @@ PT. WAHANA BARA SENTOSA`;
                             <button
                               type="button"
                               onClick={handleAddEmployee}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-4 py-2 rounded-lg transition shadow-sm cursor-pointer uppercase tracking-wider"
+                              className="bg-safe-600 hover:bg-safe-700 text-white text-xs font-black px-4 py-2 rounded-lg transition cursor-pointer"
                             >
-                              ✔ {lang === 'ID' ? 'Simpan Karyawan' : 'Save Employee'}
+                               {lang === 'ID' ? 'Simpan Karyawan' : 'Save Employee'}
                             </button>
                           </div>
                         </div>
 
                         {/* UPLOAD DATABASE KARYAWAN (Excel / CSV / Paste) */}
-                        <div className="lg:col-span-2 bg-white rounded-xl border border-neutral-200 p-4 shadow-sm flex flex-col justify-between">
+                        <div data-ui className="lg:col-span-2 bg-white rounded-xl border border-ink-200 p-4 flex flex-col justify-between">
                           <div>
-                            <h4 className="text-xs font-black text-emerald-800 uppercase tracking-wider mb-2 flex items-center gap-2">
-                              <span>🚀</span>
+                            <h4 className="text-xs font-black text-safe-800 mb-2 flex items-center gap-2">
+                              
                               <span>{lang === 'ID' ? 'Upload Data Karyawan' : 'Upload Employee Data'}</span>
                             </h4>
                             
-                            <p className="text-[10px] text-neutral-500 mb-3 leading-relaxed">
+                            <p className="text-xs text-ink-500 mb-3 leading-relaxed">
                               {lang === 'ID' 
                                 ? 'Cara paling praktis: Pilih file Excel (.xlsx/.xls) atau file CSV Anda, atau copy baris/kolom dari lembar kerja Anda lalu tempel (paste) langsung ke kotak teks di bawah.' 
                                 : 'Most convenient: Select an Excel file (.xlsx/.xls) or a CSV file, or copy rows/columns from your worksheet and paste directly in the textbox below.'}
@@ -4874,21 +4908,21 @@ PT. WAHANA BARA SENTOSA`;
                               {/* Option 1: Copy-Paste Text Area */}
                               <div>
                                 <div className="flex justify-between items-center mb-1">
-                                  <span className="text-[9.5px] font-black text-neutral-600 uppercase">
+                                  <span className="text-xs font-black text-ink-600">
                                     {lang === 'ID' ? 'Paste Data Spreadsheet (NIK, Nama, Jabatan, Dept):' : 'Paste Spreadsheet Data:'}
                                   </span>
                                   {bulkPreviewData.length > 0 && (
-                                    <span className="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.2 rounded font-black font-mono">
+                                    <span className="bg-safe-100 text-safe-800 text-xs px-1.5 py-0.5 rounded font-black tabular-nums">
                                       {bulkPreviewData.length} Karyawan Terdeteksi
                                     </span>
                                   )}
                                 </div>
                                 <textarea
-                                  className="w-full bg-neutral-50 border border-neutral-250 rounded-lg p-2 text-[11px] font-mono font-medium focus:ring-1 focus:ring-rose-500 text-neutral-850"
+                                  className="w-full bg-ink-50 border border-rule rounded-lg p-2 text-xs tabular-nums font-medium focus:ring-1 focus:ring-danger-500 text-ink-800"
                                   rows={4}
                                   placeholder={lang === 'ID' 
-                                    ? "206900001\tBudi Santoso\tDriver DT\tLogistik\n206900002\tAgus Setiawan\tOperator\tProduksi"
-                                    : "206900001\tBudi Santoso\tDriver DT\tLogistik\n206900002\tAgus Setiawan\tOperator\tProduksi"
+                                    ? "Format: NIK [Tab] Nama Lengkap [Tab] Jabatan [Tab] Departemen"
+                                    : "Format: NIK [Tab] Full Name [Tab] Position [Tab] Department"
                                   }
                                   value={bulkInputText}
                                   onChange={(e) => {
@@ -4900,13 +4934,13 @@ PT. WAHANA BARA SENTOSA`;
 
                               {/* Option 2: File upload selector */}
                               <div>
-                                <label className="block text-[9.5px] font-black text-neutral-600 uppercase mb-1">
+                                <label className="block text-xs font-black text-ink-600 mb-1">
                                   {lang === 'ID' ? 'Pilih File Database Karyawan (Excel/.xlsx/.xls atau .csv):' : 'Choose Employee Database File (Excel/.xlsx/.xls or .csv):'}
                                 </label>
                                 <input
                                   type="file"
                                   accept=".xlsx,.xls,.csv,.txt"
-                                  className="w-full text-xs text-neutral-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-[10.5px] file:font-black file:bg-neutral-100 file:text-neutral-700 hover:file:bg-neutral-200 cursor-pointer"
+                                  className="w-full text-xs text-ink-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-black file:bg-ink-100 file:text-ink-700 hover:file:bg-ink-200 cursor-pointer"
                                   onChange={(e) => {
                                     const file = e.target.files?.[0];
                                     if (file) {
@@ -4922,7 +4956,7 @@ PT. WAHANA BARA SENTOSA`;
                                             const sheet = workbook.Sheets[sheetName];
                                             const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
                                             if (rows.length === 0) {
-                                              alert(lang === 'ID' ? 'File Excel kosong!' : 'Excel file is empty!');
+                                              notifyUser(lang === 'ID' ? 'File Excel kosong!' : 'Excel file is empty!');
                                               return;
                                             }
                                             const parsed: { nik: string; nama: string; jabatan: string; dept: string }[] = [];
@@ -4957,7 +4991,7 @@ PT. WAHANA BARA SENTOSA`;
                                             setBulkInputText(`[Excel File: ${file.name}] - ${parsed.length} row(s) read.`);
                                           } catch (err) {
                                             console.error(err);
-                                            alert(lang === 'ID' ? 'Gagal membaca file Excel ini.' : 'Failed to read this Excel file.');
+                                            notifyUser(lang === 'ID' ? 'Gagal membaca file Excel ini.' : 'Failed to read this Excel file.');
                                           }
                                         };
                                         fileReader.readAsBinaryString(file);
@@ -4978,17 +5012,17 @@ PT. WAHANA BARA SENTOSA`;
 
                             {/* Preview parsed results if any */}
                             {bulkPreviewData.length > 0 && (
-                              <div className="mt-3 bg-neutral-50 border border-neutral-200 rounded-lg p-2 text-[10px] leading-relaxed max-h-24 overflow-y-auto">
-                                <p className="font-bold text-neutral-600 mb-1">🔍 {lang === 'ID' ? 'Pratinjau Hasil Ekstraksi:' : 'Parsed Preview:'}</p>
-                                <ul className="divide-y divide-neutral-150 font-mono text-[9px]">
+                              <div data-ui className="mt-3 bg-ink-50 border border-ink-200 rounded-lg p-2 text-xs leading-relaxed max-h-24 overflow-y-auto">
+                                <p className="font-bold text-ink-600 mb-1"> {lang === 'ID' ? 'Pratinjau Hasil Ekstraksi:' : 'Parsed Preview:'}</p>
+                                <ul data-ui className="divide-y divide-rule tabular-nums text-xs">
                                   {bulkPreviewData.slice(0, 3).map((item, idx) => (
-                                    <li key={idx} className="py-0.5 text-neutral-700">
+                                    <li key={idx} className="py-0.5 text-ink-700">
                                       [{item.nik}] {item.nama} - {item.jabatan} ({item.dept})
                                     </li>
                                   ))}
                                   {bulkPreviewData.length > 3 && (
-                                    <li className="py-0.5 text-rose-700 font-bold">
-                                      ...dan {bulkPreviewData.length - 3} karyawan lainnya.
+                                    <li className="py-0.5 text-danger-700 font-bold">
+                                      …dan {bulkPreviewData.length - 3} karyawan lainnya.
                                     </li>
                                   )}
                                 </ul>
@@ -5003,16 +5037,16 @@ PT. WAHANA BARA SENTOSA`;
                                 <button
                                   type="button"
                                   onClick={() => handleBulkImportSave('MERGE')}
-                                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black px-3 py-2 rounded-lg transition shadow-sm cursor-pointer uppercase tracking-wider"
+                                  className="bg-safe-600 hover:bg-safe-700 text-white text-xs font-black px-3 py-2 rounded-lg transition cursor-pointer"
                                 >
-                                  📥 {lang === 'ID' ? 'Gabungkan Data' : 'Merge Data'}
+                                   {lang === 'ID' ? 'Gabungkan Data' : 'Merge Data'}
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleBulkImportSave('OVERWRITE')}
-                                  className="bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-black px-3 py-2 rounded-lg transition shadow-sm cursor-pointer uppercase tracking-wider"
+                                  className="bg-danger-600 hover:bg-danger-700 text-white text-xs font-black px-3 py-2 rounded-lg transition cursor-pointer"
                                 >
-                                  💥 {lang === 'ID' ? 'Ganti Semua' : 'Overwrite All'}
+                                   {lang === 'ID' ? 'Ganti Semua' : 'Overwrite All'}
                                 </button>
                                 <button
                                   type="button"
@@ -5020,7 +5054,7 @@ PT. WAHANA BARA SENTOSA`;
                                     setBulkInputText('');
                                     setBulkPreviewData([]);
                                   }}
-                                  className="bg-neutral-100 hover:bg-neutral-200 text-neutral-600 text-[11px] font-black px-3 py-2 rounded-lg transition cursor-pointer uppercase tracking-wider"
+                                  className="bg-ink-100 hover:bg-ink-200 text-ink-600 text-xs font-black px-3 py-2 rounded-lg transition cursor-pointer"
                                 >
                                   {lang === 'ID' ? 'Batal' : 'Cancel'}
                                 </button>
@@ -5032,37 +5066,37 @@ PT. WAHANA BARA SENTOSA`;
                       </div>
 
                       {/* ACTIVE EMPLOYEE REGISTRY TABLE */}
-                      <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
-                        <div className="bg-neutral-100 border-b border-neutral-200 px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-2">
-                          <h4 className="text-xs font-black text-neutral-950 uppercase tracking-widest">
-                            🗂️ {lang === 'ID' ? 'Database Karyawan Terdaftar' : 'Registered Employee Database'}
+                      <div data-ui className="bg-white rounded-xl border border-ink-200 overflow-hidden">
+                        <div data-ui className="bg-ink-100 border-b border-ink-200 px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-2">
+                          <h4 className="text-xs font-black text-ink-950">
+                             {lang === 'ID' ? 'Database Karyawan Terdaftar' : 'Registered Employee Database'}
                           </h4>
                           
                           {/* Search Filter input */}
                           <div className="relative w-full sm:w-64">
                             <input 
                               type="text"
-                              className="w-full bg-white border border-neutral-250 rounded-lg py-1 px-2.5 pl-7 text-[11px] font-bold text-neutral-900 uppercase"
+                              className="w-full bg-white border border-rule rounded-lg py-1 px-2.5 pl-7 text-xs font-bold text-ink-900"
                               placeholder={lang === 'ID' ? 'Cari NIK / NAMA...' : 'Filter by NIK / Name...'}
                               value={adminNikFilter}
                               onChange={(e) => setAdminNikFilter(e.target.value)}
                             />
-                            <span className="absolute left-2 top-1.5 text-neutral-400 text-xs">🔍</span>
+                            
                           </div>
                         </div>
 
                         <div className="overflow-x-auto font-sans">
                           <table className="w-full text-left text-xs border-collapse">
                             <thead>
-                              <tr className="bg-neutral-50 text-neutral-500 border-b border-neutral-200 uppercase font-black tracking-tight text-[10px]">
+                              <tr className="bg-ink-50 text-ink-500 border-b border-ink-200 font-black tracking-tight text-xs">
                                 <th className="px-4 py-2.5 w-24">NIK</th>
                                 <th className="px-4 py-2.5">{lang === 'ID' ? 'NAMA LENGKAP' : 'FULL NAME'}</th>
                                 <th className="px-4 py-2.5">{lang === 'ID' ? 'JABATAN (ROLES)' : 'POSITION'}</th>
                                 <th className="px-4 py-2.5">DEPT</th>
-                                <th className="px-4 py-2.5 text-center w-28">TINDAKAN</th>
+                                <th className="px-4 py-2.5 text-center w-28">Tindakan</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-neutral-150">
+                            <tbody className="divide-y divide-rule">
                               {Object.entries(employeeDb)
                                 .filter(([nik, item]: [string, { nama: string; jabatan: string; dept: string }]) => {
                                   if (!adminNikFilter) return true;
@@ -5091,7 +5125,7 @@ PT. WAHANA BARA SENTOSA`;
                                 })}
                               {Object.keys(employeeDb).length === 0 && (
                                 <tr>
-                                  <td colSpan={5} className="py-12 text-center text-neutral-400 font-bold bg-neutral-50">
+                                  <td colSpan={5} className="py-12 text-center text-ink-400 font-bold bg-ink-50">
                                     No registered employees. Please use form above or sync with sheets.
                                   </td>
                                 </tr>
@@ -5104,7 +5138,7 @@ PT. WAHANA BARA SENTOSA`;
                     </div>
                   )}
 
-                  {/* TAB 3: TREND & FREQUENCY ANALYSIS (UNFIT & PENGAWASAN KHUSUS) */}
+                  {/* TAB 3: TREND & FREQUENCY ANALYSIS (UNFIT & Pengawasan Khusus) */}
                   {adminActiveTab === 'trends' && (
                     <AdminTrendsAnalysis
                       history={history as any}
@@ -5117,89 +5151,89 @@ PT. WAHANA BARA SENTOSA`;
 
                   {/* TAB 4: UNIFIED INTEGRATIONS & CLOUD BACKUP (FIREBASE, GOOGLE SHEETS, WHATSAPP) */}
                   {adminActiveTab === 'integrations' && (
-                    <div className="flex flex-col gap-6 animate-fadeIn text-neutral-800 max-w-6xl mx-auto">
+                    <div className="flex flex-col gap-6 animate-fadeIn text-ink-800 max-w-6xl mx-auto">
                       
                       {/* Sub-Navigation Tabs Bar */}
-                      <div className="bg-white border border-neutral-200 rounded-xl p-2.5 shadow-xs flex flex-wrap items-center justify-between gap-2.5">
+                      <div data-ui className="bg-white border border-ink-200 rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2.5">
                         <div className="flex items-center gap-1.5 overflow-x-auto">
                           <button
                             type="button"
                             onClick={() => setIntegrationSubTab('firebase_backup')}
-                            className={`py-1.5 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition flex items-center gap-1.5 ${
+                            className={`py-1.5 px-3 rounded-lg font-black text-xs   cursor-pointer transition flex items-center gap-1.5 ${
                               integrationSubTab === 'firebase_backup'
-                                ? 'bg-amber-600 text-white shadow-xs'
-                                : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200'
+                                ? 'bg-warn-600 text-white '
+                                : 'bg-warn-50 hover:bg-warn-100 text-warn-900 border border-warn-200'
                             }`}
                           >
-                            <Flame className="w-3.5 h-3.5 text-amber-500" />
-                            <span>🔥 {lang === 'ID' ? 'Firebase Cloud Backup' : 'Firebase Cloud Backup'}</span>
+                            <Flame className="w-3.5 h-3.5 text-warn-500" />
+                            <span> {lang === 'ID' ? 'Firebase Cloud Backup' : 'Firebase Cloud Backup'}</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => setIntegrationSubTab('sheets_sync')}
-                            className={`py-1.5 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition flex items-center gap-1.5 ${
+                            className={`py-1.5 px-3 rounded-lg font-black text-xs   cursor-pointer transition flex items-center gap-1.5 ${
                               integrationSubTab === 'sheets_sync'
-                                ? 'bg-emerald-700 text-white shadow-xs'
-                                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200'
+                                ? 'bg-safe-700 text-white '
+                                : 'bg-safe-50 hover:bg-safe-100 text-safe-900 border border-safe-200'
                             }`}
                           >
-                            <Database className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>📊 {lang === 'ID' ? 'Google Sheet Integration' : 'Google Sheets'}</span>
+                            <Database className="w-3.5 h-3.5 text-safe-600" />
+                            <span> {lang === 'ID' ? 'Google Sheet Integration' : 'Google Sheets'}</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => setIntegrationSubTab('fonnte_wa')}
-                            className={`py-1.5 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition flex items-center gap-1.5 ${
+                            className={`py-1.5 px-3 rounded-lg font-black text-xs   cursor-pointer transition flex items-center gap-1.5 ${
                               integrationSubTab === 'fonnte_wa'
-                                ? 'bg-teal-700 text-white shadow-xs'
-                                : 'bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200'
+                                ? 'bg-safe-700 text-white '
+                                : 'bg-safe-50 hover:bg-safe-100 text-safe-900 border border-safe-200'
                             }`}
                           >
-                            <MessageSquare className="w-3.5 h-3.5 text-teal-600" />
-                            <span>💬 {lang === 'ID' ? 'WhatsApp Alert (Fonnte)' : 'WhatsApp Alerts'}</span>
+                            <MessageSquare className="w-3.5 h-3.5 text-safe-600" />
+                            <span> {lang === 'ID' ? 'WhatsApp Alert (Fonnte)' : 'WhatsApp Alerts'}</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => setIntegrationSubTab('all')}
-                            className={`py-1.5 px-3 rounded-lg font-black text-[11px] uppercase tracking-wider cursor-pointer transition ${
+                            className={`py-1.5 px-3 rounded-lg font-black text-xs   cursor-pointer transition ${
                               integrationSubTab === 'all'
-                                ? 'bg-neutral-900 text-white shadow-xs'
-                                : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'
+                                ? 'bg-ink-900 text-white '
+                                : 'bg-ink-100 hover:bg-ink-200 text-ink-700'
                             }`}
                           >
-                            🌐 {lang === 'ID' ? 'Tampilkan Semua (1 Halaman)' : 'Show All (1 Page)'}
+                             {lang === 'ID' ? 'Tampilkan Semua (1 Halaman)' : 'Show All (1 Page)'}
                           </button>
                         </div>
 
-                        <span className="text-[11px] text-neutral-500 font-bold px-2 hidden sm:inline">
-                          ⚙️ {lang === 'ID' ? 'Pusat Cloud Backup, Spreadsheet, & Gateway' : 'Central Integration Hub'}
+                        <span className="text-xs text-ink-500 font-bold px-2 hidden sm:inline">
+                           {lang === 'ID' ? 'Pusat Cloud Backup, Spreadsheet, & Gateway' : 'Central Integration Hub'}
                         </span>
                       </div>
 
                       {/* SECTION: WHATSAPP ALERT (FONNTE API) INTEGRATION */}
                       {(integrationSubTab === 'all' || integrationSubTab === 'fonnte_wa') && (
-                        <div className="flex flex-col gap-6 animate-fadeIn text-neutral-800">
+                        <div className="flex flex-col gap-6 animate-fadeIn text-ink-800">
                       
                       {/* Top Header Card */}
-                      <div className="bg-gradient-to-r from-emerald-800 to-teal-900 text-white rounded-xl p-5 shadow-sm border border-emerald-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div data-ui className="bg-safe-800 text-white rounded-xl p-5 border border-safe-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="flex items-center gap-3.5 font-sans">
-                          <div className="bg-emerald-700/80 p-2.5 rounded-lg border border-emerald-600 shadow-xs shrink-0 flex items-center justify-center">
-                            <MessageSquare className="w-6 h-6 text-emerald-100" />
+                          <div data-ui className="bg-safe-700/80 p-2.5 rounded-lg border border-safe-600 shrink-0 flex items-center justify-center">
+                            <MessageSquare className="w-6 h-6 text-safe-100" />
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <h4 className="text-base font-black uppercase tracking-wider leading-none">
+                              <h4 className="text-base font-black leading-none">
                                 {lang === 'ID' ? 'Integrasi WhatsApp Gateway (Fonnte API)' : 'WhatsApp Gateway Integration (Fonnte API)'}
                               </h4>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded-full   ${
                                 fonnteEnabled && fonnteToken && fonnteTarget 
-                                  ? 'bg-emerald-300 text-emerald-950 font-black' 
-                                  : 'bg-slate-700 text-slate-200'
+                                  ? 'bg-safe-300 text-safe-950 font-black' 
+                                  : 'bg-ink-700 text-ink-200'
                               }`}>
                                 {fonnteEnabled && fonnteToken && fonnteTarget ? '● AKTIF' : '○ NONAKTIF'}
                               </span>
                             </div>
-                            <p className="text-xs text-emerald-100 mt-1.5 leading-relaxed font-sans">
+                            <p className="text-xs text-safe-100 mt-1.5 leading-relaxed font-sans">
                               {lang === 'ID'
                                 ? 'Kirim notifikasi otomatis langsung ke Grup WhatsApp Pengawas & HSE saat ada karyawan melaporkan kondisi Unfit, Butuh Istirahat, atau Pengawasan Khusus.'
                                 : 'Automatically dispatch urgent WhatsApp alerts directly to Supervisor/HSE WhatsApp group when an employee reports Unfit, Needs Rest, or Special Supervision.'}
@@ -5208,7 +5242,7 @@ PT. WAHANA BARA SENTOSA`;
                         </div>
 
                         {/* Master Toggle */}
-                        <label className="flex items-center gap-2.5 bg-white/10 hover:bg-white/15 px-4 py-2.5 rounded-xl border border-white/20 cursor-pointer transition shrink-0 select-none">
+                        <label data-ui className="flex items-center gap-2.5 bg-white/10 hover:bg-white/15 px-4 py-2.5 rounded-xl border border-white/20 cursor-pointer transition shrink-0 select-none">
                           <input 
                             type="checkbox"
                             checked={fonnteEnabled}
@@ -5217,24 +5251,24 @@ PT. WAHANA BARA SENTOSA`;
                               setFonnteEnabled(nextVal);
                               handleSaveFonnteConfig(fonnteToken, fonnteTarget, nextVal, fonnteAlertUnfit, fonnteAlertRest, fonnteAlertConditional);
                             }}
-                            className="w-4 h-4 accent-emerald-400 cursor-pointer"
+                            className="w-4 h-4 accent-safe-400 cursor-pointer"
                           />
-                          <span className="text-xs font-bold uppercase tracking-wider text-white">
+                          <span className="text-xs font-bold text-white">
                             {lang === 'ID' ? 'Aktifkan Alert WA' : 'Enable WA Alerts'}
                           </span>
                         </label>
                       </div>
 
                       {/* Credentials & Target Card */}
-                      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex flex-col gap-5">
-                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
-                          <span>🔑</span>
+                      <div data-ui className="bg-white rounded-xl border border-ink-200 p-6 flex flex-col gap-5">
+                        <h4 className="text-xs font-black text-ink-800 flex items-center gap-2 border-b border-ink-100 pb-3">
+                          
                           <span>{lang === 'ID' ? 'Konfigurasi Token Fonnte & Target WhatsApp' : 'Fonnte Token & Target Configuration'}</span>
                         </h4>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1.5 tracking-wider">
+                            <label className="block text-xs font-bold text-ink-700 mb-1.5">
                               {lang === 'ID' ? 'Token API Fonnte:' : 'Fonnte API Token:'}
                             </label>
                             <input 
@@ -5242,19 +5276,19 @@ PT. WAHANA BARA SENTOSA`;
                               value={fonnteToken}
                               onChange={(e) => setFonnteToken(e.target.value)}
                               placeholder="Contoh: a1b2c3d4e5f6g7h8..."
-                              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-mono font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
+                              className="w-full bg-ink-50 border border-ink-300 rounded-xl px-3.5 py-2.5 text-xs tabular-nums font-medium text-ink-900 focus:bg-white focus:border-safe-500 focus:ring-1 focus:ring-safe-500 transition"
                             />
-                            <p className="text-[10.5px] text-slate-500 mt-1">
+                            <p className="text-xs text-ink-500 mt-1">
                               {lang === 'ID' ? (
-                                <>Didapatkan dari dashboard akun <a href="https://fonnte.com" target="_blank" rel="noreferrer" className="text-emerald-700 underline font-semibold">fonnte.com</a> di menu <b>Device</b>.</>
+                                <>Didapatkan dari dashboard akun <a href="https://fonnte.com" target="_blank" rel="noreferrer" className="text-safe-700 underline font-semibold">fonnte.com</a> di menu <b>Device</b>.</>
                               ) : (
-                                <>Available in your <a href="https://fonnte.com" target="_blank" rel="noreferrer" className="text-emerald-700 underline font-semibold">fonnte.com</a> dashboard under <b>Device</b>.</>
+                                <>Available in your <a href="https://fonnte.com" target="_blank" rel="noreferrer" className="text-safe-700 underline font-semibold">fonnte.com</a> dashboard under <b>Device</b>.</>
                               )}
                             </p>
                           </div>
 
                           <div>
-                            <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1.5 tracking-wider">
+                            <label className="block text-xs font-bold text-ink-700 mb-1.5">
                               {lang === 'ID' ? 'Target WhatsApp (ID Grup / Nomor):' : 'WhatsApp Target (Group ID / Phone):'}
                             </label>
                             <input 
@@ -5262,9 +5296,9 @@ PT. WAHANA BARA SENTOSA`;
                               value={fonnteTarget}
                               onChange={(e) => setFonnteTarget(e.target.value)}
                               placeholder="Contoh: 120363028123456789@g.us atau 08123456789"
-                              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-mono font-medium text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
+                              className="w-full bg-ink-50 border border-ink-300 rounded-xl px-3.5 py-2.5 text-xs tabular-nums font-medium text-ink-900 focus:bg-white focus:border-safe-500 focus:ring-1 focus:ring-safe-500 transition"
                             />
-                            <p className="text-[10.5px] text-slate-500 mt-1">
+                            <p className="text-xs text-ink-500 mt-1">
                               {lang === 'ID' ? (
                                 <>Untuk grup gunakan <b>ID Grup</b> (format: <code>...@g.us</code>). Untuk nomor pribadi gunakan format <code>08...</code> atau <code>628...</code>. Bisa dipisah koma jika banyak.</>
                               ) : (
@@ -5275,54 +5309,54 @@ PT. WAHANA BARA SENTOSA`;
                         </div>
 
                         {/* Triggers selection */}
-                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col gap-3">
-                          <label className="text-[11px] font-black uppercase tracking-wider text-slate-700">
+                        <div data-ui className="bg-ink-50 rounded-xl p-4 border border-ink-200 flex flex-col gap-3">
+                          <label className="text-xs font-black text-ink-700">
                             {lang === 'ID' 
                               ? 'Kondisi Karyawan Yang Memicu Notifikasi WA Otomatis:' 
                               : 'Employee Conditions Triggering Automated WhatsApp Alerts:'}
                           </label>
                           
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <label className="flex items-start gap-2.5 bg-white p-3 rounded-lg border border-slate-200 cursor-pointer hover:border-rose-400 transition shadow-2xs">
+                            <label data-ui className="flex items-start gap-2.5 bg-white p-3 rounded-lg border border-ink-200 cursor-pointer hover:border-danger-400 transition">
                               <input 
                                 type="checkbox"
                                 checked={fonnteAlertUnfit}
                                 onChange={(e) => setFonnteAlertUnfit(e.target.checked)}
-                                className="mt-0.5 w-4 h-4 accent-rose-600 cursor-pointer"
+                                className="mt-0.5 w-4 h-4 accent-danger-600 cursor-pointer"
                               />
                               <div>
-                                <span className="text-xs font-bold text-rose-700 block">⛔ Status UNFIT</span>
-                                <span className="text-[10.5px] text-slate-500 leading-tight block mt-0.5">
+                                <span className="text-xs font-bold text-danger-700 block"> Status UNFIT</span>
+                                <span className="text-xs text-ink-500 leading-tight block mt-0.5">
                                   {lang === 'ID' ? 'Kelelahan tinggi (Score ≥ 12) / Dilarang bekerja.' : 'Severe fatigue (Score ≥ 12) / Work rejected.'}
                                 </span>
                               </div>
                             </label>
 
-                            <label className="flex items-start gap-2.5 bg-white p-3 rounded-lg border border-slate-200 cursor-pointer hover:border-amber-400 transition shadow-2xs">
+                            <label data-ui className="flex items-start gap-2.5 bg-white p-3 rounded-lg border border-ink-200 cursor-pointer hover:border-warn-400 transition">
                               <input 
                                 type="checkbox"
                                 checked={fonnteAlertRest}
                                 onChange={(e) => setFonnteAlertRest(e.target.checked)}
-                                className="mt-0.5 w-4 h-4 accent-amber-500 cursor-pointer"
+                                className="mt-0.5 w-4 h-4 accent-warn-500 cursor-pointer"
                               />
                               <div>
-                                <span className="text-xs font-bold text-amber-700 block">⚠️ Butuh Istirahat</span>
-                                <span className="text-[10.5px] text-slate-500 leading-tight block mt-0.5">
+                                <span className="text-xs font-bold text-warn-700 block"> Butuh Istirahat</span>
+                                <span className="text-xs text-ink-500 leading-tight block mt-0.5">
                                   {lang === 'ID' ? 'Kelelahan sedang (Score 9-11) / Wajib istirahat.' : 'Moderate fatigue (Score 9-11) / Rest required.'}
                                 </span>
                               </div>
                             </label>
 
-                            <label className="flex items-start gap-2.5 bg-white p-3 rounded-lg border border-slate-200 cursor-pointer hover:border-blue-400 transition shadow-2xs">
+                            <label data-ui className="flex items-start gap-2.5 bg-white p-3 rounded-lg border border-ink-200 cursor-pointer hover:border-info-400 transition">
                               <input 
                                 type="checkbox"
                                 checked={fonnteAlertConditional}
                                 onChange={(e) => setFonnteAlertConditional(e.target.checked)}
-                                className="mt-0.5 w-4 h-4 accent-blue-600 cursor-pointer"
+                                className="mt-0.5 w-4 h-4 accent-info-600 cursor-pointer"
                               />
                               <div>
-                                <span className="text-xs font-bold text-blue-700 block">⚠️ Pengawasan Khusus</span>
-                                <span className="text-[10.5px] text-slate-500 leading-tight block mt-0.5">
+                                <span className="text-xs font-bold text-info-700 block"> Pengawasan Khusus</span>
+                                <span className="text-xs text-ink-500 leading-tight block mt-0.5">
                                   {lang === 'ID' ? 'Konsumsi obat, masalah pribadi, atau Score 7-8.' : 'Medication, personal stress, or Score 7-8.'}
                                 </span>
                               </div>
@@ -5331,7 +5365,7 @@ PT. WAHANA BARA SENTOSA`;
                         </div>
 
                         {/* Action buttons */}
-                        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                        <div data-ui className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-ink-100">
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
@@ -5343,7 +5377,7 @@ PT. WAHANA BARA SENTOSA`;
                                 fonnteAlertRest,
                                 fonnteAlertConditional
                               )}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs uppercase tracking-wider transition shadow-sm flex items-center gap-2 cursor-pointer"
+                              className="bg-safe-600 hover:bg-safe-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition flex items-center gap-2 cursor-pointer"
                             >
                               <Check className="w-4 h-4" />
                               <span>{lang === 'ID' ? 'Simpan Konfigurasi WA' : 'Save WA Settings'}</span>
@@ -5353,20 +5387,20 @@ PT. WAHANA BARA SENTOSA`;
                               type="button"
                               disabled={fonnteTestStatus.loading}
                               onClick={handleTestFonnteWA}
-                              className="bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition shadow-sm flex items-center gap-2 cursor-pointer"
+                              className="bg-ink-800 hover:bg-ink-900 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition flex items-center gap-2 cursor-pointer"
                             >
-                              <Send className="w-3.5 h-3.5 text-emerald-400" />
+                              <Send className="w-3.5 h-3.5 text-safe-400" />
                               <span>{fonnteTestStatus.loading ? (lang === 'ID' ? 'Mengirim...' : 'Sending...') : (lang === 'ID' ? 'Tes Kirim Pesan WA' : 'Test WA Alert')}</span>
                             </button>
                           </div>
 
                           {fonnteTestStatus.message && (
-                            <div className={`text-xs font-semibold px-3 py-1.5 rounded-lg border flex items-center gap-1.5 ${
+                            <div data-ui className={`text-xs font-semibold px-3 py-1.5 rounded-lg border flex items-center gap-1.5 ${
                               fonnteTestStatus.success 
-                                ? 'bg-emerald-50 text-emerald-850 border-emerald-300' 
-                                : 'bg-rose-50 text-rose-850 border-rose-300'
+                                ? 'bg-safe-50 text-safe-800 border-safe-300' 
+                                : 'bg-danger-50 text-danger-800 border-danger-300'
                             }`}>
-                              <span>{fonnteTestStatus.success ? '✅' : '❌'}</span>
+                              <span>{fonnteTestStatus.success ? '' : ''}</span>
                               <span>{fonnteTestStatus.message}</span>
                             </div>
                           )}
@@ -5374,15 +5408,15 @@ PT. WAHANA BARA SENTOSA`;
                       </div>
 
                       {/* Guide & Instructions Card */}
-                      <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 flex flex-col gap-4">
-                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                          <span>📖</span>
+                      <div data-ui className="bg-ink-50 rounded-xl border border-ink-200 p-6 flex flex-col gap-4">
+                        <h4 className="text-xs font-black text-ink-800 flex items-center gap-2">
+                          
                           <span>{lang === 'ID' ? 'Panduan Menghubungkan WhatsApp Grup dengan Fonnte' : 'Fonnte WhatsApp Group Connection Guide'}</span>
                         </h4>
                         
-                        <ol className="list-decimal list-inside text-xs text-slate-600 space-y-2 leading-relaxed">
+                        <ol className="list-decimal list-inside text-xs text-ink-600 space-y-2 leading-relaxed">
                           <li>
-                            <b>Buat Akun & Sambungkan Perangkat:</b> Buka <a href="https://fonnte.com" target="_blank" rel="noreferrer" className="text-emerald-700 font-bold underline hover:text-emerald-800">fonnte.com</a>, daftar akun, lalu pada menu <b>Device</b>, klik <b>Connect</b> dan scan QR code menggunakan nomor WhatsApp yang dijadikan pengirim alert.
+                            <b>Buat Akun & Sambungkan Perangkat:</b> Buka <a href="https://fonnte.com" target="_blank" rel="noreferrer" className="text-safe-700 font-bold underline hover:text-safe-800">fonnte.com</a>, daftar akun, lalu pada menu <b>Device</b>, klik <b>Connect</b> dan scan QR code menggunakan nomor WhatsApp yang dijadikan pengirim alert.
                           </li>
                           <li>
                             <b>Salin API Token:</b> Salin token perangkat dari dashboard Fonnte ke kolom <b>Token API Fonnte</b> di atas.
@@ -5403,19 +5437,19 @@ PT. WAHANA BARA SENTOSA`;
 
                   {/* SECTION: GOOGLE SHEETS INTEGRATION & SYNCHRONIZATION SUMMARY */}
                   {(integrationSubTab === 'all' || integrationSubTab === 'sheets_sync') && (
-                    <div className="flex flex-col gap-6 animate-fadeIn text-neutral-800">
+                    <div className="flex flex-col gap-6 animate-fadeIn text-ink-800">
                       
                       {/* Top Header Card */}
-                      <div className="bg-emerald-800 text-white rounded-xl p-5 shadow-sm border border-emerald-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div data-ui className="bg-safe-800 text-white rounded-xl p-5 border border-safe-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="flex items-center gap-3.5 font-sans">
-                          <div className="bg-emerald-700/80 p-2.5 rounded-lg border border-emerald-600 shadow-xs shrink-0 flex items-center justify-center">
-                            <Database className="w-6 h-6 text-emerald-100" />
+                          <div data-ui className="bg-safe-700/80 p-2.5 rounded-lg border border-safe-600 shrink-0 flex items-center justify-center">
+                            <Database className="w-6 h-6 text-safe-100" />
                           </div>
                           <div>
-                            <h4 className="text-base font-black uppercase tracking-wider leading-none">
+                            <h4 className="text-base font-black leading-none">
                               {lang === 'ID' ? 'Integrasi Google Sheets & Webhook' : 'Google Sheets & Webhook Sync'}
                             </h4>
-                            <p className="text-xs text-emerald-200 mt-1.5 leading-relaxed font-sans">
+                            <p className="text-xs text-safe-200 mt-1.5 leading-relaxed font-sans">
                               {lang === 'ID' 
                                 ? 'Sinkronisasikan daftar karyawan aktif dan rekap seluruh riwayat laporan penilaian Fit to Work secara instan ke cloud spreadsheet pihak ketiga.' 
                                 : 'Instantly synchronize active employee registers and export assessment reports to your cloud Google Spreadsheet database.'}
@@ -5424,14 +5458,14 @@ PT. WAHANA BARA SENTOSA`;
                         </div>
 
                         {/* Direct Link to Sheet */}
-                        <a 
+                        <a data-ui 
                           href={`https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`}
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="bg-white hover:bg-neutral-50 text-emerald-800 font-extrabold py-2 px-4 rounded-lg text-xs uppercase tracking-wide self-start sm:self-center transition shadow-xs flex items-center gap-1.5 shrink-0 border border-emerald-200"
+                          className="bg-white hover:bg-ink-50 text-safe-800 font-extrabold py-2 px-4 rounded-lg text-xs self-start sm:self-center transition flex items-center gap-1.5 shrink-0 border border-safe-200"
                         >
-                          <span>📂 {lang === 'ID' ? 'Buka Google Sheet' : 'Open Sheet Link'}</span>
-                          <span className="text-[10px] bg-emerald-100 text-emerald-800 rounded px-1.5 py-0.5">Edit ↗</span>
+                          <span> {lang === 'ID' ? 'Buka Google Sheet' : 'Open Sheet Link'}</span>
+                          <span className="text-xs bg-safe-100 text-safe-800 rounded px-1.5 py-0.5">Edit ↗</span>
                         </a>
                       </div>
 
@@ -5442,22 +5476,22 @@ PT. WAHANA BARA SENTOSA`;
                         <div className="lg:col-span-7 flex flex-col gap-6">
                           
                           {/* 1. Google API Session Authentication Panel */}
-                          <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm font-sans">
-                            <h4 className="text-xs font-black text-rose-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-                              <span>🔑</span>
+                          <div data-ui className="bg-white rounded-xl border border-ink-200 p-4 font-sans">
+                            <h4 className="text-xs font-black text-danger-800 mb-4 flex items-center gap-2">
+                              
                               <span>{lang === 'ID' ? 'Otorisasi Keamanan Google Sheets API' : 'Google Authentication Control'}</span>
                             </h4>
 
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-neutral-50 border border-neutral-200 p-4 rounded-xl">
+                            <div data-ui className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-ink-50 border border-ink-200 p-4 rounded-xl">
                               <div className="flex items-center gap-3">
                                 <div className={`w-3.5 h-3.5 rounded-full shrink-0 ${
-                                  sheetsToken ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-300'
+                                  sheetsToken ? 'bg-safe-500 ' : 'bg-ink-300'
                                 }`} />
                                 <div className="flex flex-col">
-                                  <span className="text-[10.5px] font-extrabold uppercase leading-none text-neutral-600 block mb-1">
+                                  <span className="text-xs font-extrabold leading-none text-ink-600 block mb-1">
                                     {lang === 'ID' ? 'Status Koneksi Google' : 'Google Connection Status'}
                                   </span>
-                                  <span className="text-xs font-black text-neutral-800 leading-normal">
+                                  <span className="text-xs font-black text-ink-800 leading-normal">
                                     {sheetsToken 
                                       ? (lang === 'ID' ? `Terhubung sebagai: Authorized User` : `Connected: API Session Active`) 
                                       : (lang === 'ID' ? 'Hubungkan akun Google anda untuk menulis data secara aman.' : 'Disconnect / No Token Active')}
@@ -5470,7 +5504,7 @@ PT. WAHANA BARA SENTOSA`;
                                   <button
                                     type="button"
                                     onClick={handleSheetsLogin}
-                                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase py-2 px-4 rounded-lg tracking-wider cursor-pointer shadow-xs transition flex items-center gap-1.5"
+                                    className="bg-safe-600 hover:bg-safe-500 text-white font-black text-xs py-2 px-4 rounded-lg cursor-pointer transition flex items-center gap-1.5"
                                   >
                                     <LogIn className="w-3.5 h-3.5" />
                                     <span>{lang === 'ID' ? 'Hubungkan Akun' : 'Sign In Google'}</span>
@@ -5479,7 +5513,7 @@ PT. WAHANA BARA SENTOSA`;
                                   <button
                                     type="button"
                                     onClick={handleSheetsLogout}
-                                    className="bg-neutral-200 hover:bg-neutral-300 text-neutral-800 font-extrabold text-xs uppercase py-2 px-4 rounded-lg cursor-pointer transition flex items-center gap-1.5"
+                                    className="bg-ink-200 hover:bg-ink-300 text-ink-800 font-extrabold text-xs py-2 px-4 rounded-lg cursor-pointer transition flex items-center gap-1.5"
                                   >
                                     <LogOut className="w-3.5 h-3.5" />
                                     <span>{lang === 'ID' ? 'Putuskan' : 'Disconnect'}</span>
@@ -5490,20 +5524,20 @@ PT. WAHANA BARA SENTOSA`;
                           </div>
 
                           {/* 2. Spreadsheet Configuration Parameters */}
-                          <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm flex flex-col gap-4 font-sans">
-                            <h4 className="text-xs font-black text-rose-800 uppercase tracking-wider flex items-center gap-2">
-                              <span>⚙️</span>
+                          <div data-ui className="bg-white rounded-xl border border-ink-200 p-4 flex flex-col gap-4 font-sans">
+                            <h4 className="text-xs font-black text-danger-800 flex items-center gap-2">
+                              
                               <span>{lang === 'ID' ? 'Parameter Target Google Sheets' : 'Spreadsheet ID & Endpoint Config'}</span>
                             </h4>
 
                             <div className="flex flex-col gap-1.5">
-                              <label className="text-[10px] font-black text-neutral-600 uppercase tracking-wide">
+                              <label className="text-xs font-black text-ink-600">
                                 Active Spreadsheet ID:
                               </label>
                               <div className="flex gap-2">
                                 <input
                                   type="text"
-                                  className="flex-1 bg-neutral-50 text-neutral-900 border border-neutral-250 rounded-lg py-2 px-2.5 text-xs font-mono font-bold"
+                                  className="flex-1 bg-ink-50 text-ink-900 border border-rule rounded-lg py-2 px-2.5 text-xs tabular-nums font-bold"
                                   placeholder="Contoh: 15xOHL87QqqYUkwZRyNe..."
                                   value={spreadsheetId}
                                   onChange={(e) => setSpreadsheetId(e.target.value)}
@@ -5511,12 +5545,12 @@ PT. WAHANA BARA SENTOSA`;
                                 <button
                                   type="button"
                                   onClick={() => handleSaveSpreadsheetId(spreadsheetId)}
-                                  className="bg-neutral-800 hover:bg-neutral-950 text-white font-extrabold text-xs uppercase py-2 px-3.5 rounded-lg cursor-pointer transition"
+                                  className="bg-ink-800 hover:bg-ink-950 text-white font-extrabold text-xs py-2 px-3.5 rounded-lg cursor-pointer transition"
                                 >
                                   {lang === 'ID' ? 'Simpan' : 'Save'}
                                 </button>
                               </div>
-                              <span className="text-[9px] text-neutral-400 font-semibold italic mt-0.5 leading-relaxed font-sans block">
+                              <span className="text-xs text-ink-400 font-semibold italic mt-0.5 leading-relaxed font-sans block">
                                 {lang === 'ID' 
                                   ? 'ID ini digunakan untuk mengambil data karyawan dan menyimpan log rekap assessment.' 
                                   : 'This key tells the API which spreadsheet folder to access for synchronization.'}
@@ -5524,9 +5558,9 @@ PT. WAHANA BARA SENTOSA`;
                             </div>
 
                             {/* Auto-Template Creator Section */}
-                            <div className="pt-2.5 border-t border-dashed border-neutral-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-neutral-600">
+                            <div data-ui className="pt-2.5 border-t border-dashed border-ink-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-ink-600">
                               <div>
-                                <span className="font-bold text-neutral-800 block text-[11px] mb-0.5">
+                                <span className="font-bold text-ink-800 block text-xs mb-0.5">
                                   {lang === 'ID' ? 'Inisialisasi Template Otomatis' : 'Automatic Schema Builder'}
                                 </span>
                                 {lang === 'ID' 
@@ -5536,28 +5570,28 @@ PT. WAHANA BARA SENTOSA`;
                               <button
                                 type="button"
                                 onClick={handleCreateNewSpreadsheet}
-                                className="bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-black text-[10.5px] uppercase py-2 px-3.5 rounded-lg cursor-pointer shrink-0 transition"
+                                className="bg-danger-50 hover:bg-danger-100 border border-danger-200 text-danger-700 font-black text-xs py-2 px-3.5 rounded-lg cursor-pointer shrink-0 transition"
                               >
-                                🎯 {lang === 'ID' ? 'Buat Baru & Template' : 'Generate Schema'}
+                                 {lang === 'ID' ? 'Buat Baru & Template' : 'Generate Schema'}
                               </button>
                             </div>
                           </div>
 
                           {/* 3. Operational Sync Triggers */}
-                          <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm flex flex-col gap-4 font-sans">
-                            <h4 className="text-xs font-black text-rose-800 uppercase tracking-wider flex items-center gap-2">
-                              <span>🔄</span>
+                          <div data-ui className="bg-white rounded-xl border border-ink-200 p-4 flex flex-col gap-4 font-sans">
+                            <h4 className="text-xs font-black text-danger-800 flex items-center gap-2">
+                              
                               <span>{lang === 'ID' ? 'Aksi Sinkronisasi Mandatori' : 'Operational Sync Controls'}</span>
                             </h4>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {/* Tarik karyawan */}
-                              <div className="border border-neutral-150 rounded-xl p-3 bg-neutral-50/50 flex flex-col justify-between">
+                              <div data-ui className="border border-rule rounded-xl p-3 bg-ink-50/50 flex flex-col justify-between">
                                 <div className="mb-3">
-                                  <span className="font-extrabold text-xs text-neutral-800 block">
+                                  <span className="font-extrabold text-xs text-ink-800 block">
                                     {lang === 'ID' ? '1. Impor Database Karyawan' : '1. Sync Active Employees'}
                                   </span>
-                                  <span className="text-[9.5px] text-neutral-500 font-medium leading-relaxed mt-1 block font-sans">
+                                  <span className="text-xs text-ink-500 font-medium leading-relaxed mt-1 block font-sans">
                                     {lang === 'ID' 
                                       ? "Mengambil kolom data pendaftaran karyawan dari worksheet 'Karyawan' ke memori sistem." 
                                       : "Pull, parsed, and verifies names & depts from 'Karyawan' sheet tab."}
@@ -5566,19 +5600,19 @@ PT. WAHANA BARA SENTOSA`;
                                 <button
                                   type="button"
                                   onClick={() => handleSyncKaryawan()}
-                                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10.5px] uppercase py-2 rounded-lg cursor-pointer tracking-wider text-center transition shadow-xs"
+                                  className="w-full bg-safe-600 hover:bg-safe-500 text-white font-black text-xs py-2 rounded-lg cursor-pointer text-center transition"
                                 >
-                                  📥 Pull Karyawan API
+                                   Pull Karyawan API
                                 </button>
                               </div>
 
                               {/* Backup Assessment */}
-                              <div className="border border-neutral-150 rounded-xl p-3 bg-neutral-50/50 flex flex-col justify-between">
+                              <div data-ui className="border border-rule rounded-xl p-3 bg-ink-50/50 flex flex-col justify-between">
                                 <div className="mb-3">
-                                  <span className="font-extrabold text-xs text-neutral-800 block">
+                                  <span className="font-extrabold text-xs text-ink-800 block">
                                     {lang === 'ID' ? '2. Ekspor Rekap Hasil Assessment' : '2. Backup Assessment History'}
                                   </span>
-                                  <span className="text-[9.5px] text-neutral-500 font-medium leading-relaxed mt-1 block font-sans">
+                                  <span className="text-xs text-ink-500 font-medium leading-relaxed mt-1 block font-sans">
                                     {lang === 'ID' 
                                       ? "Mengunggah seluruh daftar pengisian penilaian safety yang direkap oleh sistem ke Google Sheet 'Hasil Assessment'." 
                                       : "Appends recent recorded employee fatigue passes and status rows on cloud."}
@@ -5587,22 +5621,22 @@ PT. WAHANA BARA SENTOSA`;
                                 <button
                                   type="button"
                                   onClick={handleBulkUploadHistory}
-                                  className="w-full bg-rose-600 hover:bg-rose-500 text-white font-black text-[10.5px] uppercase py-2 rounded-lg cursor-pointer tracking-wider text-center transition shadow-xs"
+                                  className="w-full bg-danger-600 hover:bg-danger-500 text-white font-black text-xs py-2 rounded-lg cursor-pointer text-center transition"
                                 >
-                                  ☁️ Push Hasil Assessment
+                                   Push Hasil Assessment
                                 </button>
                               </div>
                             </div>
 
                             {/* Sync Webhook alternative */}
-                            <div className="pt-3 border-t border-dashed border-neutral-200 flex flex-col gap-2.5">
-                              <span className="font-extrabold text-[11px] text-neutral-700 block">
+                            <div data-ui className="pt-3 border-t border-dashed border-ink-200 flex flex-col gap-2.5">
+                              <span className="font-extrabold text-xs text-ink-700 block">
                                 Webhook Google Apps Script Deployment URL:
                               </span>
                               <div className="flex gap-2">
                                 <input
                                   type="text"
-                                  className="flex-1 bg-neutral-50 text-neutral-950 border border-neutral-250 rounded-lg py-1.5 px-2 text-xs font-mono focus:ring-1 focus:ring-rose-500 font-semibold"
+                                  className="flex-1 bg-ink-50 text-ink-950 border border-rule rounded-lg py-1.5 px-2 text-xs tabular-nums focus:ring-1 focus:ring-danger-500 font-semibold"
                                   placeholder="https://script.google.com/macros/s/.../exec"
                                   value={webhookUrl}
                                   onChange={(e) => setWebhookUrl(e.target.value)}
@@ -5610,13 +5644,13 @@ PT. WAHANA BARA SENTOSA`;
                                 <button
                                   type="button"
                                   onClick={() => handleSaveWebhookUrl(webhookUrl)}
-                                  className="bg-neutral-800 hover:bg-neutral-950 text-white font-bold text-xs py-1.5 px-3.5 rounded-lg cursor-pointer transition uppercase"
+                                  className="bg-ink-800 hover:bg-ink-950 text-white font-bold text-xs py-1.5 px-3.5 rounded-lg cursor-pointer transition"
                                 >
                                   {lang === 'ID' ? 'Simpan' : 'Save'}
                                 </button>
                               </div>
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 mt-1">
-                                <span className="text-[9.5px] text-neutral-400 font-medium leading-normal italic font-sans block">
+                                <span className="text-xs text-ink-400 font-medium leading-normal italic font-sans block">
                                   {lang === 'ID' 
                                     ? 'Gunakan webhook untuk melakukan sync karyawan secara aman tanpa perlu login akun Google di perambah.' 
                                     : 'Enables quick secure sync without individual browser login or Google popup.'}
@@ -5624,9 +5658,9 @@ PT. WAHANA BARA SENTOSA`;
                                 <button
                                   type="button"
                                   onClick={handleSyncKaryawanViaWebhook}
-                                  className="bg-white hover:bg-neutral-50 border border-neutral-250 text-neutral-700 font-bold text-[10px] uppercase py-1.5 px-3 rounded-lg cursor-pointer transition shrink-0 shadow-xs"
+                                  className="bg-white hover:bg-ink-50 border border-rule text-ink-700 font-bold text-xs py-1.5 px-3 rounded-lg cursor-pointer transition shrink-0"
                                 >
-                                  ⚡ Pull via Webhook
+                                   Pull via Webhook
                                 </button>
                               </div>
                             </div>
@@ -5638,24 +5672,24 @@ PT. WAHANA BARA SENTOSA`;
                         <div className="lg:col-span-5 flex flex-col gap-4">
                           
                           {/* Instructions Card info */}
-                          <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-4 shadow-sm text-xs leading-relaxed font-sans">
-                            <h4 className="text-xs font-black text-neutral-800 uppercase tracking-widest mb-2 font-sans">
-                              📋 {lang === 'ID' ? 'Panduan Struktur Sheet' : 'Sheet Folder Guidelines'}
+                          <div data-ui className="bg-ink-50 rounded-xl border border-ink-200 p-4 text-xs leading-relaxed font-sans">
+                            <h4 className="text-xs font-black text-ink-800 mb-2 font-sans">
+                               {lang === 'ID' ? 'Panduan Struktur Sheet' : 'Sheet Folder Guidelines'}
                             </h4>
-                            <p className="text-neutral-600 text-[11px] leading-relaxed font-sans">
+                            <p className="text-ink-600 text-xs leading-relaxed font-sans">
                               {lang === 'ID' 
                                 ? 'Spreadsheet wajib memiliki dua nama worksheet (tab) utama untuk dapat dibaca dengan benar oleh sistem Fit to Work:' 
                                 : 'For this synchronization system to operate flawlessly, make sure your Spreadsheet contains these two worksheets:'}
                             </p>
-                            <ul className="text-neutral-700 flex flex-col gap-2.5 pl-1.5 mt-3 select-text font-sans">
-                              <li className="flex gap-2 items-start text-[11px]">
-                                <span className="text-rose-600 font-extrabold shrink-0">•</span>
+                            <ul className="text-ink-700 flex flex-col gap-2.5 pl-1.5 mt-3 select-text font-sans">
+                              <li className="flex gap-2 items-start text-xs">
+                                <span className="text-danger-600 font-extrabold shrink-0">•</span>
                                 <div className="font-sans leading-normal">
                                   <b>Tab 'Karyawan':</b> {lang === 'ID' ? 'Memuat kolom NIK (A), Nama (B), Jabatan (C), dan Departemen (D).' : 'Holds columns NIK (A), Name (B), Position (C), and Dept (D).'}
                                 </div>
                               </li>
-                              <li className="flex gap-2 items-start text-[11px]">
-                                <span className="text-rose-600 font-extrabold shrink-0">•</span>
+                              <li className="flex gap-2 items-start text-xs">
+                                <span className="text-danger-600 font-extrabold shrink-0">•</span>
                                 <div className="font-sans leading-normal">
                                   <b>Tab 'Hasil Assessment':</b> {lang === 'ID' ? 'Tempat sistem mengunggah detail jam tidur dan status kelayakan kerja.' : 'Real-time database table for fatigue index scores and safety passes.'}
                                 </div>
@@ -5663,35 +5697,35 @@ PT. WAHANA BARA SENTOSA`;
                             </ul>
                           </div>
 
-                          {/* Rolling Logs Live Board Terminal */}
-                          <div className="bg-neutral-900 border border-neutral-800 rounded-xl min-h-[250px] flex-1 flex flex-col overflow-hidden text-neutral-200 font-mono text-[10px] shadow-lg">
-                            <div className="bg-neutral-950 px-4 py-2.5 border-b border-neutral-800 flex items-center justify-between shrink-0 font-sans">
+                          {/* Structured Sync Log Panel */}
+                          <div data-ui className="bg-elevated border border-rule rounded-xl min-h-[250px] flex-1 flex flex-col overflow-hidden text-ink-800 text-xs">
+                            <div data-ui className="bg-surface px-4 py-2.5 border-b border-rule flex items-center justify-between shrink-0">
                               <div className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-                                <span className="text-[9.5px] font-bold text-neutral-400 uppercase tracking-widest font-mono">
-                                  SYSTEM SYNC LOGS TERMINAL
+                                
+                                <span className="text-xs font-bold text-ink-700">
+                                  {lang === 'ID' ? 'Log Sinkronisasi Sistem' : 'System Sync Logs'}
                                 </span>
                               </div>
                               <button
                                 type="button"
                                 onClick={() => setSheetsLogs([])}
-                                className="text-[8.5px] bg-neutral-800 hover:bg-neutral-700 font-bold px-2 py-0.5 rounded text-neutral-350 cursor-pointer uppercase font-mono"
+                                className="text-xs bg-elevated hover:bg-surface border border-rule font-bold px-2.5 py-1 rounded text-ink-700 cursor-pointer"
                               >
                                 {lang === 'ID' ? 'Bersihkan' : 'Clear'}
                               </button>
                             </div>
 
-                            <div className="p-3.5 flex-1 overflow-y-auto flex flex-col-reverse gap-1.5 select-text leading-relaxed font-mono">
+                            <div className="p-3.5 flex-1 overflow-y-auto flex flex-col-reverse gap-1.5 select-text leading-relaxed">
                               {sheetsLogs.length > 0 ? (
                                 sheetsLogs.map((log, index) => (
-                                  <div key={index} className="border-b border-neutral-800 pb-1 flex gap-2 items-start font-mono">
-                                    <span className="text-emerald-500 shrink-0 select-none">▶</span>
-                                    <span className="whitespace-pre-wrap font-mono">{log}</span>
+                                  <div key={index} data-ui className="border-b border-rule pb-1 flex gap-2 items-start">
+                                    <span className="text-safe-600 shrink-0 select-none">•</span>
+                                    <code className="whitespace-pre-wrap text-xs text-ink-800">{log}</code>
                                   </div>
                                 ))
                               ) : (
-                                <div className="text-neutral-500 italic py-12 text-center select-none font-mono">
-                                  {lang === 'ID' ? '--- Konsol Diagnostik Kosong ---' : '--- Diagnostics console idle. No sync acts run. ---'}
+                                <div className="text-ink-500 italic py-12 text-center select-none">
+                                  {lang === 'ID' ? 'Belum ada aktivitas sinkronisasi.' : 'No sync activity recorded yet.'}
                                 </div>
                               )}
                             </div>
@@ -5709,93 +5743,93 @@ PT. WAHANA BARA SENTOSA`;
                     <div className="max-w-5xl mx-auto space-y-5 w-full">
                       {/* Banner / Notification */}
                       {firebaseStatusMsg && (
-                        <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4 text-xs font-bold flex items-center justify-between shadow-xs">
+                        <div data-ui className="bg-warn-50 border border-warn-200 text-warn-900 rounded-xl p-4 text-xs font-bold flex items-center justify-between">
                           <span>{firebaseStatusMsg}</span>
                           <button
                             type="button"
                             onClick={() => setFirebaseStatusMsg('')}
-                            className="text-amber-700 hover:text-amber-900 font-extrabold text-xs ml-3 cursor-pointer"
+                            className="text-warn-700 hover:text-warn-900 font-extrabold text-xs ml-3 cursor-pointer"
                           >
-                            ✕
+                            
                           </button>
                         </div>
                       )}
 
                       {/* Header Card */}
-                      <div className="bg-gradient-to-r from-amber-600 via-rose-600 to-rose-700 rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
+                      <div className="bg-danger-700 rounded-2xl p-6 text-white relative overflow-hidden">
                         <div className="relative z-10">
                           <div className="flex items-center gap-3 mb-2">
-                            <span className="p-2 bg-white/20 rounded-xl backdrop-blur-xs">
-                              <Flame className="w-6 h-6 text-amber-200" />
+                            <span className="p-2 bg-white/20 rounded-xl">
+                              <Flame className="w-6 h-6 text-warn-200" />
                             </span>
                             <div>
                               <h3 className="text-lg font-black tracking-tight">
                                 Firebase Cloud Storage & Quota Optimization
                               </h3>
-                              <p className="text-xs text-amber-100 font-medium">
+                              <p className="text-xs text-warn-100 font-medium">
                                 Mode Hemat Kuota & Penyimpanan Ringan Aktif untuk PT. Wahana Bara Sentosa
                               </p>
                             </div>
                           </div>
                           
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-white/20 text-xs">
+                          <div data-ui className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-white/20 text-xs">
                             <div className="bg-black/15 rounded-xl p-3">
-                              <span className="text-[10px] text-amber-200 uppercase font-black tracking-wider block">Firebase Project</span>
-                              <span className="font-mono font-bold text-white text-sm">ftw-wbs</span>
+                              <span className="text-xs text-warn-200 font-black block">Firebase Project</span>
+                              <span className="tabular-nums font-bold text-white text-sm">ftw-wbs</span>
                             </div>
                             <div className="bg-black/15 rounded-xl p-3">
-                              <span className="text-[10px] text-amber-200 uppercase font-black tracking-wider block">Mode Arsitektur</span>
-                              <span className="font-bold text-emerald-300 text-xs flex items-center gap-1.5 mt-0.5">
-                                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                ⚡ HEMAT KUOTA & STORAGE
+                              <span className="text-xs text-warn-200 font-black block">Mode Arsitektur</span>
+                              <span className="font-bold text-safe-300 text-xs flex items-center gap-1.5 mt-0.5">
+                                
+                                 Hemat Kuota & Storage
                               </span>
                             </div>
                             <div className="bg-black/15 rounded-xl p-3">
-                              <span className="text-[10px] text-amber-200 uppercase font-black tracking-wider block">Target Collections</span>
-                              <span className="font-mono font-bold text-white text-xs">directory, assessments</span>
+                              <span className="text-xs text-warn-200 font-black block">Target Collections</span>
+                              <span className="tabular-nums font-bold text-white text-xs">directory, assessments</span>
                             </div>
                           </div>
                         </div>
                       </div>
 
                       {/* Quota & Storage Optimization Highlights */}
-                      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 sm:p-5 shadow-xs">
+                      <div data-ui className="bg-safe-50 border border-safe-200 rounded-2xl p-4 sm:p-5">
                         <div className="flex items-start gap-3">
-                          <span className="text-2xl">💡</span>
+                          
                           <div className="space-y-2 text-xs">
-                            <h4 className="font-black text-emerald-950 uppercase tracking-wide text-xs">
+                            <h4 className="font-black text-safe-950 text-xs">
                               Strategi Optimasi Kuota & Penyimpanan Firebase Aktif:
                             </h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-emerald-900">
-                              <div className="bg-white/80 rounded-xl p-3 border border-emerald-150">
-                                <div className="font-bold text-emerald-950 flex items-center gap-1.5 mb-1">
-                                  <span>📦 1-Doc Consolidated Roster</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-safe-900">
+                              <div data-ui className="bg-white/80 rounded-xl p-3 border border-safe-200">
+                                <div className="font-bold text-safe-950 flex items-center gap-1.5 mb-1">
+                                  <span> 1-Doc Consolidated Roster</span>
                                 </div>
-                                <p className="text-[11px] text-emerald-800 leading-relaxed">
-                                  Ratusan data karyawan dibundle ke 1 dokumen <code className="bg-emerald-100 px-1 py-0.5 rounded font-mono text-[10px]">/directory/roster</code>. Menghemat <b>99% kuota Read & Write</b> dibanding 1 dokumen per karyawan!
+                                <p className="text-xs text-safe-800 leading-relaxed">
+                                  Ratusan data karyawan dibundle ke 1 dokumen <code className="bg-safe-100 px-1 py-0.5 rounded tabular-nums text-xs">/directory/roster</code>. Menghemat <b>99% kuota Read & Write</b> dibanding 1 dokumen per karyawan!
                                 </p>
                               </div>
-                              <div className="bg-white/80 rounded-xl p-3 border border-emerald-150">
-                                <div className="font-bold text-emerald-950 flex items-center gap-1.5 mb-1">
-                                  <span>⚡ IndexedDB Persistent Cache</span>
+                              <div data-ui className="bg-white/80 rounded-xl p-3 border border-safe-200">
+                                <div className="font-bold text-safe-950 flex items-center gap-1.5 mb-1">
+                                  <span> IndexedDB Persistent Cache</span>
                                 </div>
-                                <p className="text-[11px] text-emerald-800 leading-relaxed">
+                                <p className="text-xs text-safe-800 leading-relaxed">
                                   Cache multi-tab browser aktif di memori lokal. Pengambilan data berulang disajikan dari browser lokal tanpa memakan kuota Read Firebase.
                                 </p>
                               </div>
-                              <div className="bg-white/80 rounded-xl p-3 border border-emerald-150">
-                                <div className="font-bold text-emerald-950 flex items-center gap-1.5 mb-1">
-                                  <span>📉 Payload Sanitized & Ringan</span>
+                              <div data-ui className="bg-white/80 rounded-xl p-3 border border-safe-200">
+                                <div className="font-bold text-safe-950 flex items-center gap-1.5 mb-1">
+                                  <span> Payload Sanitized & Ringan</span>
                                 </div>
-                                <p className="text-[11px] text-emerald-800 leading-relaxed">
+                                <p className="text-xs text-safe-800 leading-relaxed">
                                   Field kosong & metadata UI dibersihkan sebelum disimpan ke Firestore, memotong ukuran penyimpanan dokumen hingga <b>70% lebih kecil</b>.
                                 </p>
                               </div>
-                              <div className="bg-white/80 rounded-xl p-3 border border-emerald-150">
-                                <div className="font-bold text-emerald-950 flex items-center gap-1.5 mb-1">
-                                  <span>🛑 Pencegah Lonjakan Read (1.9M)</span>
+                              <div data-ui className="bg-white/80 rounded-xl p-3 border border-safe-200">
+                                <div className="font-bold text-safe-950 flex items-center gap-1.5 mb-1">
+                                  <span> Pencegah Lonjakan Read (1.9M)</span>
                                 </div>
-                                <p className="text-[11px] text-emerald-800 leading-relaxed">
+                                <p className="text-xs text-safe-800 leading-relaxed">
                                   Menghilangkan pembacaan koleksi tanpa batas di setiap refresh halaman. Query riwayat dibatasi (limit) hanya untuk data esensial terbaru.
                                 </p>
                               </div>
@@ -5807,32 +5841,32 @@ PT. WAHANA BARA SENTOSA`;
                       {/* Main Operational Cards */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         {/* 1. Backup / Push Data */}
-                        <div className="bg-white rounded-xl border border-neutral-200 p-5 shadow-sm flex flex-col justify-between">
+                        <div data-ui className="bg-white rounded-xl border border-ink-200 p-5 flex flex-col justify-between">
                           <div>
                             <div className="flex items-center gap-2 mb-3">
-                              <span className="p-2 bg-rose-50 text-rose-600 rounded-lg font-black text-sm">🚀</span>
-                              <h4 className="font-black text-sm text-neutral-900">
+                              
+                              <h4 className="font-black text-sm text-ink-900">
                                 {lang === 'ID' ? 'Backup Seluruh Data (Format Hemat)' : 'Backup All Data (Quota Saver)'}
                               </h4>
                             </div>
-                            <p className="text-xs text-neutral-600 leading-relaxed mb-4">
+                            <p className="text-xs text-ink-600 leading-relaxed mb-4">
                               {lang === 'ID'
                                 ? 'Mengunggah seluruh daftar karyawan ke 1 dokumen roster hemat kuota dan riwayat assessment ringkas ke database Firestore (ftw-wbs).'
                                 : 'Upload and safely backup all current active employees (1-Doc roster) and compact assessment history to Firebase Firestore.'}
                             </p>
                             
-                            <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-150 mb-4 space-y-1.5 text-xs">
-                              <div className="flex justify-between text-neutral-600">
+                            <div data-ui className="bg-ink-50 rounded-xl p-3 border border-rule mb-4 space-y-1.5 text-xs">
+                              <div className="flex justify-between text-ink-600">
                                 <span>Karyawan di memori:</span>
-                                <span className="font-bold font-mono text-neutral-900">{Object.keys(employeeDb).length} orang</span>
+                                <span className="font-bold tabular-nums text-ink-900">{Object.keys(employeeDb).length} orang</span>
                               </div>
-                              <div className="flex justify-between text-neutral-600">
+                              <div className="flex justify-between text-ink-600">
                                 <span>Laporan riwayat di memori:</span>
-                                <span className="font-bold font-mono text-neutral-900">{history.length} laporan</span>
+                                <span className="font-bold tabular-nums text-ink-900">{history.length} laporan</span>
                               </div>
-                              <div className="flex justify-between text-emerald-700 font-semibold pt-1 border-t border-neutral-200">
+                              <div data-ui className="flex justify-between text-safe-700 font-semibold pt-1 border-t border-ink-200">
                                 <span>Estimasi Kuota Tulis (Writes):</span>
-                                <span className="font-mono">1 Write (Roster) + {history.length} Writes</span>
+                                <span className="tabular-nums">1 Write (Roster) + {history.length} Writes</span>
                               </div>
                             </div>
                           </div>
@@ -5841,39 +5875,39 @@ PT. WAHANA BARA SENTOSA`;
                             type="button"
                             disabled={firebaseSyncing}
                             onClick={handleSyncAllToFirebase}
-                            className={`w-full py-3 px-4 rounded-xl font-black text-xs uppercase tracking-wider text-white shadow-sm flex items-center justify-center gap-2 cursor-pointer transition ${
+                            className={`w-full py-3 px-4 rounded-xl font-black text-xs   text-white  flex items-center justify-center gap-2 cursor-pointer transition ${
                               firebaseSyncing
-                                ? 'bg-neutral-400 cursor-not-allowed'
-                                : 'bg-rose-600 hover:bg-rose-700 active:scale-[0.99]'
+                                ? 'bg-ink-400 cursor-not-allowed'
+                                : 'bg-danger-600 hover:bg-danger-700 active:scale-[0.99]'
                             }`}
                           >
-                            <Flame className="w-4 h-4 text-amber-300" />
+                            <Flame className="w-4 h-4 text-warn-300" />
                             <span>
                               {firebaseSyncing
                                 ? (lang === 'ID' ? 'Memproses Backup...' : 'Backing up...')
-                                : (lang === 'ID' ? '🚀 Backup ke Firebase Sekarang' : '🚀 Backup to Firebase Now')}
+                                : (lang === 'ID' ? ' Backup ke Firebase Sekarang' : ' Backup to Firebase Now')}
                             </span>
                           </button>
                         </div>
 
                         {/* 2. Pull / Restore Data */}
-                        <div className="bg-white rounded-xl border border-neutral-200 p-5 shadow-sm flex flex-col justify-between">
+                        <div data-ui className="bg-white rounded-xl border border-ink-200 p-5 flex flex-col justify-between">
                           <div>
                             <div className="flex items-center gap-2 mb-3">
-                              <span className="p-2 bg-emerald-50 text-emerald-600 rounded-lg font-black text-sm">📥</span>
-                              <h4 className="font-black text-sm text-neutral-900">
+                              
+                              <h4 className="font-black text-sm text-ink-900">
                                 {lang === 'ID' ? 'Tarik Data (1-Read Roster Mode)' : 'Restore Data (1-Read Mode)'}
                               </h4>
                             </div>
-                            <p className="text-xs text-neutral-600 leading-relaxed mb-4">
+                            <p className="text-xs text-ink-600 leading-relaxed mb-4">
                               {lang === 'ID'
                                 ? 'Mengambil seluruh karyawan hanya dengan 1 kali Read dari dokumen roster terpadu, plus riwayat laporan assessment esensial.'
                                 : 'Fetch all employees with a single Firestore Read operation from the unified roster document, plus essential assessment history.'}
                             </p>
 
-                            <div className="bg-neutral-50 rounded-xl p-3 border border-neutral-150 mb-4 text-xs text-neutral-600 space-y-1">
-                              <div className="font-bold text-neutral-800">⚡ Efisiensi Kuota Baca (Read):</div>
-                              <p className="text-[11px] text-neutral-500 leading-relaxed">
+                            <div data-ui className="bg-ink-50 rounded-xl p-3 border border-rule mb-4 text-xs text-ink-600 space-y-1">
+                              <div className="font-bold text-ink-800"> Efisiensi Kuota Baca (Read):</div>
+                              <p className="text-xs text-ink-500 leading-relaxed">
                                 Mode sebelumnya menghabiskan ratusan Read setiap kali ditarik. Mode baru mengelompokkan data karyawan dalam 1 dokumen roster sehingga hanya mengonsumsi <b>1 Read</b>!
                               </p>
                             </div>
@@ -5883,33 +5917,33 @@ PT. WAHANA BARA SENTOSA`;
                             type="button"
                             disabled={firebaseSyncing}
                             onClick={() => handleRestoreFromFirebase()}
-                            className={`w-full py-3 px-4 rounded-xl font-black text-xs uppercase tracking-wider text-white shadow-sm flex items-center justify-center gap-2 cursor-pointer transition ${
+                            className={`w-full py-3 px-4 rounded-xl font-black text-xs   text-white  flex items-center justify-center gap-2 cursor-pointer transition ${
                               firebaseSyncing
-                                ? 'bg-neutral-400 cursor-not-allowed'
-                                : 'bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99]'
+                                ? 'bg-ink-400 cursor-not-allowed'
+                                : 'bg-safe-600 hover:bg-safe-700 active:scale-[0.99]'
                             }`}
                           >
                             <RefreshCw className={`w-4 h-4 ${firebaseSyncing ? 'animate-spin' : ''}`} />
                             <span>
                               {firebaseSyncing
                                 ? (lang === 'ID' ? 'Memproses Data...' : 'Processing...')
-                                : (lang === 'ID' ? '📥 Tarik Data dari Firebase' : '📥 Pull from Firebase')}
+                                : (lang === 'ID' ? ' Tarik Data dari Firebase' : ' Pull from Firebase')}
                             </span>
                           </button>
                         </div>
                       </div>
 
                       {/* 3. Storage Pruning & Cleanup Card (Hemat Kapasitas Penyimpanan) */}
-                      <div className="bg-white rounded-xl border border-amber-200 p-5 shadow-sm">
+                      <div data-ui className="bg-white rounded-xl border border-warn-200 p-5">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div>
                             <div className="flex items-center gap-2 mb-1.5">
-                              <span className="p-1.5 bg-amber-50 text-amber-600 rounded-lg font-bold text-sm">🧹</span>
-                              <h4 className="font-black text-sm text-neutral-900">
+                              
+                              <h4 className="font-black text-sm text-ink-900">
                                 {lang === 'ID' ? 'Pangkas & Bersihkan Storage Riwayat Lama' : 'Prune Old History Storage'}
                               </h4>
                             </div>
-                            <p className="text-xs text-neutral-600 max-w-2xl leading-relaxed">
+                            <p className="text-xs text-ink-600 max-w-2xl leading-relaxed">
                               {lang === 'ID'
                                 ? 'Hapus laporan assessment lama dari Firebase Firestore yang sudah tidak aktif untuk mengosongkan kuota penyimpanan (Storage) agar tetap berada dalam free-tier dan database tetap ringan.'
                                 : 'Delete old assessment records from Firebase Firestore to free up storage space and keep your database lightweight.'}
@@ -5920,7 +5954,7 @@ PT. WAHANA BARA SENTOSA`;
                             <select
                               value={pruneDays}
                               onChange={(e) => setPruneDays(Number(e.target.value))}
-                              className="bg-neutral-50 border border-neutral-300 rounded-xl px-3 py-2 text-xs font-bold text-neutral-800"
+                              className="bg-ink-50 border border-ink-300 rounded-xl px-3 py-2 text-xs font-bold text-ink-800"
                             >
                               <option value={14}>{lang === 'ID' ? '> 14 Hari Lalu' : '> 14 Days Old'}</option>
                               <option value={30}>{lang === 'ID' ? '> 30 Hari Lalu' : '> 30 Days Old'}</option>
@@ -5932,10 +5966,10 @@ PT. WAHANA BARA SENTOSA`;
                               type="button"
                               disabled={isPruning}
                               onClick={handlePruneOldAssessments}
-                              className={`py-2 px-4 rounded-xl font-bold text-xs text-white shadow-xs cursor-pointer transition flex items-center gap-1.5 ${
+                              className={`py-2 px-4 rounded-xl font-bold text-xs text-white  cursor-pointer transition flex items-center gap-1.5 ${
                                 isPruning
-                                  ? 'bg-neutral-400 cursor-not-allowed'
-                                  : 'bg-amber-600 hover:bg-amber-700 active:scale-95'
+                                  ? 'bg-ink-400 cursor-not-allowed'
+                                  : 'bg-warn-600 hover:bg-warn-700 active:scale-95'
                               }`}
                             >
                               <Trash2 className={`w-3.5 h-3.5 ${isPruning ? 'animate-spin' : ''}`} />
@@ -5946,27 +5980,27 @@ PT. WAHANA BARA SENTOSA`;
                       </div>
 
                       {/* Technical Info & Config Card */}
-                      <div className="bg-white rounded-xl border border-neutral-200 p-5 shadow-sm">
-                        <h4 className="text-xs font-black text-neutral-800 uppercase tracking-wider mb-3 flex items-center gap-2">
-                          <Database className="w-4 h-4 text-neutral-500" />
+                      <div data-ui className="bg-white rounded-xl border border-ink-200 p-5">
+                        <h4 className="text-xs font-black text-ink-800 mb-3 flex items-center gap-2">
+                          <Database className="w-4 h-4 text-ink-500" />
                           <span>Informasi Konfigurasi Firebase Firestore Backend</span>
                         </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
-                          <div className="bg-neutral-50 p-3 rounded-lg border border-neutral-200">
-                            <span className="text-[10px] text-neutral-500 uppercase font-bold block">Auth Domain</span>
-                            <span className="font-semibold text-neutral-800 break-all">ftw-wbs.firebaseapp.com</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs tabular-nums">
+                          <div data-ui className="bg-ink-50 p-3 rounded-lg border border-ink-200">
+                            <span className="text-xs text-ink-500 font-bold block">Auth Domain</span>
+                            <span className="font-semibold text-ink-800 break-all">ftw-wbs.firebaseapp.com</span>
                           </div>
-                          <div className="bg-neutral-50 p-3 rounded-lg border border-neutral-200">
-                            <span className="text-[10px] text-neutral-500 uppercase font-bold block">Storage Bucket</span>
-                            <span className="font-semibold text-neutral-800 break-all">ftw-wbs.firebasestorage.app</span>
+                          <div data-ui className="bg-ink-50 p-3 rounded-lg border border-ink-200">
+                            <span className="text-xs text-ink-500 font-bold block">Storage Bucket</span>
+                            <span className="font-semibold text-ink-800 break-all">ftw-wbs.firebasestorage.app</span>
                           </div>
-                          <div className="bg-neutral-50 p-3 rounded-lg border border-neutral-200">
-                            <span className="text-[10px] text-neutral-500 uppercase font-bold block">Messaging Sender ID</span>
-                            <span className="font-semibold text-neutral-800">558288446517</span>
+                          <div data-ui className="bg-ink-50 p-3 rounded-lg border border-ink-200">
+                            <span className="text-xs text-ink-500 font-bold block">Messaging Sender ID</span>
+                            <span className="font-semibold text-ink-800">558288446517</span>
                           </div>
-                          <div className="bg-neutral-50 p-3 rounded-lg border border-neutral-200">
-                            <span className="text-[10px] text-neutral-500 uppercase font-bold block">App ID</span>
-                            <span className="font-semibold text-neutral-800 break-all text-[11px]">1:558288446517:web:f7dde6f01f4accb1163d7c</span>
+                          <div data-ui className="bg-ink-50 p-3 rounded-lg border border-ink-200">
+                            <span className="text-xs text-ink-500 font-bold block">App ID</span>
+                            <span className="font-semibold text-ink-800 break-all text-xs">1:558288446517:web:f7dde6f01f4accb1163d7c</span>
                           </div>
                         </div>
                       </div>
@@ -5979,8 +6013,8 @@ PT. WAHANA BARA SENTOSA`;
                 </div>
 
                 {/* Admin Page Footer */}
-                <div className="p-4 bg-white border-t border-slate-200 flex flex-wrap justify-between items-center gap-3 shrink-0">
-                  <span className="text-xs text-slate-500 font-medium">
+                <div data-ui className="p-4 bg-white border-t border-ink-200 flex flex-wrap justify-between items-center gap-3 shrink-0">
+                  <span className="text-xs text-ink-500 font-medium">
                     Fit to Work PT. Wahana Bara Sentosa • Central Admin Portal
                   </span>
                   <button 
@@ -5991,7 +6025,7 @@ PT. WAHANA BARA SENTOSA`;
                       setEditingEmpNik(null);
                       setSelectedDashboardRecordId(null);
                     }}
-                    className="bg-slate-900 hover:bg-black font-bold py-2.5 px-6 rounded-lg text-xs cursor-pointer text-white transition uppercase tracking-wider text-[11px]"
+                    className="bg-ink-900 hover:bg-black font-bold py-2.5 px-6 rounded-lg text-xs cursor-pointer text-white transition text-xs"
                   >
                     {lang === 'ID' ? '← Kembali Ke Formulir Asesmen' : '← Return to Assessment Form'}
                   </button>
@@ -6001,6 +6035,36 @@ PT. WAHANA BARA SENTOSA`;
 
             </div>
           </main>
+        </div>
+      )}
+
+      {/* INLINE CONFIRMATION DIALOG MODAL */}
+      {confirmDialog && (
+        <div className="fixed inset-0 bg-ink-950/60 flex items-center justify-center p-4 z-[70]">
+          <div data-ui className="bg-elevated rounded-2xl border border-rule max-w-md w-full p-6 text-ink-800 flex flex-col gap-4">
+            <h3 className="text-base font-bold text-ink-900">{confirmDialog.title}</h3>
+            <p className="text-xs text-ink-600 leading-relaxed">{confirmDialog.message}</p>
+            <div className="flex justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDialog(null)}
+                className="bg-surface hover:bg-rule text-ink-700 border border-rule font-bold py-2 px-4 rounded-xl text-xs cursor-pointer"
+              >
+                {lang === 'ID' ? 'Batal' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const fn = confirmDialog.onConfirm;
+                  setConfirmDialog(null);
+                  fn();
+                }}
+                className="bg-danger-600 hover:bg-danger-700 text-ink-50 font-bold py-2 px-4 rounded-xl text-xs cursor-pointer"
+              >
+                {lang === 'ID' ? 'Ya, Lanjutkan' : 'Confirm'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

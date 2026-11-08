@@ -3,98 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fit to Work Karyawan</title>
-    <!-- Favicon & Browser Tab Icons -->
+    <title>Fit to Work Karyawan PT. WBS</title>
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/dgjnlxf69/image/upload/v1790130590/Logo_FTW_ul1dz4.png" />
     <link rel="shortcut icon" type="image/png" href="https://res.cloudinary.com/dgjnlxf69/image/upload/v1790130590/Logo_FTW_ul1dz4.png" />
     <link rel="apple-touch-icon" href="https://res.cloudinary.com/dgjnlxf69/image/upload/v1790130590/Logo_FTW_ul1dz4.png" />
-    <meta name="theme-color" content="#ffffff" />
-    <meta name="description" content="Aplikasi Fit to Work untuk menilai kelayakan kerja karyawan berdasarkan durasi tidur, jam terjaga, konsumsi obat, dan masalah pribadi sebelum memulai shift kerja." />
-    <meta property="og:title" content="Fit to Work Karyawan" />
-    <meta property="og:description" content="Aplikasi Fit to Work untuk menilai kelayakan kerja karyawan berdasarkan durasi tidur, jam terjaga, konsumsi obat, dan masalah pribadi sebelum memulai shift kerja." />
+    <meta name="theme-color" content="#fafaf9" />
+    <meta name="description" content="Aplikasi Fit to Work untuk menilai kesiapan kerja harian karyawan PT. WBS berdasarkan durasi tidur, jam terjaga, dan kondisi kesehatan sebelum memulai shift." />
+    <meta property="og:title" content="Fit to Work Karyawan PT. WBS" />
+    <meta property="og:description" content="Aplikasi Fit to Work untuk menilai kesiapan kerja harian karyawan PT. WBS berdasarkan durasi tidur, jam terjaga, dan kondisi kesehatan sebelum memulai shift." />
     <meta property="og:image" content="https://res.cloudinary.com/dgjnlxf69/image/upload/v1790130590/Logo_FTW_ul1dz4.png" />
     <meta property="og:image:alt" content="Logo Fit To Work PT. WBS" />
-
-    <style>
-      /* Ensure base styling prevents blank white flashes */
-      html, body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        background-color: #f8fafc;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      }
-      #root {
-        min-height: 100vh;
-        width: 100%;
-      }
-      .preloader-container {
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 1.5rem;
-        box-sizing: border-box;
-      }
-      .preloader-card {
-        background: #ffffff;
-        border-radius: 1.25rem;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-        border: 1px solid #e2e8f0;
-        padding: 2rem;
-        max-width: 24rem;
-        width: 100%;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 1rem;
-      }
-      .preloader-spinner {
-        width: 2.5rem;
-        height: 2.5rem;
-        border: 3px solid #e2e8f0;
-        border-top-color: #0284c7;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-      }
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-      .reload-btn {
-        background: #0284c7;
-        color: #ffffff;
-        border: none;
-        border-radius: 0.75rem;
-        padding: 0.65rem 1.25rem;
-        font-size: 0.875rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.2s;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-top: 0.5rem;
-      }
-      .reload-btn:hover {
-        background: #0369a1;
-      }
-    </style>
+    <link rel="stylesheet" href="./src/index.css" />
 
     <script>
-      // Global error listener to prevent blank white screen on script execution errors
       window.addEventListener('error', function(event) {
         var root = document.getElementById('root');
         if (root && !root.dataset.rendered) {
           root.innerHTML = '<div class="preloader-container">' +
-            '<div class="preloader-card">' +
-            '<div style="font-size: 2.5rem;">⚠️</div>' +
-            '<h2 style="margin: 0; font-size: 1.125rem; font-weight: 700; color: #1e293b;">Gagal Memuat Aplikasi</h2>' +
-            '<p style="margin: 0; font-size: 0.8125rem; color: #64748b; line-height: 1.5;">' +
-            (event.message || 'Terjadi kesalahan saat memproses modul aplikasi.') +
+            '<div class="preloader-card" data-ui>' +
+            '<svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>' +
+            '<h2 class="preloader-title">Gagal Memuat Aplikasi</h2>' +
+            '<p class="preloader-subtitle">' +
+            (event.message || 'Terjadi kendala saat memproses modul aplikasi.') +
             '</p>' +
-            '<button class="reload-btn" onclick="window.location.reload(true)">Muat Ulang Halaman</button>' +
+            '<button type="button" class="reload-btn" onclick="window.location.reload(true)">Muat Ulang Halaman</button>' +
             '</div></div>';
         }
       });
@@ -103,26 +35,26 @@
   <body>
     <div id="root">
       <div class="preloader-container">
-        <div class="preloader-card">
-          <img 
-            src="https://res.cloudinary.com/dgjnlxf69/image/upload/v1790130590/Logo_FTW_ul1dz4.png" 
-            alt="Logo FTW" 
-            style="width: 4rem; height: 4rem; object-fit: contain;"
-            onerror="this.style.display='none'"
+        <div class="preloader-card" data-ui>
+          <img
+            src="https://res.cloudinary.com/dgjnlxf69/image/upload/v1790130590/Logo_FTW_ul1dz4.png"
+            alt="Logo FTW PT. WBS"
+            class="preloader-logo"
+            fetchpriority="high"
+            onerror="this.hidden=true"
           />
           <div>
-            <h1 style="margin: 0; font-size: 1.125rem; font-weight: 700; color: #0f172a;">Fit to Work PT. WBS</h1>
-            <p style="margin: 0.25rem 0 0; font-size: 0.8125rem; color: #64748b;">Memuat sistem asesmen...</p>
+            <h1 class="preloader-title">Fit to Work PT. WBS</h1>
+            <p class="preloader-subtitle">Memuat sistem asesmen kesiapan kerja…</p>
           </div>
-          <div class="preloader-spinner"></div>
-          <div id="delayed-reload" style="display: none; margin-top: 0.5rem;">
-            <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.5rem;">Membutuhkan waktu lebih lama dari biasanya?</p>
-            <button class="reload-btn" onclick="window.location.reload(true)">Muat Ulang / Reload</button>
+          <div class="preloader-spinner" data-ui aria-hidden="true"></div>
+          <div id="delayed-reload" class="preloader-delayed">
+            <p class="preloader-note">Membutuhkan waktu lebih lama dari biasanya?</p>
+            <button type="button" class="reload-btn" onclick="window.location.reload(true)">Muat Ulang Halaman</button>
           </div>
         </div>
       </div>
       <script>
-        // If app hasn't mounted in 3.5 seconds, display the reload button
         setTimeout(function() {
           var delayed = document.getElementById('delayed-reload');
           if (delayed) delayed.style.display = 'block';

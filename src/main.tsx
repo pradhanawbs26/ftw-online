@@ -1,5 +1,6 @@
-import React, { ErrorInfo, ReactNode, StrictMode } from 'react';
+import React, { Component, ErrorInfo, ReactNode, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { AlertTriangle } from 'lucide-react';
 import App from './App.tsx';
 import './index.css';
 
@@ -12,8 +13,9 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-class RootErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  override state: ErrorBoundaryState = { hasError: false, error: null };
+class RootErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  declare props: Readonly<ErrorBoundaryProps>;
+  state: ErrorBoundaryState = { hasError: false, error: null };
 
   constructor(props: ErrorBoundaryProps) {
     super(props);
@@ -23,7 +25,7 @@ class RootErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundar
     return { hasError: true, error };
   }
 
-  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('[Root Error Caught]:', error, errorInfo);
   }
 
@@ -31,30 +33,30 @@ class RootErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundar
     window.location.reload();
   };
 
-  override render() {
+  render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-neutral-900 text-white flex flex-col items-center justify-center p-6 text-center font-sans">
-          <div className="max-w-md w-full bg-neutral-800 border border-neutral-700 rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-3xl font-bold">
-              ⚠️
+        <div className="min-h-dvh bg-ink-950 text-ink-50 flex flex-col items-center justify-center p-6 text-center font-sans">
+          <div data-ui className="max-w-md w-full bg-ink-900 border border-ink-700 rounded-2xl p-6 flex flex-col items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-danger-500/20 text-danger-300 flex items-center justify-center">
+              <AlertTriangle className="w-7 h-7" aria-hidden="true" />
             </div>
-            <h2 className="text-lg font-black tracking-wide uppercase text-neutral-100">
+            <h2 className="text-lg font-bold text-ink-50">
               Terjadi Kendala Memuat Aplikasi
             </h2>
-            <p className="text-xs text-neutral-300 leading-relaxed">
-              Sistem mendeteksi kendala pada sesi browser. Silakan klik tombol di bawah untuk memuat ulang aplikasi:
+            <p className="text-sm text-ink-200 leading-relaxed">
+              Sistem mendeteksi kendala pada sesi browser. Silakan pilih tombol di bawah untuk memuat ulang aplikasi:
             </p>
             {this.state.error?.message && (
-              <pre className="text-[11px] font-mono bg-neutral-950 p-3 rounded-lg border border-neutral-700 text-rose-300 text-left w-full overflow-x-auto max-h-32">
-                {this.state.error.message}
+              <pre data-ui className="text-xs bg-ink-950 p-3 rounded-lg border border-ink-800 text-danger-300 text-left w-full overflow-x-auto max-h-32">
+                <code>{this.state.error.message}</code>
               </pre>
             )}
-            <div className="flex gap-2 w-full mt-2">
+            <div className="flex gap-3 w-full mt-2">
               <button
                 type="button"
                 onClick={this.handleReload}
-                className="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider transition cursor-pointer shadow-md"
+                className="flex-1 min-h-11 bg-danger-500 hover:bg-danger-600 text-ink-50 font-semibold py-2.5 px-4 rounded-xl text-sm transition-colors cursor-pointer"
               >
                 Muat Ulang Aplikasi
               </button>
@@ -64,10 +66,12 @@ class RootErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundar
                   try {
                     localStorage.clear();
                     sessionStorage.clear();
-                  } catch (e) {}
+                  } catch {
+                    // ignore storage errors in restricted browsing modes
+                  }
                   window.location.reload();
                 }}
-                className="bg-neutral-700 hover:bg-neutral-600 text-neutral-200 font-bold py-2.5 px-3 rounded-xl text-xs uppercase tracking-wider transition cursor-pointer"
+                className="min-h-11 bg-ink-800 hover:bg-ink-700 text-ink-100 font-semibold py-2.5 px-4 rounded-xl text-sm transition-colors cursor-pointer"
               >
                 Bersihkan Cache
               </button>

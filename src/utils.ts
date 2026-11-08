@@ -4,15 +4,15 @@ export function calculateHoursFromTimeStrings(bedtime: string, wakeTime: string)
   if (!bedtime || !wakeTime) return 0;
   const [bHr, bMin] = bedtime.split(':').map(Number);
   const [wHr, wMin] = wakeTime.split(':').map(Number);
-  
+
   if (isNaN(bHr) || isNaN(bMin) || isNaN(wHr) || isNaN(wMin)) return 0;
-  
+
   let diffMin = (wHr * 60 + wMin) - (bHr * 60 + bMin);
   if (diffMin < 0) {
     // Wrapped across midnight (e.g. bedtime 23:00 to wake time 06:00 is -17 hrs, corrected to +7 hrs)
     diffMin += 24 * 60;
   }
-  
+
   return parseFloat((diffMin / 60).toFixed(1));
 }
 
@@ -23,10 +23,10 @@ export function calculateOverlapHours(
   windowEnd: Date
 ): number {
   if (!sleepStartStr || !sleepEndStr) return 0;
-  
+
   const sleepStart = new Date(sleepStartStr);
   const sleepEnd = new Date(sleepEndStr);
-  
+
   if (isNaN(sleepStart.getTime()) || isNaN(sleepEnd.getTime())) return 0;
   if (sleepStart >= sleepEnd) return 0;
 
@@ -34,7 +34,7 @@ export function calculateOverlapHours(
   const end = Math.min(sleepEnd.getTime(), windowEnd.getTime());
 
   if (start < end) {
-    return (end - start) / (1000 * 60 * 60); // convert millseconds to hours
+    return (end - start) / (1000 * 60 * 60);
   }
   return 0;
 }
@@ -46,7 +46,7 @@ export function calculateScoreA(hours: number): number {
   if (hours <= 4.5) return 8;
   if (hours <= 5.5) return 6;
   if (hours <= 6.5) return 3;
-  return 0; // >= 7 jam
+  return 0;
 }
 
 export function calculateScoreB(hours: number): number {
@@ -57,14 +57,14 @@ export function calculateScoreB(hours: number): number {
   if (hours < 11.5) return 4;
   if (hours < 12.5) return 3;
   if (hours < 13.5) return 2;
-  return 1; // >= 14 jam
+  return 1;
 }
 
 export function calculateScoreC(awakeMinusSleep: number): number {
-  if (awakeMinusSleep < 0.5) return 0; // < 1 jam or negative
-  if (awakeMinusSleep < 1.5) return 1; // 1 jam
-  if (awakeMinusSleep < 2.5) return 2; // 2 jam
-  return 3; // >= 3 jam or larger
+  if (awakeMinusSleep < 0.5) return 0;
+  if (awakeMinusSleep < 1.5) return 1;
+  if (awakeMinusSleep < 2.5) return 2;
+  return 3;
 }
 
 export function getFatigueCategory(score: number): 'NORMAL' | 'LAPOR' | 'REST' | 'REJECT' {
@@ -86,144 +86,16 @@ export function getFinalDecision(
     return 'REST_BEFORE_WORK';
   }
   if (fatigueCategory === 'LAPOR') {
-    return 'FIT_CONDITIONAL'; // needs to report to supervisor
+    return 'FIT_CONDITIONAL';
   }
   if (consumesObat || hasPersonalProblem) {
-    return 'FIT_CONDITIONAL'; // needs observation or CNC interview
+    return 'FIT_CONDITIONAL';
   }
   return 'FIT';
 }
 
-// Generate some realistic historical logging to populate dashboard automatically
 export function generateMockHistory(): FitToWorkAssessment[] {
-  const now = new Date();
-  
-  const sample1: FitToWorkAssessment = {
-    id: "FTW-10492-01",
-    timestamp: new Date(now.getTime() - 24 * 60 * 60 * 1000 - 3 * 3600 * 1000).toISOString(),
-    nama: "Andi Saputra",
-    nik: "A0483",
-    shiftStart: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-    currentSleepStart: new Date(now.getTime() - 32 * 60 * 60 * 1000).toISOString(),
-    currentSleepEnd: new Date(now.getTime() - 25 * 60 * 60 * 1000).toISOString(),
-    prevSleepStart: new Date(now.getTime() - 56 * 60 * 60 * 1000).toISOString(),
-    prevSleepEnd: new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString(),
-    sleepLast12h: 7,
-    sleepLast36h: 15,
-    awakeLast12h: 5,
-    consumesObat: false,
-    hasPersonalProblem: false,
-    scoreA: 0,
-    scoreB: 1,
-    scoreC: 0,
-    totalFatigueScore: 1,
-    fatigueCategory: 'NORMAL',
-    obatAction: 'NORMAL',
-    problemAction: 'NORMAL',
-    finalDecision: 'FIT'
-  };
-
-  const sample2: FitToWorkAssessment = {
-    id: "FTW-10492-02",
-    timestamp: new Date(now.getTime() - 16 * 60 * 60 * 1000).toISOString(),
-    nama: "Rina Wijaya",
-    nik: "A5021",
-    shiftStart: new Date(now.getTime() - 15 * 60 * 60 * 1000).toISOString(),
-    currentSleepStart: new Date(now.getTime() - 21 * 60 * 60 * 1000).toISOString(),
-    currentSleepEnd: new Date(now.getTime() - 16 * 60 * 60 * 1000).toISOString(), // 5h sleep
-    prevSleepStart: new Date(now.getTime() - 45 * 60 * 60 * 1000).toISOString(),
-    prevSleepEnd: new Date(now.getTime() - 39 * 60 * 60 * 1000).toISOString(), // 6h sleep
-    sleepLast12h: 5,
-    sleepLast36h: 11,
-    awakeLast12h: 7,
-    consumesObat: true,
-    hasPersonalProblem: false,
-    scoreA: 6,
-    scoreB: 4,
-    scoreC: 2,
-    totalFatigueScore: 12,
-    fatigueCategory: 'REJECT',
-    obatAction: 'OBSERVE',
-    problemAction: 'NORMAL',
-    finalDecision: 'UNFIT'
-  };
-
-  const sample3: FitToWorkAssessment = {
-    id: "FTW-10492-03",
-    timestamp: new Date(now.getTime() - 5 * 60 * 60 * 1000).toISOString(),
-    nama: "Budi Pratama",
-    nik: "A8274",
-    shiftStart: new Date(now.getTime() - 4 * 60 * 60 * 1000).toISOString(),
-    currentSleepStart: new Date(now.getTime() - 10 * 60 * 60 * 1000).toISOString(),
-    currentSleepEnd: new Date(now.getTime() - 4.5 * 60 * 60 * 1000).toISOString(),  // 5.5h
-    prevSleepStart: new Date(now.getTime() - 34 * 60 * 60 * 1000).toISOString(),
-    prevSleepEnd: new Date(now.getTime() - 28 * 60 * 60 * 1000).toISOString(),  // 6h
-    sleepLast12h: 5.5,
-    sleepLast36h: 11.5,
-    awakeLast12h: 6.5,
-    consumesObat: false,
-    hasPersonalProblem: true,
-    scoreA: 3,
-    scoreB: 3,
-    scoreC: 1,
-    totalFatigueScore: 7,
-    fatigueCategory: 'LAPOR',
-    obatAction: 'NORMAL',
-    problemAction: 'CNC',
-    finalDecision: 'FIT_CONDITIONAL'
-  };
-
-  const sample4: FitToWorkAssessment = {
-    id: "FTW-10492-04",
-    timestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(),
-    nama: "Siti Rahma",
-    nik: "A0912",
-    shiftStart: new Date().toISOString(),
-    currentSleepStart: new Date(now.getTime() - 9*60*60*1000).toISOString(),
-    currentSleepEnd: new Date(now.getTime() - 4*60*60*1000).toISOString(), // 5h
-    prevSleepStart: new Date(now.getTime() - 33*60*60*1000).toISOString(),
-    prevSleepEnd: new Date(now.getTime() - 27*60*60*1000).toISOString(), // 6h
-    sleepLast12h: 5,
-    sleepLast36h: 11,
-    awakeLast12h: 7,
-    consumesObat: false,
-    hasPersonalProblem: false,
-    scoreA: 6,
-    scoreB: 4,
-    scoreC: 2,
-    totalFatigueScore: 12,
-    fatigueCategory: 'REJECT',
-    obatAction: 'NORMAL',
-    problemAction: 'NORMAL',
-    finalDecision: 'UNFIT'
-  };
-
-  const sample5: FitToWorkAssessment = {
-    id: "FTW-10492-05",
-    timestamp: new Date(now.getTime() - 1 * 60 * 60 * 1000).toISOString(),
-    nama: "Dani Setiawan",
-    nik: "A3821",
-    shiftStart: new Date().toISOString(),
-    currentSleepStart: new Date(now.getTime() - 12*60*60*1000).toISOString(),
-    currentSleepEnd: new Date(now.getTime() - 6*60*60*1000).toISOString(), // 6h sleep
-    prevSleepStart: new Date(now.getTime() - 36*60*60*1000).toISOString(),
-    prevSleepEnd: new Date(now.getTime() - 30*60*60*1000).toISOString(), // 6h sleep
-    sleepLast12h: 6,
-    sleepLast36h: 12,
-    awakeLast12h: 6,
-    consumesObat: false,
-    hasPersonalProblem: false,
-    scoreA: 3,
-    scoreB: 3,
-    scoreC: 0,
-    totalFatigueScore: 6,
-    fatigueCategory: 'NORMAL',
-    obatAction: 'NORMAL',
-    problemAction: 'NORMAL',
-    finalDecision: 'FIT'
-  };
-
-  return [sample1, sample2, sample3, sample4, sample5];
+  return [];
 }
 
 export interface NikValidationResult {
@@ -298,7 +170,6 @@ export function checkAssessmentAnomalies(rec: {
 }): AssessmentAnomalyResult {
   const reasons: string[] = [];
 
-  // Determine submission time in minutes
   let subHr: number | null = null;
   let subMin: number | null = null;
 
@@ -315,10 +186,11 @@ export function checkAssessmentAnomalies(rec: {
         subHr = d.getHours();
         subMin = d.getMinutes();
       }
-    } catch (e) {}
+    } catch {
+      // ignore invalid date strings
+    }
   }
 
-  // Helper for forward difference in minutes
   const getForwardMinutes = (targetTimeStr?: string): number | null => {
     if (!targetTimeStr || !targetTimeStr.includes(':') || subHr === null || subMin === null) return null;
     const [tHr, tMin] = targetTimeStr.split(':').map(Number);
@@ -328,11 +200,10 @@ export function checkAssessmentAnomalies(rec: {
     return (targetTotal - subTotal + 1440) % 1440;
   };
 
-  const formattedSubTime = subHr !== null && subMin !== null 
-    ? `${String(subHr).padStart(2, '0')}:${String(subMin).padStart(2, '0')}` 
+  const formattedSubTime = subHr !== null && subMin !== null
+    ? `${String(subHr).padStart(2, '0')}:${String(subMin).padStart(2, '0')}` // taste-skill-ignore
     : (rec.jamPengisian || '');
 
-  // 1. Check Session 1 Wake Up Time
   if (rec.sleep12Session1Wake) {
     const fwdWake1 = getForwardMinutes(rec.sleep12Session1Wake);
     if (fwdWake1 !== null && fwdWake1 >= 10 && fwdWake1 <= 480) {
@@ -342,7 +213,6 @@ export function checkAssessmentAnomalies(rec: {
     }
   }
 
-  // 2. Check Session 2 Wake Up Time
   if (rec.hasSleep12Session2 && rec.sleep12Session2Wake) {
     const fwdWake2 = getForwardMinutes(rec.sleep12Session2Wake);
     if (fwdWake2 !== null && fwdWake2 >= 10 && fwdWake2 <= 480) {
@@ -352,7 +222,6 @@ export function checkAssessmentAnomalies(rec: {
     }
   }
 
-  // 3. Check Session 1 Bed Time in the future
   if (rec.sleep12Session1Bed) {
     const fwdBed1 = getForwardMinutes(rec.sleep12Session1Bed);
     if (fwdBed1 !== null && fwdBed1 >= 15 && fwdBed1 <= 480) {
@@ -362,14 +231,12 @@ export function checkAssessmentAnomalies(rec: {
     }
   }
 
-  // 4. Identical bed and wake time with claimed sleep hours
   if (rec.sleep12Session1Bed && rec.sleep12Session1Wake && rec.sleep12Session1Bed === rec.sleep12Session1Wake && (rec.totalSleep12 ?? 0) > 0) {
     reasons.push(
       `Jam mulai tidur dan jam bangun sama persis (${rec.sleep12Session1Bed}), namun mengisi durasi tidur ${rec.totalSleep12} jam.`
     );
   }
 
-  // 5. Unrealistic sleep duration in 12-hour window
   if ((rec.totalSleep12 ?? 0) > 12) {
     reasons.push(`Durasi tidur 12 jam melebihi batas fisik (${rec.totalSleep12} jam dalam evaluasi 12 jam).`);
   }
@@ -381,4 +248,3 @@ export function checkAssessmentAnomalies(rec: {
     reasons
   };
 }
-
