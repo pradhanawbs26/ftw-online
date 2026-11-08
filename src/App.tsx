@@ -53,6 +53,9 @@ import {
   syncAssessmentToFirestore,
   deleteAssessmentFromFirestore,
   fetchAssessmentsFromFirestore,
+  fetchAssessmentsSinceFromFirestore,
+  fetchAssessmentsRangeFromFirestore,
+  isFirestoreQuotaError,
   syncEmployeeToFirestore,
   syncEmployeesBatchToFirestore,
   deleteEmployeeFromFirestore,
@@ -533,6 +536,8 @@ export default function App() {
   const [isCloudSyncing, setIsCloudSyncing] = useState<boolean>(false);
   const [lastCloudSyncTime, setLastCloudSyncTime] = useState<string>('');
   const lastSyncTimestampRef = useRef<number>(0);
+  const backupRunningRef = useRef<boolean>(false);
+  const fetchedRangesRef = useRef<Set<string>>(new Set());
 
   // Load config, employees list and assessment history on startup with self-healing credentials
   useEffect(() => {
@@ -686,7 +691,10 @@ export default function App() {
       // CRITICAL READ SAVER: Do not query Firestore assessments collection on general user page loads!
       let historyLoaded = false;
       try {
-        const historyResp = await fetch('/api/history');
+        // Only today's records are needed for the duplicate-submission check.
+        // Full history is loaded on demand by the Admin dashboard (date range).
+        const todayForQuery = new Date().toISOString().split('T')[0];
+        const historyResp = await fetch(`/api/history?date=${todayForQuery}`);
         if (historyResp.ok) {
           const contentType = historyResp.headers.get('content-type') || '';
           if (contentType.includes('application/json')) {
@@ -822,15 +830,24 @@ export default function App() {
   // Function to pull real latest assessments from Firestore with bounded limit (150 docs)
   const syncAssessmentsFromCloud = async (isManualClick: boolean = false) => {
     const now = Date.now();
-    // Throttle automatic syncs to at least 20 seconds apart
-    if (!isManualClick && now - lastSyncTimestampRef.current < 20000) {
+    // Throttle automatic syncs to at least 3 minutes apart (saves Firestore reads)
+    if (!isManualClick && now - lastSyncTimestampRef.current < 180000) {
       return;
     }
     lastSyncTimestampRef.current = now;
 
     try {
       setIsCloudSyncing(true);
-      const cloudRecords = await fetchAssessmentsFromFirestore(150);
+      // Incremental: only read documents newer than the newest one already in memory.
+      // First sync of a session with no ISO timestamps falls back to a small bounded read.
+      let newestIso = '';
+      for (const r of history) {
+        const t = r && r.timestamp;
+        if (t && /^\d{4}-\d{2}-\d{2}T/.test(t) && t > newestIso) newestIso = t;
+      }
+      const cloudRecords = newestIso
+        ? await fetchAssessmentsSinceFromFirestore(newestIso, 500)
+        : await fetchAssessmentsFromFirestore(100);
       if (cloudRecords && cloudRecords.length > 0) {
         setHistory(prev => {
           const map = new Map<string, CustomAssessment>();
@@ -855,6 +872,38 @@ export default function App() {
     }
   };
 
+  // Admin date-range filter: pull the selected period on demand so older months are readable
+  useEffect(() => {
+    if (!isAdminPage || !isAdminAuthenticated || adminActiveTab !== 'dashboard') return;
+    if (!adminFilterStartDate && !adminFilterEndDate) return;
+
+    const rangeKey = `${adminFilterStartDate}|${adminFilterEndDate}`;
+    if (fetchedRangesRef.current.has(rangeKey)) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const qs = new URLSearchParams();
+        if (adminFilterStartDate) qs.set('startDate', adminFilterStartDate);
+        if (adminFilterEndDate) qs.set('endDate', adminFilterEndDate);
+        const resp = await fetch(`/api/history?${qs.toString()}`);
+        if (!resp.ok) return;
+        fetchedRangesRef.current.add(rangeKey);
+        const data = await resp.json();
+        if (!Array.isArray(data) || data.length === 0) return;
+        setHistory(prev => {
+          const map = new Map<string, CustomAssessment>();
+          prev.forEach(r => { if (r && r.id) map.set(r.id, r); });
+          data.forEach((r: any) => { if (r && r.id && r.timestamp) map.set(r.id, r); });
+          return Array.from(map.values());
+        });
+      } catch (err) {
+        console.warn('[Admin Range Fetch] Error:', err);
+      }
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [adminFilterStartDate, adminFilterEndDate, adminActiveTab, isAdminPage, isAdminAuthenticated]);
+
   // Sync URL hash for dedicated Admin Page navigation
   useEffect(() => {
     const handleHashChange = () => {
@@ -877,12 +926,12 @@ export default function App() {
     // 1. Run immediate sync when admin enters the dashboard
     syncAssessmentsFromCloud(false);
 
-    // 2. Poll every 2 minutes while looking at the dashboard
+    // 2. Poll every 10 minutes while looking at the dashboard (incremental reads only)
     const interval = setInterval(() => {
       if (!document.hidden) {
         syncAssessmentsFromCloud(false);
       }
-    }, 120000);
+    }, 600000);
 
     // 3. Sync on window focus if tab was in background
     const handleFocus = () => {
@@ -1923,7 +1972,7 @@ export default function App() {
 
       let existingIds: string[] = [];
       try {
-        const checkResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Laporan_Fit!A2:A5000`, {
+        const checkResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Laporan_Fit!A2:A200000`, {
           headers: { 'Authorization': `Bearer ${sheetsToken}` }
         });
         if (checkResp.ok) {
@@ -1991,6 +2040,133 @@ export default function App() {
       setSheetsConnectionStatus('CONNECTED');
     }
   };
+
+  const sheetRowFromRecord = (record: any) => [
+    record.id,
+    record.tanggalPengisian,
+    record.jamPengisian,
+    record.nik,
+    record.nama,
+    record.jabatan,
+    record.dept,
+    record.totalSleep12,
+    record.totalSleep36,
+    record.consumesObat ? 'Ya' : 'Tidak',
+    record.hasPersonalProblem ? 'Ya' : 'Tidak',
+    record.totalFatigueScore,
+    record.finalDecision
+  ];
+
+  // Backup: pull everything in Firestore newer than the last row in Google Sheets, then append the missing rows.
+  // Safe to retry: if Firestore quota is still exhausted nothing is written and it reports clearly.
+  const handleBackupFirestoreToSheets = async (silent: boolean = false) => {
+    if (backupRunningRef.current) return;
+    if (!sheetsToken || !spreadsheetId) {
+      if (!silent) notifyUser(lang === 'ID' ? 'Harap login Google dan isi Spreadsheet ID terlebih dahulu.' : 'Please sign in to Google and set the Spreadsheet ID first.');
+      return;
+    }
+    backupRunningRef.current = true;
+    try {
+      setSheetsConnectionStatus('SYNCING');
+      addLog('Backup Firestore ke Sheets: membaca isi Laporan_Fit...');
+
+      const sheetResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Laporan_Fit!A2:B200000`, {
+        headers: { 'Authorization': `Bearer ${sheetsToken}` }
+      });
+      if (!sheetResp.ok) throw new Error(`Gagal membaca Google Sheets: ${await sheetResp.text()}`);
+      const sheetData = await sheetResp.json();
+      const sheetRows: any[][] = sheetData.values || [];
+      const existingIds = new Set<string>();
+      let lastDate = '';
+      for (const row of sheetRows) {
+        if (row[0]) existingIds.add(String(row[0]).trim());
+        const d = row[1] ? String(row[1]).trim() : '';
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d > lastDate) lastDate = d;
+      }
+      const startDate = lastDate || '2026-01-01';
+      addLog(`Tanggal terakhir di Sheets: ${lastDate || '(kosong)'}. Mengambil data Firestore sejak ${startDate}...`);
+
+      let fsRecords: any[] = [];
+      try {
+        fsRecords = await fetchAssessmentsRangeFromFirestore(startDate, undefined, 5000);
+      } catch (fsErr) {
+        if (isFirestoreQuotaError(fsErr)) {
+          const msg = lang === 'ID'
+            ? 'Kuota Firestore hari ini masih habis. Backup akan dicoba lagi otomatis setelah kuota pulih (sekitar pukul 14:00 WIB).'
+            : 'Firestore daily quota is still exhausted. Backup will retry automatically after it resets (around 14:00 WIB).';
+          addLog(msg);
+          if (!silent) notifyUser(msg);
+          setSheetsConnectionStatus('CONNECTED');
+          return;
+        }
+        throw fsErr;
+      }
+
+      const missing = deduplicateAssessments(fsRecords)
+        .filter((r: any) => r && r.id && !existingIds.has(String(r.id).trim()))
+        .sort((a: any, b: any) => {
+          const da = `${a.tanggalPengisian || ''} ${(a.jamPengisian || '').padStart(5, '0')}`;
+          const db2 = `${b.tanggalPengisian || ''} ${(b.jamPengisian || '').padStart(5, '0')}`;
+          return da.localeCompare(db2);
+        });
+
+      if (missing.length === 0) {
+        addLog('Google Sheets sudah sama dengan Firestore. Tidak ada data yang perlu dicadangkan.');
+        if (!silent) notifyUser(lang === 'ID' ? 'Google Sheets sudah lengkap dan sama dengan Firestore.' : 'Google Sheets is already up to date with Firestore.');
+        setSheetsConnectionStatus('CONNECTED');
+        return;
+      }
+
+      addLog(`Menemukan ${missing.length} laporan di Firestore yang belum ada di Sheets. Mengunggah...`);
+      const CHUNK = 500;
+      for (let i = 0; i < missing.length; i += CHUNK) {
+        const part = missing.slice(i, i + CHUNK);
+        const appendResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Laporan_Fit!A:M:append?valueInputOption=USER_ENTERED`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${sheetsToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ values: part.map(sheetRowFromRecord) })
+        });
+        if (!appendResp.ok) throw new Error(await appendResp.text());
+        addLog(`Terunggah ${Math.min(i + CHUNK, missing.length)} dari ${missing.length} laporan...`);
+      }
+
+      setHistory(prev => {
+        const map = new Map<string, CustomAssessment>();
+        prev.forEach(r => { if (r && r.id) map.set(r.id, r); });
+        missing.forEach((r: any) => { if (r.timestamp) map.set(r.id, r as CustomAssessment); });
+        return Array.from(map.values());
+      });
+
+      const okMsg = lang === 'ID'
+        ? `Backup selesai: ${missing.length} laporan dari Firestore berhasil dicadangkan ke Google Sheets.`
+        : `Backup complete: ${missing.length} Firestore records appended to Google Sheets.`;
+      addLog(okMsg);
+      if (!silent) notifyUser(okMsg, 'success');
+      setSheetsConnectionStatus('CONNECTED');
+    } catch (e: any) {
+      console.error(e);
+      addLog('Gagal backup Firestore ke Sheets: ' + (e.message || e));
+      if (!silent) notifyUser('Gagal backup Firestore ke Sheets: ' + (e.message || e), 'error');
+      setSheetsConnectionStatus('CONNECTED');
+    } finally {
+      backupRunningRef.current = false;
+    }
+  };
+
+  // Automatic retry: while Admin has the portal open and Google is connected, try the backup at most every 30 minutes.
+  useEffect(() => {
+    if (!isAdminPage || !isAdminAuthenticated || !sheetsToken || !spreadsheetId) return;
+    const KEY = 'wbs_last_sheets_backup_attempt';
+    const attempt = () => {
+      const last = Number(safeStorage.get(KEY) || 0);
+      if (Date.now() - last < 30 * 60 * 1000) return;
+      safeStorage.set(KEY, String(Date.now()));
+      handleBackupFirestoreToSheets(true);
+    };
+    attempt();
+    const interval = setInterval(attempt, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [isAdminPage, isAdminAuthenticated, sheetsToken, spreadsheetId]);
 
   // Calculations logic
   const calculations = useMemo(() => {
@@ -5626,6 +5802,27 @@ PT. Wahana Bara Sentosa`;
                                    Push Hasil Assessment
                                 </button>
                               </div>
+                            </div>
+
+                            {/* Firestore -> Sheets backup */}
+                            <div data-ui className="border border-rule rounded-xl p-3 bg-ink-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                              <div>
+                                <span className="font-extrabold text-xs text-ink-800 block">
+                                  {lang === 'ID' ? '3. Cadangkan Firestore ke Google Sheets' : '3. Back up Firestore to Google Sheets'}
+                                </span>
+                                <span className="text-xs text-ink-500 font-medium leading-relaxed mt-1 block font-sans">
+                                  {lang === 'ID'
+                                    ? "Menarik laporan Firestore sejak tanggal terakhir di tab 'Laporan_Fit' lalu menambahkan yang belum ada. Dicoba otomatis tiap 30 menit selama panel admin terbuka dan Google terhubung."
+                                    : "Pulls Firestore reports since the last date in 'Laporan_Fit' and appends missing rows. Retries automatically every 30 minutes while the admin panel is open and Google is connected."}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleBackupFirestoreToSheets(false)}
+                                className="bg-safe-700 hover:bg-safe-600 text-white font-black text-xs py-2 px-4 rounded-lg cursor-pointer shrink-0 transition"
+                              >
+                                {lang === 'ID' ? 'Cadangkan Sekarang' : 'Back up now'}
+                              </button>
                             </div>
 
                             {/* Sync Webhook alternative */}

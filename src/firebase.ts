@@ -232,6 +232,42 @@ export async function fetchAssessmentsFromFirestore(limitCount: number = 300, ta
 }
 
 /**
+ * Incremental fetch: only documents newer than `sinceIso` (by `timestamp`).
+ * Reads only new documents, so repeated polling costs almost nothing.
+ * Throws on failure (including quota exhausted) so callers can report it.
+ */
+export async function fetchAssessmentsSinceFromFirestore(sinceIso: string, limitCount: number = 500): Promise<any[]> {
+  const colRef = collection(db, 'assessments');
+  const q = query(colRef, where('timestamp', '>', sinceIso), orderBy('timestamp', 'asc'), limit(Math.max(1, limitCount)));
+  const snapshot = await getDocs(q);
+  const records: any[] = [];
+  snapshot.forEach((d) => records.push(d.data()));
+  return records;
+}
+
+/**
+ * Range fetch by `tanggalPengisian` (YYYY-MM-DD, inclusive). Single-field range, no composite index.
+ * Throws on failure (including quota exhausted) so callers can report it.
+ */
+export async function fetchAssessmentsRangeFromFirestore(startDate: string, endDate?: string, limitCount: number = 5000): Promise<any[]> {
+  const colRef = collection(db, 'assessments');
+  const constraints: any[] = [where('tanggalPengisian', '>=', startDate)];
+  if (endDate) constraints.push(where('tanggalPengisian', '<=', endDate));
+  const q = query(colRef, ...constraints, limit(Math.max(1, limitCount)));
+  const snapshot = await getDocs(q);
+  const records: any[] = [];
+  snapshot.forEach((d) => records.push(d.data()));
+  return records;
+}
+
+/** True when the error is Firestore's daily quota being exhausted. */
+export function isFirestoreQuotaError(error: unknown): boolean {
+  const e = error as any;
+  const text = `${e?.code || ''} ${e?.message || ''}`.toLowerCase();
+  return text.includes('resource-exhausted') || text.includes('quota') || text.includes('429');
+}
+
+/**
  * Prune old assessments from Firestore to free up cloud storage.
  * Deletes records older than daysOld days.
  */

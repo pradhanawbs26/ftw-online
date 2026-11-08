@@ -20,6 +20,9 @@ export default async function handler(req: any, res: any) {
         limit: Math.min(limit, 1000)
       };
 
+      const startDate = req.query?.startDate as string | undefined;
+      const endDate = req.query?.endDate as string | undefined;
+
       if (date) {
         structuredQuery.where = {
           fieldFilter: {
@@ -28,6 +31,19 @@ export default async function handler(req: any, res: any) {
             value: { stringValue: date }
           }
         };
+      } else if (startDate || endDate) {
+        // Range on a single field needs no composite index; no orderBy to stay index-free.
+        const filters: any[] = [];
+        if (startDate) {
+          filters.push({ fieldFilter: { field: { fieldPath: "tanggalPengisian" }, op: "GREATER_THAN_OR_EQUAL", value: { stringValue: startDate } } });
+        }
+        if (endDate) {
+          filters.push({ fieldFilter: { field: { fieldPath: "tanggalPengisian" }, op: "LESS_THAN_OR_EQUAL", value: { stringValue: endDate } } });
+        }
+        structuredQuery.where = filters.length === 1
+          ? filters[0]
+          : { compositeFilter: { op: "AND", filters } };
+        structuredQuery.limit = 5000;
       } else {
         structuredQuery.orderBy = [
           { field: { fieldPath: "timestamp" }, direction: "DESCENDING" }
